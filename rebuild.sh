@@ -70,12 +70,7 @@ echo "🔄 Refreshing Gradle dependencies..."
 echo "📦 Generating JS bundle for Debug..."
 cd ..
 mkdir -p android/app/src/main/assets
-npx react-native bundle \
-  --platform android \
-  --dev false \
-  --entry-file index.js \
-  --bundle-output android/app/src/main/assets/index.android.bundle \
-  --assets-dest android/app/src/main/res
+npx expo export:embed --platform android --dev false
 
 # Step 9: Build Debug APK with bundle
 echo "🏗 Building Debug APK..."

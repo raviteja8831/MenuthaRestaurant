@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(find:*)",
-      "Read(//c/Users/ravit/Downloads/**)"
+      "Read(//c/Users/ravit/Downloads/**)",
+      "Bash(chmod:*)"
     ],
     "deny": [],
     "ask": []
