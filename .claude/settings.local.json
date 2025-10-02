@@ -3,7 +3,9 @@
     "allow": [
       "Bash(find:*)",
       "Read(//c/Users/ravit/Downloads/**)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(npx expo prebuild:*)",
+      "Bash(java:*)"
     ],
     "deny": [],
     "ask": []
