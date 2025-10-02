@@ -313,6 +313,8 @@ export default function ManagerDashboardScreenNew() {
                 flexDirection: "row",
                 alignItems: "center",
                 width: "100%",
+                right: -50,
+                position: "relative"
               }}
             >
               <Text style={styles.buffetTitle}>Buffet</Text>
@@ -375,16 +377,7 @@ export default function ManagerDashboardScreenNew() {
               />
             </Pressable>
             {/* Make buffet type clickable to open modal */}
-            <Pressable
-              // onPress={() => setBuffetVisible(true)}
-              style={{ marginTop: 8, alignItems: "center", width: "100%" }}
-            >
-              <Text
-                style={{ color: "#1f1d1d", fontWeight: "bold", fontSize: 15 }}
-              >
-                {buffet.type || "Buffet Type"}
-              </Text>
-            </Pressable>
+           
             <View style={{ marginTop: 8, alignItems: "center", width: "100%" }}>
               <Switch
                 value={buffetEnabled}
@@ -805,7 +798,7 @@ const styles = StyleSheet.create({
   },
   buffetCard: {
     backgroundColor: "#8D8BEA",
-    padding: 16,
+    padding: 10,
     minWidth: 120,
     minHeight: 120,
     alignItems: "center",
@@ -1099,7 +1092,7 @@ const styles = StyleSheet.create({
   },
   weekDropdownText: {
     fontSize: 14,
-    color: "#fff",
+    color: "#8D8BEA",
     fontWeight: "bold",
   },
   transactionSummary: {

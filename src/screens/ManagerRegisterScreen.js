@@ -1,3 +1,7 @@
+// Reusable RedStar component
+const RedStar = () => (
+  <Text style={{ color: 'red', fontSize: 16, fontWeight: 'bold' }}>*</Text>
+);
 import React, { useEffect } from "react";
 import { useRouter } from "expo-router";
 import {
@@ -9,10 +13,8 @@ import {
   Pressable,
   ScrollView,
   SafeAreaView,
-  TextInput,
 } from "react-native";
 import { Button, Text, Surface } from "react-native-paper";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import { registerManager } from "../api/managerApi";
@@ -26,79 +28,204 @@ const DEFAULT_ADDRESS =
   "1600 Amphitheatre Parkway, Mountain View, CA 94043, USA";
 
 export default function ManagerRegisterScreen() {
-  const router = useRouter();
-  const [loading, setLoading] = React.useState(false);
-
-  // Form state
-  const [restaurantName, setRestaurantName] = React.useState("");
-  const [restaurantAddress, setRestaurantAddress] = React.useState("");
-
-  // Service type state
-  const [tableService, setTableService] = React.useState(false);
-  const [selfService, setSelfService] = React.useState(false);
-  const [enableBoth, setEnableBoth] = React.useState(false);
-
-  // Food type state
-  const [pureVeg, setPureVeg] = React.useState(false);
-  const [nonVeg, setNonVeg] = React.useState(false);
-
-  // Buffet state
-  const [enableBuffet, setEnableBuffet] = React.useState(false);
-
-  // Image state
-  const [ambianceImage, setAmbianceImage] = React.useState(null);
-
-  // When enableBoth changes, update both service states
-  React.useEffect(() => {
-    if (enableBoth) {
-      setTableService(true);
-      setSelfService(true);
-    } else {
-      setTableService(false);
-      setSelfService(false);
-    }
-  }, [enableBoth]);
-
+  const [address, setAddress] = React.useState(DEFAULT_ADDRESS);
   // Location logic
   const GOOGLE_API_KEY = "AIzaSyCJT87ZYDqm6bVLxRsg4Zde87HyefUfASQ";
   const handleUseCurrentLocation = async () => {
     try {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
-        showApiError("Permission to access location was denied");
+       showApiError("Permission to access location was denied");
+        setAddress("Location permission denied");
+        setFormState((prev) => ({
+          ...prev,
+          restaurantAddress: "Location permission denied",
+        }));
         return;
       }
       let location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
       });
       const { latitude, longitude } = location.coords;
+      // Use Google Maps Geocoding API
       const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${GOOGLE_API_KEY}`;
       const response = await fetch(url);
       const data = await response.json();
       if (data.results && data.results.length > 0) {
         const addr = data.results[0].formatted_address;
-        setRestaurantAddress(addr);
+        setAddress(addr);
+        handleChange("restaurantAddress", addr);
       } else {
-        setRestaurantAddress("Address not found");
+        setAddress("Address not found");
+        handleChange("restaurantAddress", "Address not found");
       }
     } catch (error) {
-      setRestaurantAddress("Error fetching location or address");
+      setAddress("Error fetching location or address");
+      handleChange("restaurantAddress", "Error fetching location or address");
     }
   };
-  const handleServiceSelection = (type) => {
-    if (type === 'table') {
-      if (enableBoth) return; // Don't allow manual toggle if both is enabled
-      setTableService(!tableService);
-      setSelfService(false);
-    } else if (type === 'self') {
-      if (enableBoth) return; // Don't allow manual toggle if both is enabled
-      setSelfService(!selfService);
-      setTableService(false);
+  const router = useRouter();
+  const [step, setStep] = React.useState(1);
+  const [tableService, setTableService] = React.useState(false);
+  const [selfService, setSelfService] = React.useState(false);
+  const [pureVeg, setPureVeg] = React.useState(false);
+  const [nonVeg, setNonVeg] = React.useState(false);
+  const [enableBuffet, setEnableBuffet] = React.useState(false);
+  const [enableBoth, setEnableBoth] = React.useState(false);
+
+  // When enableBoth changes, update both service states
+  React.useEffect(() => {
+    if (enableBoth) {
+      setTableService(true);
+      setSelfService(true);
     }
+  }, [enableBoth]);
+  const [ambianceImage, setAmbianceImage] = React.useState(null);
+  // const [logo, setLogo] = React.useState(null); // Removed unused variable
+  // Remove parent error state for form steps
+  const [loading, setLoading] = React.useState(false);
+  // const [error, setError] = React.useState(""); // Removed unused variable
+  const formConfig = [
+    {
+      label:<> First Name <Text style={{ color: 'red' }}>*</Text></>,
+      name: "firstname",
+      type: "text",
+      required: true,
+    },
+    {
+      label: "Last Name",
+      name: "lastname",
+      type: "text",
+    },
+    {
+      label: <>Phone Number <Text style={{ color: 'red' }}>*</Text></>,
+      name: "phone",
+      type: "text",
+      keyboardType: "phone-pad",
+      required: true,
+    },
+    {
+      label: <>UPI <Text style={{ color: 'red' }}>*</Text></>,
+      name: "upi",
+      type: "text",
+      keyboardType: "text",
+      required: true,
+    },
+    {
+      label: <>Restaurant Name <Text style={{ color: 'red' }}>*</Text></>,
+      name: "name",
+      type: "text",
+      required: true,
+    },
+    {
+      label: <>Restaurant Address <Text style={{ color: 'red' }}>*</Text></>,
+      name: "restaurantAddress",
+      type: "textarea",
+      value: address,
+      multiline: true,
+      editable: true,
+      required: true,
+    },
+    {
+      label: "Restaurant Type",
+      name: "restaurantType",
+      type: "select",
+      required: true,
+      options: [
+        { label: "Multi-cuisine", value: "Multi-cuisine" },
+        { label: "Cafe", value: "Cafe" },
+        { label: "3 Star", value: "3 Star" },
+        { label: "5 Star", value: "5 Star" },
+        { label: "Other", value: "Other" },
+      ],
+      placeholder: "Select type",
+    },
+  ];
+
+  // Form validation function
+  const validateForm = (values) => {
+    const errors = {};
+
+    // Step 1 validations
+    if (!values.firstname?.trim()) errors.firstname = "First name is required";
+    if (!values.lastname?.trim()) errors.lastname = "Last name is required";
+    if (!values.phone?.trim()) errors.phone = "Phone number is required";
+    if (values.phone && !/^\d{10}$/.test(values.phone.replace(/[^0-9]/g, ''))) {
+      errors.phone = "Phone number must be 10 digits";
+    }
+    if (!values.upi?.trim()) errors.upi = "UPI is required";
+    if (values.upi && !/^[\w.-]+@[\w.-]+$/.test(values.upi)) {
+      errors.upi = "Please enter a valid UPI ID (e.g., user@paytm)";
+    }
+
+    // Step 2 validations
+    if (!values.name?.trim()) errors.name = "Restaurant name is required";
+    if (!values.restaurantAddress?.trim()) errors.restaurantAddress = "Restaurant address is required";
+    if (!values.restaurantType?.trim()) errors.restaurantType = "Restaurant type is required";
+    if (values.restaurantType === 'Other' && !values.restaurantTypeOther?.trim()) {
+      errors.restaurantTypeOther = "Please specify the restaurant type";
+    }
+
+    return errors;
   };
 
-  const handleEnableBoth = () => {
-    setEnableBoth(!enableBoth);
+  // Validate specific step
+  const validateStep = (stepNumber) => {
+    const errors = validateForm(form);
+    if (stepNumber === 1) {
+      return ['firstname', 'lastname', 'phone', 'upi'].some(field => errors[field]);
+    } else if (stepNumber === 2) {
+      return ['name', 'restaurantAddress', 'restaurantType'].some(field => errors[field]) ||
+             (form.restaurantType === 'Other' && errors.restaurantTypeOther);
+    }
+    return false;
+  };
+
+  // Use form validation hook
+  const {
+    values: form,
+    setValues: setFormState,
+    errors,
+    touched,
+    handleChange,
+    handleBlur,
+  } = useFormValidation({
+    firstname: "",
+    lastname: "",
+    phone: "",
+    name: "",
+    upi: "",
+    restaurantAddress: DEFAULT_ADDRESS,
+    restaurantType: "",
+    restaurantTypeOther: "",
+  }, validateForm);
+
+  // Custom setForm to keep restaurantAddress equal to restaurantName
+  const setForm = (updater) => {
+    setFormState((prev) => {
+      let next = typeof updater === "function" ? updater(prev) : updater;
+      // If restaurantName is updated, set restaurantAddress to same value
+      if (next.name !== undefined) {
+        next = {
+          ...next,
+          restaurantAddress: next.restaurantAddress,
+        };
+      }
+      return next;
+    });
+  };
+
+  const handleNext = () => {
+    // Validate step 1 before proceeding
+    if (validateStep(1)) {
+      showApiError("Please fill in all required fields correctly");
+      return;
+    }
+    setStep(2);
+  };
+
+  const handleBack = () => {
+    setStep(1);
   };
 
   const pickImage = async () => {
@@ -115,13 +242,9 @@ export default function ManagerRegisterScreen() {
   };
 
   const handleRegister = async () => {
-    // Basic validation
-    if (!restaurantName.trim()) {
-      showApiError("Restaurant name is required");
-      return;
-    }
-    if (!restaurantAddress.trim()) {
-      showApiError("Restaurant address is required");
+    // Validate step 2 before proceeding
+    if (validateStep(2)) {
+      showApiError("Please fill in all required fields correctly");
       return;
     }
 
@@ -132,7 +255,7 @@ export default function ManagerRegisterScreen() {
       let longitude = null;
       try {
         const geoRes = await fetch(
-          `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(restaurantAddress)}&key=${GOOGLE_API_KEY}`
+          `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(form.restaurantAddress)}&key=${GOOGLE_API_KEY}`
         );
         const geoData = await geoRes.json();
         if (geoData.results && geoData.results.length > 0) {
@@ -142,14 +265,14 @@ export default function ManagerRegisterScreen() {
       } catch (geoErr) {
         // If geocoding fails, leave lat/lng null
       }
-
-      // Handle image upload if present
+      // Service type: send array if both selected, else single value or empty
       let ambianceImageUrl = "";
       if (ambianceImage) {
         if (
           ambianceImage.startsWith("file://") ||
           ambianceImage.startsWith("content://")
         ) {
+          // Local file, upload as file object
           const filename = ambianceImage.split("/").pop();
           const match = /\.(\w+)$/.exec(filename ?? "");
           const typeMime = match ? `image/${match[1]}` : `image/jpeg`;
@@ -165,33 +288,89 @@ export default function ManagerRegisterScreen() {
             imageUrl =
               SERVER_URL +
               (imageUrl.startsWith("/") ? imageUrl : "/" + imageUrl);
+            if (imageUrl && !imageUrl.startsWith("http")) {
+              imageUrl =
+                SERVER_URL +
+                (imageUrl.startsWith("/") ? imageUrl : "/" + imageUrl);
+            }
             ambianceImageUrl = imageUrl;
           } catch (err) {
-            showApiError("Image upload failed");
+            showApiError(err);
             ambianceImageUrl = "";
           }
+        } else if (ambianceImage.startsWith("http")) {
+          // Already a URL, use as is
+          ambianceImageUrl = ambianceImage;
+        } else if (ambianceImage.startsWith("data:image/")) {
+          // Handle base64 data URL
+          try {
+            // Extract mime and base64 data
+            const matches = ambianceImage.match(
+              /^data:(image\/(png|jpeg|jpg));base64,(.+)$/
+            );
+            if (!matches) throw new Error("Invalid base64 image format");
+            const mimeType = matches[1];
+            const base64Data = matches[3];
+            // Create a blob from base64 (browser only)
+            let fileObj;
+            if (typeof window !== "undefined" && window.File) {
+              const byteCharacters = atob(base64Data);
+              const byteNumbers = new Array(byteCharacters.length);
+              for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+              }
+              const byteArray = new Uint8Array(byteNumbers);
+              const blob = new Blob([byteArray], { type: mimeType });
+              const filename = `ambiance_${Date.now()}.${
+                mimeType.split("/")[1]
+              }`;
+              fileObj = new File([blob], filename, { type: mimeType });
+            } else {
+              // React Native: just pass uri, name, type
+              const filename = `ambiance_${Date.now()}.${
+                mimeType.split("/")[1]
+              }`;
+              fileObj = {
+                uri: ambianceImage,
+                name: filename,
+                type: mimeType,
+              };
+            }
+            const data = await uploadImage(fileObj);
+            let imageUrl = data.url;
+            console.log(imageUrl, "imageUel");
+            ambianceImageUrl = imageUrl;
+          } catch (err) {
+            showApiError(err);
+            ambianceImageUrl = "";
+          }
+        } else {
+          showApiError("Please select a valid image.");
+          setLoading(false);
+          return;
         }
       }
 
-      // Prepare payload
+      // If you add logo upload, repeat the same logic for logo here
+
+      // Always call upload API before registerManager
       const payload = {
-        name: restaurantName,
-        restaurantAddress,
+        phone: form.phone || "",
+        role_id: 1,
+        ...form,
         ambianceImage: ambianceImageUrl,
         enableBuffet,
         enableVeg: pureVeg,
         enableNonveg: nonVeg,
         enableTableService: tableService,
         enableSelfService: selfService,
-        restaurantType: "Restaurant", // Default type
+        restaurantType: form.restaurantType === 'Other' ? form.restaurantTypeOther : form.restaurantType,
         latitude,
         longitude,
-        role_id: 1,
       };
-
       const data = await registerManager(payload);
       showApiError(data.message || "Registered successfully");
-      router.push("/login");
+        router.push("/login");
     } catch (err) {
       showApiError(err);
       const msg =
@@ -200,391 +379,836 @@ export default function ManagerRegisterScreen() {
     }
     setLoading(false);
   };
-  return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView
-          style={styles.scrollContainer}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Restaurant Name Input */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Restaurant Name:</Text>
-            <TextInput
-              style={styles.textInput}
-              value={restaurantName}
-              onChangeText={setRestaurantName}
-              placeholder=""
-            />
-          </View>
-
-          {/* Restaurant Address Input */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Restaurant Address:</Text>
-            <TextInput
-              style={[styles.textInput, styles.textAreaInput]}
-              value={restaurantAddress}
-              onChangeText={setRestaurantAddress}
-              placeholder=""
-              multiline={true}
-              numberOfLines={4}
-            />
-          </View>
-
-          {/* Use Current Location Button */}
-          <Pressable style={styles.locationButton} onPress={handleUseCurrentLocation}>
-            <MaterialCommunityIcons name="crosshairs-gps" size={20} color="#fff" />
-            <Text style={styles.locationButtonText}>Use Current Location</Text>
-          </Pressable>
-
-          {/* Choose your Restaurant Type */}
-          <Text style={styles.sectionTitle}>Choose your Restaurant Type</Text>
-
-          {/* Service Type Selection */}
-          <View style={styles.serviceTypeContainer}>
-            <Pressable
-              style={[
-                styles.serviceTypeBox,
-                tableService && styles.serviceTypeBoxActive,
-              ]}
-              onPress={() => handleServiceSelection('table')}
-            >
-              <View style={styles.serviceIconContainer}>
-                <MaterialCommunityIcons
-                  name="silverware-fork-knife"
-                  size={40}
-                  color="#333"
-                />
-              </View>
-              <Text style={styles.serviceTypeLabel}>Table Service</Text>
-            </Pressable>
-
-            <Pressable
-              style={[
-                styles.serviceTypeBox,
-                selfService && styles.serviceTypeBoxActive,
-              ]}
-              onPress={() => handleServiceSelection('self')}
-            >
-              <View style={styles.serviceIconContainer}>
-                <View style={styles.selfServiceIcon}>
-                  <Text style={styles.selfServiceText}>SELF SERVICE</Text>
-                </View>
-              </View>
-              <Text style={styles.serviceTypeLabel}>Self Service</Text>
-            </Pressable>
-          </View>
-
-          {/* Enable Both */}
-          <View style={styles.enableBothContainer}>
-            <Pressable
-              style={styles.checkboxContainer}
-              onPress={handleEnableBoth}
-            >
-              <View style={[styles.checkbox, enableBoth && styles.checkboxActive]}>
-                {enableBoth && (
-                  <MaterialCommunityIcons name="check" size={16} color="#fff" />
-                )}
-              </View>
-              <Text style={styles.checkboxLabel}>Enable Both</Text>
-            </Pressable>
-          </View>
-
-          {/* Food Type Selection */}
-          <View style={styles.foodTypeContainer}>
-            <Pressable
-              style={[
-                styles.foodTypeBox,
-                styles.vegBox,
-                pureVeg && styles.vegBoxActive,
-              ]}
-              onPress={() => setPureVeg(!pureVeg)}
-            >
-              <View style={styles.vegIndicator} />
-              <Text style={styles.foodTypeLabel}>Pure Veg</Text>
-            </Pressable>
-
-            <Pressable
-              style={[
-                styles.foodTypeBox,
-                styles.nonVegBox,
-                nonVeg && styles.nonVegBoxActive,
-              ]}
-              onPress={() => setNonVeg(!nonVeg)}
-            >
-              <View style={styles.nonVegIndicator} />
-              <Text style={styles.foodTypeLabel}>Non Veg</Text>
-            </Pressable>
-          </View>
-
-          {/* Enable Buffet */}
-          <View style={styles.enableBuffetContainer}>
-            <Pressable
-              style={styles.checkboxContainer}
-              onPress={() => setEnableBuffet(!enableBuffet)}
-            >
-              <View style={[styles.checkbox, enableBuffet && styles.checkboxActive]}>
-                {enableBuffet && (
-                  <MaterialCommunityIcons name="check" size={16} color="#fff" />
-                )}
-              </View>
-              <Text style={styles.checkboxLabel}>Enable Buffet</Text>
-            </Pressable>
-          </View>
-
-          {/* Upload Ambiance Photo */}
-          <Text style={styles.sectionTitle}>Upload Ambiance Photo</Text>
-          <Pressable style={styles.photoUploadBox} onPress={pickImage}>
-            {ambianceImage ? (
-              <Image
-                source={{ uri: ambianceImage }}
-                style={styles.photoPreview}
-                resizeMode="cover"
-              />
-            ) : (
-              <MaterialCommunityIcons name="camera" size={60} color="#333" />
-            )}
-          </Pressable>
-
-          {/* Register Button */}
-          <Pressable
-            style={[styles.registerButton, loading && styles.registerButtonDisabled]}
-            onPress={handleRegister}
-            disabled={loading}
+ return (
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#8D8BEA' }}>
+          <KeyboardAvoidingView
+            style={{ flex: 1, backgroundColor: '#8D8BEA' }}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           >
-            <Text style={styles.registerButtonText}>
-              {loading ? "Registering..." : "Register"}
-            </Text>
-          </Pressable>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
-  );
+            <Image
+              source={require("../assets/images/logo.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <ScrollView
+              style={{ flex: 1 }}
+              contentContainerStyle={{ flexGrow: 1 }}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              <Surface style={styles.formSurface}>
+                 <View style={styles.loginLinkContainer}>
+                <Text style={styles.loginLinkText}>Already have an account? </Text>
+                <Pressable onPress={() => router.push("/login")}>
+                  <Text style={styles.loginLink}>Login here</Text>
+                </Pressable>
+              </View>
+                <View style={styles.formWrapper}>
+                  {step === 1 && (
+                    <View style={styles.stepBox}>
+                      <View style={styles.stepFormAreaScroll}>
+                        <FormInput
+                          label="First Name *"
+                          name="firstname"
+                          value={form.firstname}
+                          onChange={handleChange}
+                          onBlur={handleBlur}
+                          error={errors.firstname}
+                          touched={touched.firstname}
+                          type="text"
+                        />
+                        <FormInput
+                          label="Last Name *"
+                          name="lastname"
+                          value={form.lastname}
+                          onChange={handleChange}
+                          onBlur={handleBlur}
+                          error={errors.lastname}
+                          touched={touched.lastname}
+                          type="text"
+                        />
+                        <FormInput
+                          label="Phone Number *"
+                          name="phone"
+                          value={form.phone}
+                          onChange={handleChange}
+                          onBlur={handleBlur}
+                          error={errors.phone}
+                          touched={touched.phone}
+                          type="text"
+                          keyboardType="phone-pad"
+                        />
+                        <FormInput
+                          label="UPI *"
+                          name="upi"
+                          value={form.upi}
+                          onChange={handleChange}
+                          onBlur={handleBlur}
+                          error={errors.upi}
+                          touched={touched.upi}
+                          type="text"
+                        />
+                      </View>
+                    </View>
+                  )}
+                {step === 2 && (
+                  <View style={styles.stepBox}>
+                    <View style={styles.stepFormAreaScroll}>
+                      <FormInput
+                        label="Restaurant Name *"
+                        name="name"
+                        value={form.name}
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        error={errors.name}
+                        touched={touched.name}
+                        type="text"
+                      />
+                      <FormInput
+                        label="Restaurant Address *"
+                        name="restaurantAddress"
+                        value={form.restaurantAddress}
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        error={errors.restaurantAddress}
+                        touched={touched.restaurantAddress}
+                        type="textarea"
+                      />
+                      {/* Use Current Location button below address */}
+                      <Button
+                        mode="contained"
+                        style={styles.locationBtnStep2}
+                        icon="crosshairs-gps"
+                        onPress={handleUseCurrentLocation}
+                      >
+                        Use Current Location
+                      </Button>
+                      <FormInput
+                        label="Restaurant Type *"
+                        name="restaurantType"
+                        value={form.restaurantType}
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        error={errors.restaurantType}
+                        touched={touched.restaurantType}
+                        type="select"
+                        options={[
+                          { label: "Multi-cuisine", value: "Multi-cuisine" },
+                          { label: "Cafe", value: "Cafe" },
+                          { label: "3 Star", value: "3 Star" },
+                          { label: "5 Star", value: "5 Star" },
+                          { label: "Other", value: "Other" },
+                        ]}
+                        placeholder="Select type"
+                      />
+                      {/* If 'Other' is selected, show a text input for custom value */}
+                      {form.restaurantType === 'Other' && (
+                        <FormInput
+                          label="Enter Restaurant Type"
+                          name="restaurantTypeOther"
+                          value={form.restaurantTypeOther}
+                          onChange={handleChange}
+                          onBlur={handleBlur}
+                          error={errors.restaurantTypeOther}
+                          touched={touched.restaurantTypeOther}
+                          type="text"
+                          placeholder="Enter custom type"
+                        />
+                      )}
+                      {/* Extra controls below the form, not inside it */}
+                      <View style={{ marginTop: 24 }}>
+                        <Text style={styles.sectionTitleStep2Grid}>
+                        </Text>
+                        <View style={styles.typeFoodGridRow}>
+                          <View style={styles.typeFoodGridCol}>
+                            <Pressable
+                              style={[
+                                styles.typeBoxStep2,
+                                tableService && styles.typeBoxActiveStep2,
+                              ]}
+                              onPress={() => {
+                                if (enableBoth) return; // Prevent toggling if both enabled
+                                setTableService(!tableService);
+                              }}
+                            >
+                              <Image
+                                source={require("../assets/images/table_service.jpg")}
+                                style={styles.typeIconStep2}
+                              />
+                              <Text style={styles.typeLabelStep2Small}>
+                                Table Service
+                              </Text>
+                            </Pressable>
+                          </View>
+                          <View style={styles.typeFoodGridCol}>
+                            <Pressable
+                              style={[
+                                styles.typeBoxStep2,
+                                selfService && styles.typeBoxActiveStep2,
+                              ]}
+                              onPress={() => {
+                                if (enableBoth) return; // Prevent toggling if both enabled
+                                setSelfService(!selfService);
+                              }}
+                            >
+                              <Image
+                                source={require("../assets/images/self_service.jpg")}
+                                style={styles.typeIconStep2}
+                              />
+                              <Text style={styles.typeLabelStep2Small}>
+                                Self Service
+                              </Text>
+                            </Pressable>
+                          </View>
+                        </View>
+                        <View style={styles.enableBothRowCenter}>
+                          <Pressable
+                            style={styles.checkboxRowStep2Grid}
+                            onPress={() => {
+                              if (!enableBoth) {
+                                setEnableBoth(true);
+                              } else {
+                                setEnableBoth(false);
+                                setTableService(false);
+                                setSelfService(false);
+                              }
+                            }}
+                          >
+                            <View
+                              style={[
+                                styles.checkboxStep2,
+                                enableBoth && styles.checkboxActiveStep2,
+                              ]}
+                            />
+                            <Text style={styles.enableTextStep2Grid}>
+                              Enable Both
+                            </Text>
+                          </Pressable>
+                        </View>
+                        <View style={styles.typeFoodGridRow}>
+                          <View style={styles.typeFoodGridCol}>
+                            <Pressable
+                              style={[
+                                styles.foodTypeBoxStep2,
+                                styles.foodTypeBoxVeg,
+                                pureVeg && styles.foodTypeBoxVegActive,
+                              ]}
+                              onPress={() => setPureVeg(!pureVeg)}
+                              activeOpacity={0.8}
+                            >
+                              <Image
+                                source={require("../assets/images/veg.png")}
+                                style={styles.foodCircleVegStep2}
+                              />
+                              <Text style={styles.foodLabelStep2}>Pure Veg</Text>
+                            </Pressable>
+                          </View>
+                          <View style={styles.typeFoodGridCol}>
+                            <Pressable
+                              style={[
+                                styles.foodTypeBoxStep2,
+                                styles.foodTypeBoxNonVeg,
+                                nonVeg && styles.foodTypeBoxNonVegActive,
+                              ]}
+                              onPress={() => setNonVeg(!nonVeg)}
+                              activeOpacity={0.8}
+                            >
+                              <Image
+                                source={require("../assets/images/non-veg.png")}
+                                style={styles.foodCircleNonVegStep2}
+                              />
+                              <Text style={styles.foodLabelStep2}>Non Veg</Text>
+                            </Pressable>
+                          </View>
+                        </View>
+                        <View style={styles.buffetRowGrid}>
+                          <Pressable
+                            style={styles.checkboxRowStep2Grid}
+                            onPress={() => setEnableBuffet(!enableBuffet)}
+                          >
+                            <View
+                              style={[
+                                styles.checkboxStep2,
+                                enableBuffet && styles.checkboxActiveStep2,
+                              ]}
+                            />
+                            <Text style={styles.checkboxLabelStep2Grid}>
+                              Enable Buffet
+                            </Text>
+                          </Pressable>
+                        </View>
+                        <Text style={styles.sectionTitleStep2Grid}>
+                          Upload Ambiance Photo
+                        </Text>
+                        <Pressable
+                          style={styles.photoUploadBoxStep2}
+                          onPress={pickImage}
+                        >
+                          {ambianceImage ? (
+                            <Image
+                              source={{ uri: ambianceImage }}
+                              style={styles.photoPreviewStep2}
+                              onError={() =>
+                                showApiError(
+                                  "Image failed to load. Check the URL or server."
+                                )
+                              }
+                            />
+                          ) : (
+                            <Image
+                              source={require("../assets/images/camera-icon.png")}
+                              style={styles.cameraIconStep2}
+                            />
+                          )}
+                        </Pressable>
+                      </View>
+                    </View>
+                  </View>
+                )}
+                </View>
+              </Surface>
+            </ScrollView>
+            {/* Fixed bottom bar for Next/Register button */}
+            <View style={styles.fixedBottomBar}>
+              {step === 1 && (
+                <Button
+                  mode="contained"
+                  style={styles.bottomButtonStep}
+                  labelStyle={styles.buttonTextStep}
+                  onPress={handleNext}
+                  loading={loading}
+                >
+                  Next
+                </Button>
+              )}
+              {step === 2 && (
+                <View style={styles.buttonRow}>
+                  <Button
+                    mode="outlined"
+                    style={[styles.bottomButtonStep, styles.backButton]}
+                    labelStyle={[styles.buttonTextStep, styles.backButtonText]}
+                    onPress={handleBack}
+                    disabled={loading}
+                  >
+                    Back
+                  </Button>
+                  <Button
+                    mode="contained"
+                    style={[styles.bottomButtonStep, styles.registerButton]}
+                    labelStyle={styles.buttonTextStep}
+                    onPress={handleRegister}
+                    loading={loading}
+                  >
+                    Register
+                  </Button>
+                </View>
+              )}
+
+              {/* Login Link */}
+             
+            </View>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      );
  
     }
 
 const styles = StyleSheet.create({
-  container: {
+  container: { flex: 1, padding: 0, backgroundColor: "#8D8BEA" },
+  appbar: { backgroundColor: "#8D8BEA", elevation: 0 },
+  appbarTitle: { fontWeight: "bold", fontSize: 20, textAlign: "center" },
+  formSurface: {
     flex: 1,
-    backgroundColor: "#8D8BEA",
+    justifyContent: "flex-start",
+    alignItems: "center",
+    padding: 0,
+    backgroundColor: "transparent",
+    elevation: 0,
   },
-  scrollContainer: {
+  formWrapper: {
     flex: 1,
   },
-  scrollContent: {
-    padding: 24,
-    paddingBottom: 100,
-  },
-  inputContainer: {
+  logo: {
+    width: 180,
+    height: 120,
     marginBottom: 24,
+    alignSelf: "center",
   },
-  inputLabel: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#fff",
-    marginBottom: 8,
-  },
-  textInput: {
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: "#333",
-    minHeight: 48,
-  },
-  textAreaInput: {
-    minHeight: 100,
-    textAlignVertical: "top",
-  },
-  locationButton: {
-    backgroundColor: "#6c63b5",
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+  typeFoodGridRow: {
     flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    width: "100%",
+    marginBottom: 10,
+    gap: 18,
+  },
+  input: {
+    // ...existing input styles...
+  },
+  enableBothRowCenter: {
+    width: "100%",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 32,
-  },
-  locationButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "500",
-    marginLeft: 8,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "500",
-    color: "#fff",
-    textAlign: "center",
-    marginBottom: 24,
-  },
-  serviceTypeContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 16,
-    marginBottom: 24,
-  },
-  serviceTypeBox: {
-    flex: 1,
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    paddingVertical: 20,
-    paddingHorizontal: 16,
-    alignItems: "center",
-    borderWidth: 3,
-    borderColor: "transparent",
-  },
-  serviceTypeBoxActive: {
-    borderColor: "#6c63b5",
-  },
-  serviceIconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 16,
-    backgroundColor: "#f0f0f0",
-    alignItems: "center",
-    justifyContent: "center",
+    display: "flex",
     marginBottom: 12,
+    flexDirection: "row",
   },
-  selfServiceIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: "#8B4513",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 3,
-    borderColor: "#fff",
-  },
-  selfServiceText: {
-    color: "#fff",
-    fontSize: 8,
-    fontWeight: "bold",
-    textAlign: "center",
-  },
-  serviceTypeLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
-    textAlign: "center",
-  },
-  enableBothContainer: {
-    alignItems: "center",
-    marginBottom: 32,
-  },
-  checkboxContainer: {
+  buffetRowGrid: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    marginTop: 16,
+    marginBottom: 16,
+    gap: 10,
+    width: "100%",
+    display: "flex",
+  },
+  checkboxRowStep2Grid: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 0,
+    alignSelf: "center",
+    marginLeft: 0,
+  },
+  photoUploadBoxStep2: {
+    width: 180,
+    height: 120,
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    marginVertical: 16,
+    alignSelf: "center",
+  },
+  typeIcon: { width: 60, height: 60, marginBottom: 5 },
+  typeLabel: { fontSize: 14, fontWeight: "bold", color: "#333" },
+  enableText: {
+    fontSize: 13,
+    color: "#7b6eea",
+    marginVertical: 5,
+    textAlign: "center",
+  },
+  checkboxRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+    alignSelf: "center",
   },
   checkbox: {
     width: 20,
     height: 20,
-    borderRadius: 4,
+    borderRadius: 5,
     borderWidth: 2,
-    borderColor: "#fff",
-    backgroundColor: "transparent",
-    alignItems: "center",
-    justifyContent: "center",
+    borderColor: "#7b6eea",
     marginRight: 8,
+    backgroundColor: "#fff",
   },
-  checkboxActive: {
-    backgroundColor: "#6c63b5",
-    borderColor: "#6c63b5",
-  },
-  checkboxLabel: {
-    fontSize: 16,
-    color: "#fff",
-    fontWeight: "500",
-  },
-  foodTypeContainer: {
+  checkboxActive: { backgroundColor: "#7b6eea" },
+  checkboxLabel: { fontSize: 14, color: "#333" },
+  foodTypeRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 16,
-    marginBottom: 32,
+    justifyContent: "space-around",
+    width: "100%",
+    marginBottom: 10,
   },
   foodTypeBox: {
-    flex: 1,
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    paddingVertical: 20,
-    paddingHorizontal: 16,
     alignItems: "center",
-    borderWidth: 3,
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: "#eae6ff",
+    marginHorizontal: 10,
   },
-  vegBox: {
-    borderColor: "#22c55e",
+  foodTypeBoxActive: {
+    borderColor: "#7b6eea",
+    borderWidth: 2,
+    backgroundColor: "#d1c4e9",
   },
-  vegBoxActive: {
-    borderColor: "#16a34a",
-    borderWidth: 4,
-  },
-  nonVegBox: {
-    borderColor: "#ef4444",
-  },
-  nonVegBoxActive: {
-    borderColor: "#dc2626",
-    borderWidth: 4,
-  },
-  vegIndicator: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: "#22c55e",
-    marginBottom: 12,
-  },
-  nonVegIndicator: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: "#ef4444",
-    marginBottom: 12,
-  },
-  foodTypeLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
-    textAlign: "center",
-  },
-  enableBuffetContainer: {
-    alignItems: "center",
-    marginBottom: 32,
-  },
+  foodCircle: { width: 30, height: 30, borderRadius: 15, marginBottom: 5 },
+  foodLabel: { fontSize: 14, fontWeight: "bold", color: "#333" },
   photoUploadBox: {
-    backgroundColor: "#E8E8E8",
-    borderRadius: 16,
-    height: 160,
-    marginBottom: 40,
+    width: 180,
+    height: 120,
+    backgroundColor: "#eae6ff",
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    marginVertical: 10,
+  },
+  cameraIcon: { width: 60, height: 60 },
+  photoPreview: { width: 120, height: 100, borderRadius: 10 },
+  bottomBar: {
+    padding: 16,
+    backgroundColor: "#8D8BEA",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    elevation: 8,
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: "100%",
+    alignItems: "center",
+  },
+  bottomButton: {
+    borderRadius: 24,
+    width: "95%",
+    alignSelf: "center",
+    paddingVertical: 10,
+    backgroundColor: "#7b6eea",
+    marginTop: 16,
+  },
+  outerStep1Box: {
+    width: "100%",
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 8,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    elevation: 4,
+    marginBottom: 16,
+  },
+  innerStep1Box: {
+    width: "100%",
+    alignItems: "center",
+  },
+  stepTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 16,
+    textAlign: "center",
+    color: "#333",
+  },
+  formFullWidth: {
+    width: "100%",
+    paddingHorizontal: 0,
+    marginBottom: 0,
+  },
+  buttonBar: {
+    display: "none",
+  },
+  fixedBottomBar: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: "100%",
+    backgroundColor: "#8D8BEA",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    elevation: 8,
+    alignItems: "center",
+    paddingTop: 16,
+    paddingBottom: 34,
+    paddingHorizontal: 16,
+    zIndex: 10,
+  },
+  stepBox: {
+    flex: 1,
+    width: "100%",
+    backgroundColor: "#8D8BEA",
+    justifyContent: "flex-start",
+    alignItems: "center",
+    paddingTop: 32,
+    paddingHorizontal: 0,
+  },
+  stepFormArea: {
+    width: "90%",
+    backgroundColor: "transparent",
+    alignItems: "flex-start",
+    marginBottom: 0,
+    flex: 1,
+    justifyContent: "flex-start",
+  },
+  stepFormAreaScroll: {
+    width: "100%",
+    backgroundColor: "transparent",
+    alignItems: "flex-start",
+    marginBottom: 0,
+    flex: 1,
+    justifyContent: "flex-start",
+    paddingHorizontal: 24,
+    paddingTop: 16,
+  },
+  inputStep: {
+    width: "100%",
+    alignSelf: "stretch",
+    minHeight: 44,
+    marginBottom: 24,
+    backgroundColor: "#fff",
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    fontSize: 15,
+    borderWidth: 0,
+    color: "#222",
+  },
+  labelStep: {
+    color: "#fff",
+    fontSize: 13,
+    marginBottom: 4,
+    marginLeft: 2,
+  },
+  requiredstyle: {
+      color: 'red',
+      fontSize: 16,
+      fontWeight: 'bold',
+    },
+  fixedBottomBarStep: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: "100%",
+    backgroundColor: "#8D8BEA",
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    alignItems: "center",
+    padding: 12,
+    zIndex: 10,
+  },
+  bottomButtonStep: {
+    borderRadius: 14,
+    width: "92%",
+    alignSelf: "center",
+    paddingVertical: 8,
+    backgroundColor: "#6c6cf2",
+    marginTop: 0,
+    marginBottom: 0,
+    elevation: 0,
+  },
+  buttonTextStep: {
+    fontSize: 26,
+    color: "#fff",
+    fontWeight: "400",
+    letterSpacing: 1,
+    // lineHeight removed for button text
+  },
+  buttonRow: {
+    flexDirection: "row",
+    width: "100%",
+    gap: 12,
     alignItems: "center",
     justifyContent: "center",
-    marginHorizontal: 20,
   },
-  photoPreview: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 16,
+  backButton: {
+    flex: 1,
+    backgroundColor: "transparent",
+    borderColor: "#fff",
+    borderWidth: 2,
+  },
+  backButtonText: {
+    color: "#fff",
+    fontSize: 20,
   },
   registerButton: {
-    backgroundColor: "#6c63b5",
-    borderRadius: 16,
-    paddingVertical: 16,
+    flex: 1,
+  },
+  loginLinkContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255, 255, 255, 0.2)",
+  },
+  loginLinkText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "400",
+  },
+  loginLink: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "bold",
+    textDecorationLine: "underline",
+  },
+  stepFormAreaStep2: {
+    width: "92%",
+    backgroundColor: "transparent",
+    alignItems: "center",
+    marginBottom: 0,
+    flex: 1,
+    justifyContent: "flex-start",
+  },
+  locationBtnStep2: {
+    marginBottom: 18,
+    backgroundColor: "#7b6eea",
+    width: "100%",
+    borderRadius: 8,
+    alignSelf: "center",
+  },
+  sectionTitleStep2: {
+    fontSize: 15,
+    fontWeight: "bold",
+    marginVertical: 8,
+    textAlign: "center",
+    color: "#fff",
+  },
+  sectionTitleStep2Grid: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginTop: 18,
+    marginBottom: 12,
+    textAlign: "left",
+    color: "#fff",
+    alignSelf: "center",
+  },
+
+  typeFoodGridCol: {
+    flex: 1,
+    flexDirection: "column",
+    alignItems: "center",
+    gap: 18,
+  },
+
+  enableTextStep2Grid: {
+    fontSize: 14,
+    color: "#fff",
+    marginRight: 8,
+    fontWeight: "400",
+  },
+
+  checkboxLabelStep2Grid: {
+    fontSize: 14,
+    color: "#fff",
+    marginLeft: 6,
+  },
+  typeRowStep2: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    width: "100%",
+    marginBottom: 10,
+  },
+  typeBoxStep2: {
     alignItems: "center",
     justifyContent: "center",
-    marginHorizontal: 20,
-    marginBottom: 20,
+    padding: 8,
+    borderRadius: 10,
+    // backgroundColor: "#fff",
+    marginHorizontal: 10,
+    borderWidth: 2,
+    borderColor: "#eae6ff",
+    width: 110,
+    height: 110,
   },
-  registerButtonDisabled: {
-    backgroundColor: "#9ca3af",
+  typeBoxActiveStep2: {
+    borderColor: "#7b6eea",
+    // backgroundColor: "#d1c4e9",
   },
-  registerButtonText: {
+  typeIconStep2: { width: 48, height: 48, marginBottom: 2 },
+  typeLabelStep2: {
+    fontSize: 15,
+    fontWeight: "bold",
+    color: "#333",
+    textAlign: "center",
+    flexWrap: "wrap",
+    width: "100%",
+    marginTop: 4,
+  },
+  typeLabelStep2Small: {
+    fontSize: 13,
+    fontWeight: "bold",
+    color: "#333",
+    textAlign: "center",
+    flexWrap: "wrap",
+    width: "100%",
+    marginTop: 4,
+  },
+  foodTypeRowStep2: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    width: "100%",
+    marginBottom: 10,
+  },
+  foodTypeBoxStep2: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 8,
+    borderRadius: 10,
+    // backgroundColor: "#fff",
+    marginHorizontal: 10,
+    borderWidth: 2,
+    borderColor: "#eae6ff",
+    width: 110,
+    height: 110,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 2.0,
+    elevation: 4,
+  },
+  foodTypeBoxVeg: {
+    borderColor: "#1ca11c",
+  },
+  foodTypeBoxNonVeg: {
+    borderColor: "#c22a2a",
+  },
+  foodTypeBoxVegActive: {
+    borderColor: "#1ca11c",
+    borderWidth: 3,
+  },
+  foodTypeBoxNonVegActive: {
+    borderColor: "#c22a2a",
+    borderWidth: 3,
+  },
+  foodCircleVegStep2: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    marginBottom: 8,
+    backgroundColor: "#1ca11c",
+    borderWidth: 2,
+    borderColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 1.5,
+    elevation: 2,
+  },
+  foodCircleNonVegStep2: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    marginBottom: 8,
+    backgroundColor: "#c22a2a",
+    borderWidth: 2,
+    borderColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 1.5,
+    elevation: 2,
+  },
+  foodLabelStep2: {
+    fontSize: 15,
+    fontWeight: "bold",
+    color: "#333",
+    marginTop: 2,
+  },
+  enableTextStep2: {
+    fontSize: 13,
     color: "#fff",
-    fontSize: 18,
-    fontWeight: "600",
+    marginVertical: 5,
+    textAlign: "center",
   },
+  checkboxRowStep2: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+    alignSelf: "center",
+  },
+  checkboxStep2: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    borderWidth: 2,
+    borderColor: "#7b6eea",
+    marginRight: 8,
+    backgroundColor: "#fff",
+  },
+  checkboxActiveStep2: { backgroundColor: "#7b6eea" },
+  checkboxLabelStep2: { fontSize: 14, color: "#fff" },
+
+  cameraIconStep2: { width: 60, height: 60 },
+  photoPreviewStep2: { width: 120, height: 100, borderRadius: 10 },
 });
