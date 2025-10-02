@@ -18,7 +18,7 @@ npm cache clean --force
 
 # Step 2: Install dependencies
 echo "📦 Installing dependencies..."
-npm install
+npm install --force
 
 # Step 3: Regenerate android folder using Expo prebuild
 echo "🔄 Regenerating android folder with expo prebuild..."
