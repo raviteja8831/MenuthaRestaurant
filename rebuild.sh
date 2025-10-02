@@ -70,12 +70,21 @@ echo "🔄 Refreshing Gradle dependencies..."
 echo "📦 Generating JS bundle for Debug..."
 cd ..
 mkdir -p android/app/src/main/assets
-npx expo export:embed \
-  --platform android \
-  --dev false \
-  --entry-file index.js \
-  --bundle-output android/app/src/main/assets/index.android.bundle \
-  --assets-dest android/app/src/main/res
+# Use Expo's export command for Expo Router apps
+npx expo export --output-dir dist --clear
+# Copy the bundle to Android assets
+if [ -f "dist/_expo/static/js/web/index-*.js" ]; then
+  cp dist/_expo/static/js/web/index-*.js android/app/src/main/assets/index.android.bundle
+elif [ -f "dist/bundles/android-*.js" ]; then
+  cp dist/bundles/android-*.js android/app/src/main/assets/index.android.bundle
+else
+  echo "⚠️  Expo export didn't create expected bundle files, trying Metro fallback..."
+  npx metro build index.js \
+    --platform android \
+    --dev false \
+    --out android/app/src/main/assets/index.android.bundle \
+    --reset-cache
+fi
 
 # Step 9: Build Debug APK with bundle
 echo "🏗 Building Debug APK..."
