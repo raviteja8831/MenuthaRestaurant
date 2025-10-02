@@ -71,7 +71,7 @@ echo "📦 Generating JS bundle for Debug..."
 cd ..
 mkdir -p android/app/src/main/assets
 # Use Metro bundler with JSC engine (consistent with gradle.properties)
-npx metro build index.js \
+npx metro build app/index.js \
   --platform android \
   --dev false \
   --out android/app/src/main/assets/index.android.bundle \

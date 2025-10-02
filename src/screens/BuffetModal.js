@@ -437,9 +437,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   cancelButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: '#fff',
+     backgroundColor: '#6c6cf2',
   },
   saveButton: {
     backgroundColor: '#6c6cf2',
