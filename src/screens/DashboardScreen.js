@@ -574,9 +574,9 @@ export default function ManagerDashboardScreenNew() {
               width={Dimensions.get("window").width - 40}
               height={180}
               chartConfig={{
-                backgroundColor: "#ece9fa",
-                backgroundGradientFrom: "#ece9fa",
-                backgroundGradientTo: "#ece9fa",
+                backgroundColor: "#DAD6FE",
+                backgroundGradientFrom: "#DAD6FE",
+                backgroundGradientTo: "#DAD6FE",
                 decimalPlaces: 0,
                 color: (opacity = 1) => `rgba(108, 99, 181, ${opacity})`,
                 labelColor: (opacity = 1) => `rgba(108, 99, 181, ${opacity})`,
@@ -591,7 +591,7 @@ export default function ManagerDashboardScreenNew() {
               style={{ borderRadius: 16 }}
             />
           ) : (
-            <View style={{ height: 180, backgroundColor: "#ece9fa", borderRadius: 16, justifyContent: "center", alignItems: "center" }}>
+            <View style={{ height: 180, backgroundColor: "#DAD6FE", borderRadius: 16, justifyContent: "center", alignItems: "center" }}>
               <Text style={{ color: "#6c63b5", fontSize: 16 }}>No sales data available</Text>
             </View>
           )}
@@ -648,9 +648,9 @@ export default function ManagerDashboardScreenNew() {
               width={Dimensions.get("window").width - 40}
               height={180}
               chartConfig={{
-                backgroundColor: "#ece9fa",
-                backgroundGradientFrom: "#ece9fa",
-                backgroundGradientTo: "#ece9fa",
+                backgroundColor: "#DAD6FE",
+                backgroundGradientFrom: "#DAD6FE",
+                backgroundGradientTo: "#DAD6FE",
                 decimalPlaces: 0,
                 color: (opacity = 1) => `rgba(108, 99, 181, ${opacity})`,
                 labelColor: (opacity = 1) => `rgba(108, 99, 181, ${opacity})`,
@@ -665,7 +665,7 @@ export default function ManagerDashboardScreenNew() {
               style={{ borderRadius: 16 }}
             />
           ) : (
-            <View style={{ height: 180, backgroundColor: "#ece9fa", borderRadius: 16, justifyContent: "center", alignItems: "center" }}>
+            <View style={{ height: 180, backgroundColor: "#DAD6FE", borderRadius: 16, justifyContent: "center", alignItems: "center" }}>
               <Text style={{ color: "#6c63b5", fontSize: 16 }}>No income data available</Text>
             </View>
           )}
@@ -728,9 +728,9 @@ const styles = StyleSheet.create({
   infoBuffetRow: {
     flexDirection: "row",
     alignItems: "stretch",
-    marginHorizontal: 16,
-    marginTop: 16,
-    marginBottom: 8,
+    marginHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 16,
   },
   infoBuffetCard: {
     minHeight: 180,
@@ -778,7 +778,7 @@ const styles = StyleSheet.create({
     width: 8,
   },
   buffetCard: {
-    backgroundColor: "#e3dbfa",
+    backgroundColor: "#DAD6FE",
     borderRadius: 20,
     padding: 16,
     minWidth: 120,
@@ -823,12 +823,12 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   chefCard: {
-    backgroundColor: "#ece9fa",
-    borderRadius: 16,
-    padding: 18,
-    marginHorizontal: 16,
-    marginTop: 16,
-    marginBottom: 8,
+    backgroundColor: "#DAD6FE",
+    borderRadius: 20,
+    padding: 20,
+    marginHorizontal: 20,
+    marginTop: 8,
+    marginBottom: 16,
     elevation: 2,
   },
   chefTitle: {
@@ -1157,10 +1157,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 0,
-    marginBottom: 8,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 8,
+    marginBottom: 12,
   },
   headerLeft: {},
   todayText: {
@@ -1195,12 +1195,12 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   infoCard: {
-    marginHorizontal: 18,
-    marginTop: 8,
-    marginBottom: 12,
-    padding: 16,
-    borderRadius: 16,
-    backgroundColor: "#d1c4e9",
+    marginHorizontal: 20,
+    marginTop: 12,
+    marginBottom: 16,
+    padding: 20,
+    borderRadius: 20,
+    backgroundColor: "#DAD6FE",
     elevation: 4,
     alignItems: "center",
   },
@@ -1228,12 +1228,12 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   statusCard: {
-    marginHorizontal: 18,
-    marginTop: 0,
-    marginBottom: 12,
-    padding: 16,
-    borderRadius: 16,
-    backgroundColor: "#d1c4e9",
+    marginHorizontal: 20,
+    marginTop: 8,
+    marginBottom: 16,
+    padding: 20,
+    borderRadius: 20,
+    backgroundColor: "#DAD6FE",
     elevation: 4,
     alignItems: "center",
   },
@@ -1265,12 +1265,12 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   chartCard: {
-    marginHorizontal: 18,
-    marginTop: 0,
-    marginBottom: 16,
-    padding: 16,
-    borderRadius: 16,
-    backgroundColor: "#ece9fa",
+    marginHorizontal: 20,
+    marginTop: 8,
+    marginBottom: 20,
+    padding: 20,
+    borderRadius: 20,
+    backgroundColor: "#DAD6FE",
     elevation: 4,
     alignItems: "center",
     position: "relative",

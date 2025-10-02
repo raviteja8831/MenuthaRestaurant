@@ -1,12 +1,11 @@
-const { getDefaultConfig } = require('expo/metro-config');
+// metro.config.js
+const { getDefaultConfig } = require("expo/metro-config");
 
-/** @type {import('expo/metro-config').MetroConfig} */
-const config = getDefaultConfig(__dirname, {
-  // [Web-only]: Enables CSS support in Metro.
-  isCSSEnabled: true,
-});
+const config = getDefaultConfig(__dirname);
 
-// Expo Router requires additional configuration for Metro.
-config.resolver.unstable_enablePackageExports = true;
+config.resolver.extraNodeModules = {
+  ...config.resolver.extraNodeModules,
+  "@": __dirname, // maps "@/..." to project root
+};
 
 module.exports = config;
