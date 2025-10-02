@@ -9,7 +9,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "build:android": "expo prebuild --platform android && cd android && ./gradlew assembleDebug",
-    "bundle:android": "metro build index.js --platform android --dev false --out android/app/src/main/assets/index.android.bundle --reset-cache",
+    "bundle:android": "mkdir -p android/app/src/main/assets && metro build index.js --platform android --dev false --out android/app/src/main/assets/index.android.bundle --reset-cache",
     "clean": "rm -rf node_modules android .expo && npm install"
   },
   "dependencies": {

@@ -24,7 +24,8 @@
       },
       "package": "com.menutha.app",
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "jsEngine": "jsc"
     },
     "web": {
       "favicon": "./src/assets/favicon.png"
