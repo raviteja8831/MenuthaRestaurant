@@ -13,10 +13,10 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import AddMenuItemScreen from "../src/screens/AddMenuItemScreen";
+import { testLoader } from '../src/api/axiosService';
 import { addMenuItem, updateMenuItemsStatus } from "../src/api/menuApi";
-import { useAlert } from "../src/services/alertService";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
+import { AlertService } from "../src/services/alert.service";
 export default function MenuScreen() {
   const { width, height } = useWindowDimensions();
   const menuCategories = [
@@ -45,7 +45,7 @@ export default function MenuScreen() {
   // Placeholder: Replace with real menu item IDs from state/store
   const [menuItemIds, setMenuItemIds] = useState([1, 2, 3]);
   const [showAddModal, setShowAddModal] = useState(false);
-  const alert = useAlert();
+  const alert = AlertService;
   // TODO: Replace with real menuId from context/store/props
 
   // const handleAddSave = async (item) => {
@@ -95,7 +95,23 @@ export default function MenuScreen() {
 
   return (
     <>
-      <View style={styles.container}>
+  <View style={styles.container}>
+        {/* Test Loader Button */}
+        <Pressable
+          style={{
+            position: 'absolute',
+            top: 10,
+            right: 10,
+            backgroundColor: '#fff',
+            borderRadius: 8,
+            padding: 10,
+            zIndex: 1000,
+            elevation: 5,
+          }}
+          onPress={testLoader}
+        >
+          <Text style={{ color: '#7b6eea', fontWeight: 'bold' }}>Test Loader</Text>
+        </Pressable>
         {/* Header */}
         <View style={styles.header}>
           <Pressable
