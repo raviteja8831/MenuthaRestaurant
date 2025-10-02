@@ -303,7 +303,6 @@ export default function ManagerDashboardScreenNew() {
                 flex: 1,
                 marginLeft: 8,
                 alignItems: "center",
-                justifyContent: "center",
                 flexDirection: "column",
                 position: "relative",
               },
@@ -313,14 +312,13 @@ export default function ManagerDashboardScreenNew() {
               style={{
                 flexDirection: "row",
                 alignItems: "center",
-                justifyContent: "space-between",
                 width: "100%",
               }}
             >
               <Text style={styles.buffetTitle}>Buffet</Text>
               <View style={{ position: "relative" }}>
                 <Pressable
-                   onPress={() => setBuffetMenuVisible(!buffetMenuVisible)}
+                  onPress={() => setBuffetMenuVisible(!buffetMenuVisible)}
                   style={styles.buffetMenuIcon}
                 >
                   <MaterialCommunityIcons
@@ -536,24 +534,38 @@ export default function ManagerDashboardScreenNew() {
               </Text>
               <MaterialCommunityIcons name="chevron-down" size={20} color="#fff" style={{ marginLeft: 4 }} />
             </Pressable>
-            {/* Modal for sales dropdown */}
+            {/* Modal for sales dropdown (QRCodeScreen.js style) */}
             <Modal
               visible={showSalesDropdown}
               transparent
               animationType="fade"
               onRequestClose={() => setShowSalesDropdown(false)}
             >
-              <Pressable style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.2)' }} onPress={() => setShowSalesDropdown(false)}>
-                <View style={{ borderRadius: 10, padding: 8, width: 180 }}>
-                  <Picker
-                    selectedValue={salesDateFilter}
-                    onValueChange={(val) => { setSalesDateFilter(val); setShowSalesDropdown(false); }}
-                  >
-                    <Picker.Item label="Today" value="day" />
-                    <Picker.Item label="Week" value="week" />
-                    <Picker.Item label="Month" value="month" />
-                    <Picker.Item label="Year" value="year" />
-                  </Picker>
+              <Pressable style={styles.modalOverlay} onPress={() => setShowSalesDropdown(false)}>
+                <View style={styles.dropdownModal}>
+                  {[
+                    { label: 'Today', value: 'day' },
+                    { label: 'Week', value: 'week' },
+                    { label: 'Month', value: 'month' },
+                    { label: 'Year', value: 'year' },
+                  ].map(option => (
+                    <Pressable
+                      key={option.value}
+                      style={[
+                        styles.dropdownOption,
+                        salesDateFilter === option.value && styles.dropdownOptionSelected,
+                      ]}
+                      onPress={() => {
+                        setSalesDateFilter(option.value);
+                        setShowSalesDropdown(false);
+                      }}
+                    >
+                      <Text style={[
+                        styles.dropdownOptionText,
+                        salesDateFilter === option.value && styles.dropdownOptionTextSelected,
+                      ]}>{option.label}</Text>
+                    </Pressable>
+                  ))}
                 </View>
               </Pressable>
             </Modal>
@@ -610,27 +622,42 @@ export default function ManagerDashboardScreenNew() {
               </Text>
               <MaterialCommunityIcons name="chevron-down" size={20} color="#fff" style={{ marginLeft: 4 }} />
             </Pressable>
-            {/* Modal for income dropdown */}
+            {/* Modal for income dropdown (QRCodeScreen.js style) */}
             <Modal
               visible={showIncomeDropdown}
               transparent
               animationType="fade"
               onRequestClose={() => setShowIncomeDropdown(false)}
             >
-              <Pressable style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.2)' }} onPress={() => setShowIncomeDropdown(false)}>
-                <View style={{ borderRadius: 10, padding: 8, width: 180 }}>
-                  <Picker
-                    selectedValue={incomeDateFilter}
-                    onValueChange={(val) => { setIncomeDateFilter(val); setShowIncomeDropdown(false); }}
-                  >
-                    <Picker.Item label="Today" value="day" />
-                    <Picker.Item label="Week" value="week" />
-                    <Picker.Item label="Month" value="month" />
-                    <Picker.Item label="Year" value="year" />
-                  </Picker>
+              <Pressable style={styles.modalOverlay} onPress={() => setShowIncomeDropdown(false)}>
+                <View style={styles.dropdownModal}>
+                  {[
+                    { label: 'Today', value: 'day' },
+                    { label: 'Week', value: 'week' },
+                    { label: 'Month', value: 'month' },
+                    { label: 'Year', value: 'year' },
+                  ].map(option => (
+                    <Pressable
+                      key={option.value}
+                      style={[
+                        styles.dropdownOption,
+                        incomeDateFilter === option.value && styles.dropdownOptionSelected,
+                      ]}
+                      onPress={() => {
+                        setIncomeDateFilter(option.value);
+                        setShowIncomeDropdown(false);
+                      }}
+                    >
+                      <Text style={[
+                        styles.dropdownOptionText,
+                        incomeDateFilter === option.value && styles.dropdownOptionTextSelected,
+                      ]}>{option.label}</Text>
+                    </Pressable>
+                  ))}
                 </View>
               </Pressable>
             </Modal>
+
           </View>
 {incomeData.length > 0 ? (
             <LineChart
@@ -735,7 +762,6 @@ const styles = StyleSheet.create({
   infoBuffetCard: {
     minHeight: 180,
     borderRadius: 24,
-    backgroundColor: "#e3dbfa",
     shadowColor: "#000",
     shadowOpacity: 0.08,
     shadowRadius: 8,
@@ -778,20 +804,18 @@ const styles = StyleSheet.create({
     width: 8,
   },
   buffetCard: {
-    backgroundColor: "#DAD6FE",
-    borderRadius: 20,
+    backgroundColor: "#8D8BEA",
     padding: 16,
     minWidth: 120,
     minHeight: 120,
-    elevation: 2,
-    justifyContent: "center",
     alignItems: "center",
+
   },
   buffetTitle: {
     fontWeight: "bold",
     fontSize: 18,
     color: "#222",
-    marginBottom: 8,
+    
   },
   buffetMenuIcon: {
     padding: 4,
@@ -1790,3 +1814,36 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
 });
+const dropdownModalStyles = {
+  dropdownModal: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 0,
+    minWidth: 160,
+    alignItems: 'stretch',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  dropdownOption: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  dropdownOptionSelected: {
+    backgroundColor: '#ece9fa',
+  },
+  dropdownOptionText: {
+    fontSize: 16,
+    color: '#222 !important',
+    fontWeight: '500',
+  },
+  dropdownOptionTextSelected: {
+    color: '#6c63b5',
+    fontWeight: 'bold',
+  },
+};
+Object.assign(styles, dropdownModalStyles);

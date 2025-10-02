@@ -13,7 +13,6 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import AddMenuItemScreen from "../src/screens/AddMenuItemScreen";
-import { testLoader } from '../src/api/axiosService';
 import { addMenuItem, updateMenuItemsStatus } from "../src/api/menuApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AlertService } from "../src/services/alert.service";
@@ -96,22 +95,7 @@ export default function MenuScreen() {
   return (
     <>
   <View style={styles.container}>
-        {/* Test Loader Button */}
-        <Pressable
-          style={{
-            position: 'absolute',
-            top: 10,
-            right: 10,
-            backgroundColor: '#fff',
-            borderRadius: 8,
-            padding: 10,
-            zIndex: 1000,
-            elevation: 5,
-          }}
-          onPress={testLoader}
-        >
-          <Text style={{ color: '#7b6eea', fontWeight: 'bold' }}>Test Loader</Text>
-        </Pressable>
+      
         {/* Header */}
         <View style={styles.header}>
           <Pressable
