@@ -397,6 +397,12 @@ export default function ManagerRegisterScreen() {
               showsVerticalScrollIndicator={false}
             >
               <Surface style={styles.formSurface}>
+                 <View style={styles.loginLinkContainer}>
+                <Text style={styles.loginLinkText}>Already have an account? </Text>
+                <Pressable onPress={() => router.push("/login")}>
+                  <Text style={styles.loginLink}>Login here</Text>
+                </Pressable>
+              </View>
                 <View style={styles.formWrapper}>
                   {step === 1 && (
                     <View style={styles.stepBox}>
@@ -697,6 +703,9 @@ export default function ManagerRegisterScreen() {
                   </Button>
                 </View>
               )}
+
+              {/* Login Link */}
+             
             </View>
           </KeyboardAvoidingView>
         </SafeAreaView>
@@ -992,6 +1001,26 @@ const styles = StyleSheet.create({
   },
   registerButton: {
     flex: 1,
+  },
+  loginLinkContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255, 255, 255, 0.2)",
+  },
+  loginLinkText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "400",
+  },
+  loginLink: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "bold",
+    textDecorationLine: "underline",
   },
   stepFormAreaStep2: {
     width: "92%",

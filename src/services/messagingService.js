@@ -8,5 +8,5 @@ export function showApiError(error) {
   /* if (error?.response?.data?.message) msg = error.response.data.message;
   else if (error?.message) msg = error.message; */
   console.log("API Error:", error);
-  showError(msg);
+  showError(error);
 }

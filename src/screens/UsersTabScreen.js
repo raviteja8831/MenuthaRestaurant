@@ -10,6 +10,7 @@ import {
   Alert,
   TextInput,
   Image,
+  TouchableWithoutFeedback,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import TabBar from "./TabBarScreen";
@@ -28,8 +29,10 @@ import { getMenusWithItems, saveUserMenuItems } from "../api/menuApi";
 import AddUserScreen from "./AddUserScreen";
 import EditUserScreen from "./EditUserScreen";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useAlert } from "../services/alertService";
 
 export default function UsersTabScreen() {
+  const alert = useAlert();
   const periodOptions = [
         { label: "Today", value: "Today" },
     { label: "Week", value: "week" },
@@ -139,7 +142,7 @@ export default function UsersTabScreen() {
       setMessage("");
       fetchMessages(selectedUser.id);
     } catch (err) {
-      Alert.alert("Error", err.message || "Failed to send message");
+      alert.error(err.message || "Failed to send message");
     }
     setSending(false);
   };
@@ -150,7 +153,7 @@ export default function UsersTabScreen() {
       const data = await getUserDashboard(userId, period);
       setDashboard(data);
     } catch (err) {
-      Alert.alert("Error", err.message || "Failed to load dashboard");
+      alert.error(err.message || "Failed to load dashboard");
     }
     setLoading(false);
   };
@@ -163,7 +166,7 @@ export default function UsersTabScreen() {
       await fetchAllottedMenuItems(selectedUser.id); // Refresh allotted items first
       await fetchDashboard(selectedUser.id, period); // Then refresh dashboard
     } catch (err) {
-      Alert.alert("Error", err.message || "Failed to add menu item");
+      alert.error(err.message || "Failed to add menu item");
     }
   };
 
@@ -179,7 +182,7 @@ export default function UsersTabScreen() {
         setSelectedUser({ ...selectedUser, ...userData });
       }
     } catch (err) {
-      Alert.alert("Error", err.message || "Failed to update user");
+      alert.error(err.message || "Failed to update user");
     }
   };
 
@@ -193,14 +196,21 @@ export default function UsersTabScreen() {
       setShowAddUserModal(false);
       fetchUserList();
     } catch (err) {
-      Alert.alert("Error", err.message || "Failed to add user");
+      alert.error(err.message || "Failed to add user");
     }
   };
         console.log('userList:', userList);
 
+  const handlePressOutside = () => {
+    if (showPeriodDropdown) {
+      setShowPeriodDropdown(false);
+    }
+  };
+
   return (
-    <>
-      <ScrollView style={styles.container}>
+    <TouchableWithoutFeedback onPress={handlePressOutside}>
+      <View style={styles.container}>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 100 }}>
         <View style={styles.usersHeader}>
           <Text style={styles.usersTitle}>Users</Text>
           <ScrollView
@@ -269,22 +279,11 @@ export default function UsersTabScreen() {
             </Text>
           </View>
           {/* Add User Modal */}
-          <Modal
+          <AddUserScreen
             visible={showAddUserModal}
-            animationType="slide"
-            transparent={true}
-            onRequestClose={() => setShowAddUserModal(false)}
-          >
-            <View style={styles.addUserModalOverlay}>
-              <View style={styles.addUserModalBox}>
-                <AddUserScreen
-                  visible={showAddUserModal}
-                  onClose={() => setShowAddUserModal(false)}
-                  onSave={handleSaveUser}
-                />
-              </View>
-            </View>
-          </Modal>
+            onClose={() => setShowAddUserModal(false)}
+            onSave={handleSaveUser}
+          />
         </View>
 
         {/* Profile Row (with settings icon) */}
@@ -375,12 +374,19 @@ export default function UsersTabScreen() {
                 <MaterialCommunityIcons name="plus" size={22} color="#6c63b5" />
               </Pressable>
             </View>
-            <ScrollView>
-              {allottedUserMenuItemIds?.map((dish, idx) => (
-                <Text key={dish.id} style={styles.usersAllottedDish}>
-                  {dish.name}
-                </Text>
-              ))}
+            <ScrollView style={{ flex: 1 }}>
+              {allottedUserMenuItemIds && allottedUserMenuItemIds.length > 0 ? (
+                allottedUserMenuItemIds.map((dish, idx) => (
+                  <Text key={dish.id} style={styles.usersAllottedDish}>
+                    {dish.name}
+                  </Text>
+                ))
+              ) : (
+                <View style={styles.noDishesContainer}>
+                  <Text style={styles.noDishesText}>No dishes allotted yet</Text>
+                  <Text style={styles.noDishesSubtext}>Use + to add dishes to this chef</Text>
+                </View>
+              )}
             </ScrollView>
           </View>
 
@@ -706,12 +712,10 @@ export default function UsersTabScreen() {
           action={action}
           onAdd={handleAddMenuItem}
         />
-        {/* <TabBar /> */}
-        <View style={{ position: 'absolute', left: 0, right: 0, bottom: -42 }}>
-                <TabBar  />
-              </View>
-      </ScrollView>
-    </>
+        </ScrollView>
+        <TabBar activeTab="users" />
+      </View>
+    </TouchableWithoutFeedback>
   );
 }
 
@@ -827,6 +831,25 @@ const styles = StyleSheet.create({
     color: "#222",
     marginBottom: 2,
   },
+  noDishesContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  noDishesText: {
+    fontSize: 14,
+    color: "#6c63b5",
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  noDishesSubtext: {
+    fontSize: 12,
+    color: "#888",
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
   usersOrdersCardImage2: {
     backgroundColor: "#d1c4e9",
     borderRadius: 16,
@@ -876,25 +899,6 @@ const styles = StyleSheet.create({
     color: "#222",
     textAlign: "center",
     marginRight: 4,
-  },
-  addUserModalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.10)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  addUserModalBox: {
-    backgroundColor: "#ded7fa",
-    borderRadius: 36,
-    padding: 32,
-    minWidth: 340,
-    maxWidth: 420,
-    width: "90%",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.18,
-    shadowRadius: 16,
-    elevation: 12,
   },
      userAvatarCol: {
                 alignItems: "center",

@@ -1,163 +1,268 @@
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, Modal, ScrollView, SafeAreaView } from 'react-native';
+import { useAlert } from '../services/alertService';
+import { FormInput, useFormValidation } from '../components/formHelper';
+import { Surface } from 'react-native-paper';
 
-export default function EditUserScreen({ user, onSave, onClose }) {
-  const [firstname, setFirstname] = useState('');
-  const [lastname, setLastname] = useState('');
-  const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('');
-  const [role, setRole] = useState('');
-  const [showRoleDropdown, setShowRoleDropdown] = useState(false);
+export default function EditUserScreen({ user, onSave, onClose, visible }) {
+  const alert = useAlert();
+
+  // Form validation function
+  const validateForm = (values) => {
+    const errors = {};
+    if (!values.firstname?.trim()) errors.firstname = "First name is required";
+    if (!values.lastname?.trim()) errors.lastname = "Last name is required";
+    if (!values.phone?.trim()) errors.phone = "Phone number is required";
+    if (values.phone && !/^\d{10}$/.test(values.phone.replace(/[^0-9]/g, ''))) {
+      errors.phone = "Phone number must be 10 digits";
+    }
+    if (!values.role?.toString()) errors.role = "Role is required";
+    return errors;
+  };
+
+  // Use form validation hook
+  const {
+    values: form,
+    setValues: setForm,
+    errors,
+    touched,
+    handleChange,
+    handleBlur,
+  } = useFormValidation({
+    firstname: "",
+    lastname: "",
+    phone: "",
+    password: "",
+    role: "",
+  }, validateForm);
+
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (user) {
-      setFirstname(user.firstname || user.name?.split(' ')[0] || '');
-      setLastname(user.lastname || user.name?.split(' ')[1] || '');
-      setPhone(user.phone || '');
+      let roleValue = '';
       // Accept both role_id (number) and role (string/number)
       if (user.role_id) {
-        setRole(user.role_id);
+        roleValue = user.role_id.toString();
       } else if (user.role && (user.role === 1 || user.role === 2)) {
-        setRole(user.role);
+        roleValue = user.role.toString();
       } else if (user.role && typeof user.role === 'string') {
-        setRole(user.role === 'Manager' ? 1 : user.role === 'Chef' ? 2 : '');
-      } else {
-        setRole('');
+        roleValue = user.role === 'Manager' ? '1' : user.role === 'Chef' ? '2' : '';
       }
+
+      setForm({
+        firstname: user.firstname || user.name?.split(' ')[0] || '',
+        lastname: user.lastname || user.name?.split(' ')[1] || '',
+        phone: user.phone || '',
+        password: '',
+        role: roleValue,
+      });
     }
-  }, [user]);
+  }, [user, setForm]);
 
   const roleOptions = [
-    { label: 'Chef', value: 2 },
-    { label: 'Manager', value: 1 },
+    { label: 'Chef', value: '2' },
+    { label: 'Manager', value: '1' },
   ];
 
   const handleSave = async () => {
-    if (!firstname || !lastname || !phone || !role) {
-      Alert.alert('Validation', 'All fields are required.');
+    // Validate form before saving
+    const validationErrors = validateForm(form);
+    if (Object.keys(validationErrors).length > 0) {
+      alert.error('Please fill in all required fields correctly.');
       return;
     }
+
     setLoading(true);
     try {
-      await onSave({ id: user.id, firstname, lastname, phone, password: password || undefined, role_id: role });
-      Alert.alert('Success', 'User updated successfully!');
+      await onSave({
+        id: user.id,
+        firstname: form.firstname,
+        lastname: form.lastname,
+        phone: form.phone,
+        password: form.password || undefined,
+        role_id: parseInt(form.role)
+      });
+      alert.success('User updated successfully!');
     } catch (err) {
-      Alert.alert('Error', err.message || 'Failed to update user');
+      alert.error(err.message || 'Failed to update user');
     }
     setLoading(false);
   };
 
   return (
-    <View style={styles.overlay}>
-      <View style={styles.form}>
-        <Text style={styles.title}>Edit Profile</Text>
-        <TextInput style={styles.input} placeholder="First Name" value={firstname} onChangeText={setFirstname} />
-        <TextInput style={styles.input} placeholder="Last Name" value={lastname} onChangeText={setLastname} />
-        <TextInput style={styles.input} placeholder="Phone No." value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
-        {/* Password field (optional) */}
-        <TextInput style={styles.input} placeholder="New Password (leave blank to keep)" value={password} onChangeText={setPassword} secureTextEntry />
-        {/* Role Dropdown */}
-        <View style={{ width: '100%', marginBottom: 15 }}>
-          <Pressable
-            style={[styles.input, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}
-            onPress={() => setShowRoleDropdown(v => !v)}
-          >
-            <Text style={{ color: '#fff' }}>{roleOptions.find(r => r.value === role)?.label || 'Select Role'}</Text>
-            <Text style={{ color: '#fff' }}>{showRoleDropdown ? '\u25B2' : '\u25BC'}</Text>
-          </Pressable>
-          {showRoleDropdown && (
-            <View style={{ backgroundColor: '#a18cd1', borderRadius: 8, marginTop: 4 }}>
-              {roleOptions.map(opt => (
-                <Pressable
-                  key={opt.value}
-                  style={{ padding: 10 }}
-                  onPress={() => { setRole(opt.value); setShowRoleDropdown(false); }}
-                >
-                  <Text style={{ color: '#fff' }}>{opt.label}</Text>
-                </Pressable>
-              ))}
+    <SafeAreaView style={styles.overlay}>
+      <View style={styles.modalContainer}>
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+          <Surface style={styles.form}>
+            <Text style={styles.title}>Edit Profile</Text>
+
+            <FormInput
+              label="First Name *"
+              name="firstname"
+              value={form.firstname}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              error={errors.firstname}
+              touched={touched.firstname}
+              type="text"
+            />
+
+            <FormInput
+              label="Last Name *"
+              name="lastname"
+              value={form.lastname}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              error={errors.lastname}
+              touched={touched.lastname}
+              type="text"
+            />
+
+            <FormInput
+              label="Phone Number *"
+              name="phone"
+              value={form.phone}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              error={errors.phone}
+              touched={touched.phone}
+              type="text"
+              keyboardType="phone-pad"
+            />
+
+            <FormInput
+              label="New Password (optional)"
+              name="password"
+              value={form.password}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              error={errors.password}
+              touched={touched.password}
+              type="password"
+            />
+
+            <FormInput
+              label="Role *"
+              name="role"
+              value={form.role}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              error={errors.role}
+              touched={touched.role}
+              type="select"
+              options={roleOptions}
+              placeholder="Select Role"
+            />
+
+            <View style={styles.buttonRow}>
+              <Pressable
+                style={[styles.button, styles.cancelButton]}
+                onPress={onClose}
+                disabled={loading}
+              >
+                <Text style={[styles.buttonText, styles.cancelButtonText]}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.button, styles.saveButton, loading && styles.disabledButton]}
+                onPress={handleSave}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.buttonText}>Save</Text>
+                )}
+              </Pressable>
             </View>
-          )}
-        </View>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%' }}>
-          <Pressable style={[styles.button, { backgroundColor: '#aaa' }]} onPress={onClose} disabled={loading}>
-            <Text style={styles.buttonText}>Cancel</Text>
-          </Pressable>
-          <Pressable style={styles.button} onPress={handleSave} disabled={loading}>
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save</Text>}
-          </Pressable>
-        </View>
+          </Surface>
+        </ScrollView>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: '#DAD6FE',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 40,
+  },
+  scrollView: {
+    maxHeight: '90%',
+    width: '100%',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
   },
   form: {
-    backgroundColor: '#DAD6FE',
-    borderRadius: 20,
-    padding: 30,
-    width: 300,
-    alignItems: 'center',
-  },
-  title: { fontSize: 22, fontWeight: 'bold', marginBottom: 20, color: '#333' },
-  input: {
+    backgroundColor: '#8D8BEA',
+    borderRadius: 24,
+    padding: 24,
     width: '100%',
-    height: 44,
-    borderRadius: 8,
-    marginBottom: 18,
-    paddingHorizontal: 14,
-    backgroundColor: '#fff',
-    borderWidth: 1.5,
-    borderColor: '#e0e0e0',
-    fontSize: 16,
-    color: '#222',
+    maxWidth: 400,
+    alignSelf: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 16,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 24,
+    letterSpacing: 0.5,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 16,
+    width: '100%',
+    marginTop: 24,
   },
   button: {
-    backgroundColor: '#7b6eea',
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 40,
-    marginTop: 10,
+    flex: 1,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.10,
+    shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 2,
+    elevation: 3,
   },
-  buttonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  dropdown: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    borderWidth: 1.5,
-    borderColor: '#e0e0e0',
-    marginTop: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 4,
-    elevation: 2,
+  cancelButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: '#fff',
   },
-  dropdownItem: {
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+  saveButton: {
+    backgroundColor: '#6c6cf2',
   },
-  dropdownItemText: {
-    color: '#222',
+  disabledButton: {
+    backgroundColor: '#aaa',
+    borderColor: '#aaa',
+  },
+  buttonText: {
+    color: '#fff',
+    fontWeight: 'bold',
     fontSize: 16,
+    letterSpacing: 0.5,
+  },
+  cancelButtonText: {
+    color: '#fff',
   },
 });

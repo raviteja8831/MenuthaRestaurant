@@ -306,8 +306,6 @@ export default function ManagerDashboardScreenNew() {
                 justifyContent: "center",
                 flexDirection: "column",
                 position: "relative",
-                backgroundColor: "transparent",
-                boxShadow: "none",
               },
             ]}
           >

@@ -4,9 +4,11 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import { useAlert } from '../services/alertService';
 
 
 export default function QRCodeModal({ visible, onClose, onSave, loading, restaurantId }) {
+  const alert = useAlert();
   const [name, setName] = useState('');
   const [showQR, setShowQR] = useState(false);
   const qrRef = useRef();
@@ -26,7 +28,15 @@ export default function QRCodeModal({ visible, onClose, onSave, loading, restaur
   const handleDownload = async () => {
     try {
       console.log('Downloading QR code...');
+      if (!qrRef.current) {
+        alert.error('QR code not ready for download');
+        return;
+      }
       qrRef.current.toDataURL(async (data) => {
+        if (!data) {
+          alert.error('Failed to generate QR code data');
+          return;
+        }
         const base64Data = data.replace('data:image/png;base64,', '');
         if (Platform.OS === 'web') {
           // Convert base64 to Blob and trigger download
@@ -56,8 +66,9 @@ export default function QRCodeModal({ visible, onClose, onSave, loading, restaur
           await Sharing.shareAsync(fileUri);
         }
       });
-    } catch (_e) {
-      alert('Failed to download QR code');
+    } catch (error) {
+      console.error('Download error:', error);
+      alert.error('Failed to download QR code');
     }
   };
 

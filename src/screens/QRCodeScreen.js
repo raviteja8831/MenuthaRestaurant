@@ -7,7 +7,6 @@ import {
   ScrollView,
   ActivityIndicator,
   FlatList,
-  Alert,
   Modal,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -16,8 +15,10 @@ import QRCodeModal from "../components/QRCodeModal";
 import { fetchQRCodes, createQRCode } from "../services/qrcodeService";
 import { useFocusEffect, useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useAlert } from "../services/alertService";
 
 export default function QRCodeScreen() {
+  const alert = useAlert();
   const router = useRouter();
   const [selectedDate, setSelectedDate] = useState("Today");
   const [dropdownVisible, setDropdownVisible] = useState(false);
@@ -32,7 +33,7 @@ export default function QRCodeScreen() {
       const data = await fetchQRCodes(restaurantId);
       setQRCodes(data);
     } catch (err) {
-      Alert.alert("Error", err.message || "Failed to load QR codes");
+      alert.error(err.message || "Failed to load QR codes");
     }
     setLoading(false);
   }, [restaurantId]);
@@ -50,7 +51,7 @@ export default function QRCodeScreen() {
             setRestaurantId(rid);
           }
         } catch (err) {
-          Alert.alert("Error", "Failed to load user data", err);
+          alert.error("Failed to load user data");
         }
       };
       getUserData();
@@ -73,7 +74,7 @@ export default function QRCodeScreen() {
       // setShowModal(false);
       loadQRCodes();
     } catch (err) {
-      Alert.alert("Error", err.message || "Failed to add QR code");
+      alert.error(err.message || "Failed to add QR code");
     }
     setSaving(false);
   };
@@ -87,126 +88,126 @@ export default function QRCodeScreen() {
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={{ paddingBottom: 32 }}
-      showsVerticalScrollIndicator={false}
-    >
-      <Text style={styles.title}>QR Code Generator{"\n"}/ Statistics</Text>
-      <View style={styles.qrWrapper}>
-        <MaterialCommunityIcons
-          name="qrcode"
-          size={180}
-          color="#19171d"
-          style={styles.qrIcon}
-        />
-      </View>
-      <Pressable
-        style={styles.addBtn}
-        activeOpacity={0.8}
-        onPress={() => setShowModal(true)}
+    <View style={styles.container}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 100 }}
+        showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.addBtnText}>+</Text>
-        <Text style={styles.addBtnLabel}>New QR Code</Text>
-      </Pressable>
-      <View style={styles.statsRow}>
-        <Pressable
-          style={styles.dropdownFake}
-          onPress={() => setDropdownVisible(true)}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.dropdownText}>{selectedDate}</Text>
+        <Text style={styles.title}>QR Code Generator{"\n"}/ Statistics</Text>
+        <View style={styles.qrWrapper}>
           <MaterialCommunityIcons
-            name="chevron-down"
-            size={20}
-            color="#7b6eea"
+            name="qrcode"
+            size={180}
+            color="#19171d"
+            style={styles.qrIcon}
           />
-        </Pressable>
-        {/* <Text style={styles.statsText}>No of Customers today : <Text style={styles.statsNum}>50</Text></Text> */}
-      </View>
-      <Modal
-        visible={dropdownVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setDropdownVisible(false)}
-      >
+        </View>
         <Pressable
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPressOut={() => setDropdownVisible(false)}
+          style={styles.addBtn}
+          activeOpacity={0.8}
+          onPress={() => setShowModal(true)}
         >
-          <View style={styles.dropdownModal}>
-            {["Today", "Week", "Month"].map((option) => (
-              <Pressable
-                key={option}
-                style={[
-                  styles.dropdownOption,
-                  selectedDate === option && styles.dropdownOptionActive,
-                ]}
-                onPress={() => {
-                  setSelectedDate(option);
-                  setDropdownVisible(false);
-                }}
-              >
-                <Text
-                  style={[
-                    styles.dropdownOptionText,
-                    selectedDate === option && styles.dropdownOptionTextActive,
-                  ]}
-                >
-                  {option}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
+          <Text style={styles.addBtnText}>+</Text>
+          <Text style={styles.addBtnLabel}>New QR Code</Text>
         </Pressable>
-      </Modal>
-      <Text
-        style={{
-          color: "#fff",
-          fontWeight: "bold",
-          fontSize: 18,
-          marginLeft: 18,
-          marginBottom: 8,
-        }}
-      >
-        QR Code List
-      </Text>
-      {loading ? (
-        <ActivityIndicator color="#6c63b5" />
-      ) : (
-        <FlatList
-          data={qrcodes}
-          keyExtractor={(item) => item.id?.toString() || item.name}
-          contentContainerStyle={styles.tablesRow}
-          renderItem={({ item }) => (
-            <Pressable
-              style={styles.tableBtn}
-              onPress={() => handleQRCodePress(item)}
-            >
-              <Text style={styles.tableBtnText}>{item.name}</Text>
-            </Pressable>
-          )}
-          ListEmptyComponent={
-            <Text style={{ color: "#fff", textAlign: "center", marginTop: 16 }}>
-              No QR codes found.
-            </Text>
-          }
-          horizontal
-          showsHorizontalScrollIndicator={false}
+        <View style={styles.statsRow}>
+          <Pressable
+            style={styles.dropdownFake}
+            onPress={() => setDropdownVisible(true)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.dropdownText}>{selectedDate}</Text>
+            <MaterialCommunityIcons
+              name="chevron-down"
+              size={20}
+              color="#7b6eea"
+            />
+          </Pressable>
+          {/* <Text style={styles.statsText}>No of Customers today : <Text style={styles.statsNum}>50</Text></Text> */}
+        </View>
+        <Modal
+          visible={dropdownVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setDropdownVisible(false)}
+        >
+          <Pressable
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPressOut={() => setDropdownVisible(false)}
+          >
+            <View style={styles.dropdownModal}>
+              {["Today", "Week", "Month"].map((option) => (
+                <Pressable
+                  key={option}
+                  style={[
+                    styles.dropdownOption,
+                    selectedDate === option && styles.dropdownOptionActive,
+                  ]}
+                  onPress={() => {
+                    setSelectedDate(option);
+                    setDropdownVisible(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.dropdownOptionText,
+                      selectedDate === option && styles.dropdownOptionTextActive,
+                    ]}
+                  >
+                    {option}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </Pressable>
+        </Modal>
+        <Text
+          style={{
+            color: "#fff",
+            fontWeight: "bold",
+            fontSize: 18,
+            marginLeft: 18,
+            marginBottom: 8,
+          }}
+        >
+          QR Code List
+        </Text>
+        {loading ? (
+          <ActivityIndicator color="#6c63b5" />
+        ) : (
+          <FlatList
+            data={qrcodes}
+            keyExtractor={(item) => item.id?.toString() || item.name}
+            contentContainerStyle={styles.tablesRow}
+            renderItem={({ item }) => (
+              <Pressable
+                style={styles.tableBtn}
+                onPress={() => handleQRCodePress(item)}
+              >
+                <Text style={styles.tableBtnText}>{item.name}</Text>
+              </Pressable>
+            )}
+            ListEmptyComponent={
+              <Text style={{ color: "#fff", textAlign: "center", marginTop: 16 }}>
+                No QR codes found.
+              </Text>
+            }
+            horizontal
+            showsHorizontalScrollIndicator={false}
+          />
+        )}
+        <QRCodeModal
+          visible={showModal}
+          onClose={() => setShowModal(false)}
+          onSave={handleAddQRCode}
+          loading={saving}
+          restaurantId={restaurantId}
         />
-      )}
-      <QRCodeModal
-        visible={showModal}
-        onClose={() => setShowModal(false)}
-        onSave={handleAddQRCode}
-        loading={saving}
-        restaurantId={restaurantId}
-      />
-      <View style={{ position: "absolute", left: 0, right: 0, bottom: -42 }}>
-        <TabBar activeTab="qrcodes" />
-      </View>
-    </ScrollView>
+      </ScrollView>
+      <TabBar activeTab="qrcodes" />
+    </View>
   );
 }
 

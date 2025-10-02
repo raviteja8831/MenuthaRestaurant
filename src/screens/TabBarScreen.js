@@ -6,8 +6,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 const tabs = [
   { key: 'dashboard', label: 'Home', icon: 'home', route: '/dashboard' },
   { key: 'users', label: 'Users', icon: 'account', route: '/users' },
-  { key: 'qrcodes', label: 'QR', icon: 'qrcode', route: '/qrcodes' },
-  { key: 'notifications', label: 'Bell', icon: 'bell', route: '/notifications' },
+  { key: 'qrcodes', label: 'QRCode', icon: 'qrcode', route: '/qrcodes' },
+  { key: 'notifications', label: 'Reviews', icon: 'bell', route: '/notifications' },
 ];
 
 export default function TabBar({ activeTab }) {

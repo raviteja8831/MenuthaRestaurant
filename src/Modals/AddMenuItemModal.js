@@ -2,8 +2,9 @@
 
 
 import React, { useState, useEffect } from "react";
-import { View, Modal, Text, Pressable, StyleSheet, ScrollView } from "react-native";
-import { Ionicons } from '@expo/vector-icons';
+import { View, Modal, Text, Pressable, StyleSheet, ScrollView, SafeAreaView } from "react-native";
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Surface } from 'react-native-paper';
 
 // menus: [{ id, name, items: [{id, name}] }]
 // menuItemIds: [id] (all menu item ids for the user)
@@ -68,14 +69,16 @@ export default function AddMenuItemModal({
   const selectedMenuItemIds = selectedMenuItemsByMenu[selectedMenuId] || [];
 
   return (
-    <Modal visible={visible} transparent animationType="slide">
-      <View style={styles.overlay}>
-        <View style={styles.content}>
-          <Text style={styles.title}>Allot Menu Items</Text>
-          {filteredMenus.length === 0 ? (
-            <Text style={{ color: '#888', marginVertical: 24, textAlign: 'center' }}>
-              No menu items available to assign.
-            </Text>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <SafeAreaView style={styles.overlay}>
+        <View style={styles.modalContainer}>
+          <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+            <Surface style={styles.content}>
+              <Text style={styles.title}>Allot Menu Items</Text>
+              {filteredMenus.length === 0 ? (
+                <Text style={styles.noItemsText}>
+                  No menu items available to assign.
+                </Text>
           ) : (
             <>
               <Text style={styles.label}>Menu</Text>
@@ -128,10 +131,10 @@ export default function AddMenuItemModal({
                           }}
                           disabled={false}
                         >
-                          <View style={{ flexDirection: 'row', alignItems: 'center', minWidth: 0 }}>
-                            <Text style={{ flexShrink: 1 }}>{item.name}</Text>
+                          <View style={styles.itemRow}>
+                            <Text style={styles.itemText}>{item.name}</Text>
                             {isSelected ? (
-                              <Ionicons name="checkmark" size={18} color="#4b5cff" style={{ marginLeft: 10, minWidth: 18 }} />
+                              <MaterialCommunityIcons name="check" size={18} color="#6c6cf2" style={styles.checkIcon} />
                             ) : null}
                             {/* {isAllotted ? (
                               <Text style={{ color: '#888', marginLeft: 4 }}></Text>
@@ -145,47 +148,176 @@ export default function AddMenuItemModal({
               )}
             </>
           )}
-          <View style={styles.actions}>
-            <Pressable onPress={onClose} style={styles.cancelBtn}>
-              <Ionicons name="close" size={24} color="#333" />
-            </Pressable>
-            <Pressable
-              onPress={() => {
-                // Collect only currently selected items from all menus
-                let allSelected = [];
-                filteredMenus.forEach(menu => {
-                  const selectedForMenu = selectedMenuItemsByMenu[menu.id] || [];
-                  allSelected = allSelected.concat(selectedForMenu);
-                });
-                // Remove duplicates
-                allSelected = Array.from(new Set(allSelected));
-                onAdd(allSelected);
-              }}
-              style={[
-                styles.addBtn,
-                (filteredMenus.length === 0) && { opacity: 0.5 }
-              ]}
-              disabled={filteredMenus.length === 0}
-            >
-              <Ionicons name="checkmark" size={24} color="#fff" />
-            </Pressable>
-          </View>
+              <View style={styles.actions}>
+                <Pressable onPress={onClose} style={styles.cancelBtn}>
+                  <Text style={styles.cancelText}>Cancel</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    // Collect only currently selected items from all menus
+                    let allSelected = [];
+                    filteredMenus.forEach(menu => {
+                      const selectedForMenu = selectedMenuItemsByMenu[menu.id] || [];
+                      allSelected = allSelected.concat(selectedForMenu);
+                    });
+                    // Remove duplicates
+                    allSelected = Array.from(new Set(allSelected));
+                    onAdd(allSelected);
+                  }}
+                  style={[
+                    styles.addBtn,
+                    (filteredMenus.length === 0) && { opacity: 0.5 }
+                  ]}
+                  disabled={filteredMenus.length === 0}
+                >
+                  <Text style={styles.addText}>Save</Text>
+                </Pressable>
+              </View>
+            </Surface>
+          </ScrollView>
         </View>
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 }
 
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center' },
-  content: { backgroundColor: '#fff', borderRadius: 12, padding: 20, width: 320, maxHeight: 480 },
-  title: { fontSize: 18, fontWeight: 'bold', marginBottom: 12 },
-  label: { fontSize: 15, fontWeight: 'bold', marginTop: 8, marginBottom: 4 },
-  dropdown: { maxHeight: 90, borderWidth: 1, borderColor: '#eee', borderRadius: 8, marginBottom: 8 },
-  dropdownItem: { padding: 10, borderBottomWidth: 1, borderColor: '#eee' },
-  selected: { backgroundColor: '#e0e0ff' },
-  actions: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 16 },
-  cancelBtn: { marginRight: 16 },
-  addBtn: { backgroundColor: '#4b5cff', borderRadius: 20, padding: 8 },
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 40,
+  },
+  scrollView: {
+    maxHeight: '90%',
+    width: '100%',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
+  content: {
+    backgroundColor: '#8D8BEA',
+    borderRadius: 24,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    alignSelf: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 16,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 24,
+    letterSpacing: 0.5,
+  },
+  noItemsText: {
+    color: '#ece9fa',
+    marginVertical: 24,
+    textAlign: 'center',
+    fontSize: 16,
+    fontStyle: 'italic',
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  dropdown: {
+    maxHeight: 120,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  dropdownItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  selected: {
+    backgroundColor: '#e6e1fa',
+  },
+  itemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minWidth: 0,
+  },
+  itemText: {
+    flex: 1,
+    fontSize: 16,
+    color: '#212529',
+  },
+  checkIcon: {
+    marginLeft: 10,
+    minWidth: 18,
+  },
+  actions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 16,
+    width: '100%',
+    marginTop: 24,
+  },
+  cancelBtn: {
+    flex: 1,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  cancelText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+    letterSpacing: 0.5,
+  },
+  addBtn: {
+    flex: 1,
+    backgroundColor: '#6c6cf2',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  addText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+    letterSpacing: 0.5,
+  },
 });
