@@ -50,6 +50,24 @@ else
 fi
 echo "✅ Hermes disabled: $(grep hermesEnabled android/gradle.properties)"
 
+# Step 2a: Ensure android/gradle.properties exists
+if [ ! -f android/gradle.properties ]; then
+    echo "Creating android/gradle.properties..."
+    cat > android/gradle.properties << 'EOF'
+hermesEnabled=false
+EOF
+fi
+
+# Step 2b: Ensure expo-router layout exists
+if [ ! -f app/_layout.js ]; then
+    echo "Creating app/_layout.js for expo-router..."
+    cat > app/_layout.js << 'EOF'
+import { Stack } from 'expo-router';
+export default function Layout() {
+    return <Stack />;
+}
+EOF
+fi
 # Step 5: Navigate to android folder
 cd android
 chmod +x gradlew

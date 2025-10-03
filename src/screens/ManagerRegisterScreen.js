@@ -85,63 +85,7 @@ export default function ManagerRegisterScreen() {
   // Remove parent error state for form steps
   const [loading, setLoading] = React.useState(false);
   // const [error, setError] = React.useState(""); // Removed unused variable
-  const formConfig = [
-    {
-      label:<> First Name <Text style={{ color: 'red' }}>*</Text></>,
-      name: "firstname",
-      type: "text",
-      required: true,
-    },
-    {
-      label: "Last Name",
-      name: "lastname",
-      type: "text",
-    },
-    {
-      label: <>Phone Number <Text style={{ color: 'red' }}>*</Text></>,
-      name: "phone",
-      type: "text",
-      keyboardType: "phone-pad",
-      required: true,
-    },
-    {
-      label: <>UPI <Text style={{ color: 'red' }}>*</Text></>,
-      name: "upi",
-      type: "text",
-      keyboardType: "text",
-      required: true,
-    },
-    {
-      label: <>Restaurant Name <Text style={{ color: 'red' }}>*</Text></>,
-      name: "name",
-      type: "text",
-      required: true,
-    },
-    {
-      label: <>Restaurant Address <Text style={{ color: 'red' }}>*</Text></>,
-      name: "restaurantAddress",
-      type: "textarea",
-      value: address,
-      multiline: true,
-      editable: true,
-      required: true,
-    },
-    {
-      label: "Restaurant Type",
-      name: "restaurantType",
-      type: "select",
-      required: true,
-      options: [
-        { label: "Multi-cuisine", value: "Multi-cuisine" },
-        { label: "Cafe", value: "Cafe" },
-        { label: "3 Star", value: "3 Star" },
-        { label: "5 Star", value: "5 Star" },
-        { label: "Other", value: "Other" },
-      ],
-      placeholder: "Select type",
-    },
-  ];
-
+ 
   // Form validation function
   const validateForm = (values) => {
     const errors = {};
@@ -385,11 +329,7 @@ export default function ManagerRegisterScreen() {
             style={{ flex: 1, backgroundColor: '#8D8BEA' }}
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           >
-            <Image
-              source={require("../assets/images/logo.png")}
-              style={styles.logo}
-              resizeMode="contain"
-            />
+          
             <ScrollView
               style={{ flex: 1 }}
               contentContainerStyle={{ flexGrow: 1 }}
@@ -397,12 +337,17 @@ export default function ManagerRegisterScreen() {
               showsVerticalScrollIndicator={false}
             >
               <Surface style={styles.formSurface}>
-                 <View style={styles.loginLinkContainer}>
+                 {/* <View style={styles.loginLinkContainer}>
                 <Text style={styles.loginLinkText}>Already have an account? </Text>
                 <Pressable onPress={() => router.push("/login")}>
                   <Text style={styles.loginLink}>Login here</Text>
                 </Pressable>
-              </View>
+              </View> */}
+                <Image
+              source={require("../assets/images/logo.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
                 <View style={styles.formWrapper}>
                   {step === 1 && (
                     <View style={styles.stepBox}>
@@ -455,7 +400,7 @@ export default function ManagerRegisterScreen() {
                   <View style={styles.stepBox}>
                     <View style={styles.stepFormAreaScroll}>
                       <FormInput
-                        label="Restaurant Name *"
+                        placeholder="Restaurant Name "
                         name="name"
                         value={form.name}
                         onChange={handleChange}
@@ -465,7 +410,8 @@ export default function ManagerRegisterScreen() {
                         type="text"
                       />
                       <FormInput
-                        label="Restaurant Address *"
+                      placeholder="Restaurant Address "
+
                         name="restaurantAddress"
                         value={form.restaurantAddress}
                         onChange={handleChange}
@@ -484,7 +430,7 @@ export default function ManagerRegisterScreen() {
                         Use Current Location
                       </Button>
                       <FormInput
-                        label="Restaurant Type *"
+                        placeholder="Restaurant Type *"
                         name="restaurantType"
                         value={form.restaurantType}
                         onChange={handleChange}
@@ -499,12 +445,11 @@ export default function ManagerRegisterScreen() {
                           { label: "5 Star", value: "5 Star" },
                           { label: "Other", value: "Other" },
                         ]}
-                        placeholder="Select type"
                       />
                       {/* If 'Other' is selected, show a text input for custom value */}
                       {form.restaurantType === 'Other' && (
                         <FormInput
-                          label="Enter Restaurant Type"
+                          placeholder="Enter Restaurant Type"
                           name="restaurantTypeOther"
                           value={form.restaurantTypeOther}
                           onChange={handleChange}
@@ -512,11 +457,34 @@ export default function ManagerRegisterScreen() {
                           error={errors.restaurantTypeOther}
                           touched={touched.restaurantTypeOther}
                           type="text"
-                          placeholder="Enter custom type"
                         />
                       )}
+                       <Text style={styles.sectionTitleStep2Grid}>
+                          Upload Ambiance Photo
+                        </Text>
+                        <Pressable
+                          style={styles.photoUploadBoxStep2}
+                          onPress={pickImage}
+                        >
+                          {ambianceImage ? (
+                            <Image
+                              source={{ uri: ambianceImage }}
+                              style={styles.photoPreviewStep2}
+                              onError={() =>
+                                showApiError(
+                                  "Image failed to load. Check the URL or server."
+                                )
+                              }
+                            />
+                          ) : (
+                            <Image
+                              source={require("../assets/images/camera-icon.png")}
+                              style={styles.cameraIconStep2}
+                            />
+                          )}
+                        </Pressable>
                       {/* Extra controls below the form, not inside it */}
-                      <View style={{ marginTop: 24 }}>
+                      <View style={{ marginTop: 4 }}>
                         <Text style={styles.sectionTitleStep2Grid}>
                         </Text>
                         <View style={styles.typeFoodGridRow}>
@@ -637,39 +605,15 @@ export default function ManagerRegisterScreen() {
                             </Text>
                           </Pressable>
                         </View>
-                        <Text style={styles.sectionTitleStep2Grid}>
-                          Upload Ambiance Photo
-                        </Text>
-                        <Pressable
-                          style={styles.photoUploadBoxStep2}
-                          onPress={pickImage}
-                        >
-                          {ambianceImage ? (
-                            <Image
-                              source={{ uri: ambianceImage }}
-                              style={styles.photoPreviewStep2}
-                              onError={() =>
-                                showApiError(
-                                  "Image failed to load. Check the URL or server."
-                                )
-                              }
-                            />
-                          ) : (
-                            <Image
-                              source={require("../assets/images/camera-icon.png")}
-                              style={styles.cameraIconStep2}
-                            />
-                          )}
-                        </Pressable>
+                       
                       </View>
                     </View>
                   </View>
                 )}
                 </View>
-              </Surface>
-            </ScrollView>
+             
             {/* Fixed bottom bar for Next/Register button */}
-            <View style={styles.fixedBottomBar}>
+            <View >
               {step === 1 && (
                 <Button
                   mode="contained"
@@ -683,7 +627,7 @@ export default function ManagerRegisterScreen() {
               )}
               {step === 2 && (
                 <View style={styles.buttonRow}>
-                  <Button
+                  {/* <Button
                     mode="outlined"
                     style={[styles.bottomButtonStep, styles.backButton]}
                     labelStyle={[styles.buttonTextStep, styles.backButtonText]}
@@ -691,7 +635,7 @@ export default function ManagerRegisterScreen() {
                     disabled={loading}
                   >
                     Back
-                  </Button>
+                  </Button> */}
                   <Button
                     mode="contained"
                     style={[styles.bottomButtonStep, styles.registerButton]}
@@ -707,8 +651,11 @@ export default function ManagerRegisterScreen() {
               {/* Login Link */}
              
             </View>
+                </Surface>
+            </ScrollView>
           </KeyboardAvoidingView>
         </SafeAreaView>
+     
       );
  
     }
@@ -771,13 +718,12 @@ const styles = StyleSheet.create({
     marginLeft: 0,
   },
   photoUploadBoxStep2: {
-    width: 180,
+    width: 400,
     height: 120,
-    backgroundColor: "#fff",
+    backgroundColor: "#D9D9D9",
     borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
-    marginVertical: 16,
     alignSelf: "center",
   },
   typeIcon: { width: 60, height: 60, marginBottom: 5 },
@@ -926,7 +872,7 @@ const styles = StyleSheet.create({
     marginBottom: 0,
     flex: 1,
     justifyContent: "flex-start",
-    paddingHorizontal: 24,
+    paddingHorizontal: 32,
     paddingTop: 16,
   },
   inputStep: {
@@ -967,13 +913,14 @@ const styles = StyleSheet.create({
   },
   bottomButtonStep: {
     borderRadius: 14,
-    width: "92%",
+    width: 400,
     alignSelf: "center",
     paddingVertical: 8,
     backgroundColor: "#6c6cf2",
-    marginTop: 0,
-    marginBottom: 0,
+    marginTop: 20,
+    marginBottom: 40,
     elevation: 0,
+    height:70
   },
   buttonTextStep: {
     fontSize: 26,
@@ -1034,7 +981,7 @@ const styles = StyleSheet.create({
     marginBottom: 18,
     backgroundColor: "#7b6eea",
     width: "100%",
-    borderRadius: 8,
+    borderRadius: 6,
     alignSelf: "center",
   },
   sectionTitleStep2: {
@@ -1045,11 +992,11 @@ const styles = StyleSheet.create({
     color: "#fff",
   },
   sectionTitleStep2Grid: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginTop: 18,
-    marginBottom: 12,
-    textAlign: "left",
+    fontSize: 17,
+    fontWeight: "600",
+    marginTop: 24,
+    marginBottom: 16,
+    textAlign: "center",
     color: "#fff",
     alignSelf: "center",
   },
@@ -1082,20 +1029,20 @@ const styles = StyleSheet.create({
   typeBoxStep2: {
     alignItems: "center",
     justifyContent: "center",
-    padding: 8,
-    borderRadius: 10,
-    // backgroundColor: "#fff",
+    padding: 12,
+    borderRadius: 16,
+    backgroundColor: "#8D8BEA",
     marginHorizontal: 10,
-    borderWidth: 2,
-    borderColor: "#eae6ff",
-    width: 110,
-    height: 110,
+    borderWidth: 3,
+    borderColor: "#8D8BEA",
+    width: 130,
+    height: 130,
   },
   typeBoxActiveStep2: {
-    borderColor: "#7b6eea",
-    // backgroundColor: "#d1c4e9",
+    borderColor: "#fff",
+    backgroundColor: "#8D8BEA",
   },
-  typeIconStep2: { width: 48, height: 48, marginBottom: 2 },
+  typeIconStep2: { width: 60, height: 60, marginBottom: 8 },
   typeLabelStep2: {
     fontSize: 15,
     fontWeight: "bold",
@@ -1106,9 +1053,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   typeLabelStep2Small: {
-    fontSize: 13,
-    fontWeight: "bold",
-    color: "#333",
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#fff",
     textAlign: "center",
     flexWrap: "wrap",
     width: "100%",
@@ -1123,14 +1070,14 @@ const styles = StyleSheet.create({
   foodTypeBoxStep2: {
     alignItems: "center",
     justifyContent: "center",
-    padding: 8,
-    borderRadius: 10,
-    // backgroundColor: "#fff",
+    padding: 12,
+    borderRadius: 16,
+    backgroundColor: "#fff",
     marginHorizontal: 10,
-    borderWidth: 2,
-    borderColor: "#eae6ff",
-    width: 110,
-    height: 110,
+    borderWidth: 3,
+    borderColor: "#fff",
+    width: 130,
+    height: 130,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.18,
@@ -1139,51 +1086,39 @@ const styles = StyleSheet.create({
   },
   foodTypeBoxVeg: {
     borderColor: "#1ca11c",
+    backgroundColor: "#fff",
   },
   foodTypeBoxNonVeg: {
     borderColor: "#c22a2a",
+    backgroundColor: "#fff",
   },
   foodTypeBoxVegActive: {
     borderColor: "#1ca11c",
-    borderWidth: 3,
+    borderWidth: 4,
+    backgroundColor: "#fff",
   },
   foodTypeBoxNonVegActive: {
     borderColor: "#c22a2a",
-    borderWidth: 3,
+    borderWidth: 4,
+    backgroundColor: "#fff",
   },
   foodCircleVegStep2: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    marginBottom: 8,
-    backgroundColor: "#1ca11c",
-    borderWidth: 2,
-    borderColor: "#fff",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
-    shadowRadius: 1.5,
-    elevation: 2,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginBottom: 12,
   },
   foodCircleNonVegStep2: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    marginBottom: 8,
-    backgroundColor: "#c22a2a",
-    borderWidth: 2,
-    borderColor: "#fff",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
-    shadowRadius: 1.5,
-    elevation: 2,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginBottom: 12,
   },
   foodLabelStep2: {
-    fontSize: 15,
-    fontWeight: "bold",
+    fontSize: 16,
+    fontWeight: "600",
     color: "#333",
-    marginTop: 2,
+    marginTop: 4,
   },
   enableTextStep2: {
     fontSize: 13,
@@ -1198,17 +1133,17 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   checkboxStep2: {
-    width: 20,
-    height: 20,
-    borderRadius: 5,
-    borderWidth: 2,
-    borderColor: "#7b6eea",
-    marginRight: 8,
+    width: 18,
+    height: 18,
+    borderRadius: 3,
+    borderWidth: 0,
+    borderColor: "#fff",
+    marginRight: 10,
     backgroundColor: "#fff",
   },
-  checkboxActiveStep2: { backgroundColor: "#7b6eea" },
-  checkboxLabelStep2: { fontSize: 14, color: "#fff" },
+  checkboxActiveStep2: { backgroundColor: "#00ff00" },
+  checkboxLabelStep2: { fontSize: 15, color: "#fff", fontWeight: "400" },
 
-  cameraIconStep2: { width: 60, height: 60 },
-  photoPreviewStep2: { width: 120, height: 100, borderRadius: 10 },
+  cameraIconStep2: { width: 80, height: 80 },
+  photoPreviewStep2: { width: "100%", height: 180, borderRadius: 10 },
 });
