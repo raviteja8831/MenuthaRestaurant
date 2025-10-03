@@ -178,7 +178,7 @@ export default function ManagerDashboardScreenNew() {
             <MaterialCommunityIcons name="food" size={28} color="#6c63b5" />
           </Pressable>
           <Appbar.Content
-            // title={restaurantName}
+            style={{ fontWeight: "bold", fontSize: 18, marginBottom: 12, color: "#fff" }}
             title={profile.restaurant?.name || restaurantName}
             titleStyle={styles.appbarTitle}
           />
@@ -1198,6 +1198,8 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 24,
     textAlign: "center",
+    color:'#fff',
+    top:20
   },
   payBtnText: {
     color: "#fff",
