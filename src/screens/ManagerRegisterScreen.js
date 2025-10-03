@@ -14,7 +14,7 @@ import {
   ScrollView,
   SafeAreaView,
 } from "react-native";
-import { Button, Text, Surface } from "react-native-paper";
+import { Button, Text, Surface, IconButton } from "react-native-paper";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import { registerManager } from "../api/managerApi";
@@ -25,7 +25,7 @@ import { API_BASE_URL } from "../constants/api.constants";
 
 // Set a default Google address
 const DEFAULT_ADDRESS =
-  "1600 Amphitheatre Parkway, Mountain View, CA 94043, USA";
+  "";
 
 export default function ManagerRegisterScreen() {
   const [address, setAddress] = React.useState(DEFAULT_ADDRESS);
@@ -343,11 +343,13 @@ export default function ManagerRegisterScreen() {
                   <Text style={styles.loginLink}>Login here</Text>
                 </Pressable>
               </View> */}
-                <Image
-              source={require("../assets/images/logo.png")}
-              style={styles.logo}
-              resizeMode="contain"
-            />
+                <Pressable onPress={() => step === 1 ? router.push("/login") : setStep(1)}>
+                  <Image
+                    source={require("../assets/images/logo.png")}
+                    style={styles.logo}
+                    resizeMode="contain"
+                  />
+                </Pressable>
                 <View style={styles.formWrapper}>
                   {step === 1 && (
                     <View style={styles.stepBox}>
@@ -398,9 +400,18 @@ export default function ManagerRegisterScreen() {
                   )}
                 {step === 2 && (
                   <View style={styles.stepBox}>
+                    {/* <View style={styles.backIconContainer}>
+                      <IconButton
+                        icon="arrow-left"
+                        iconColor="#fff"
+                        size={32}
+                        onPress={handleBack}
+                        style={styles.backIconButton}
+                      />
+                    </View> */}
                     <View style={styles.stepFormAreaScroll}>
                       <FormInput
-                        placeholder="Restaurant Name "
+                        label="Restaurant Name *"
                         name="name"
                         value={form.name}
                         onChange={handleChange}
@@ -410,8 +421,7 @@ export default function ManagerRegisterScreen() {
                         type="text"
                       />
                       <FormInput
-                      placeholder="Restaurant Address "
-
+                        label="Restaurant Address *"
                         name="restaurantAddress"
                         value={form.restaurantAddress}
                         onChange={handleChange}
@@ -430,7 +440,7 @@ export default function ManagerRegisterScreen() {
                         Use Current Location
                       </Button>
                       <FormInput
-                        placeholder="Restaurant Type *"
+                        label="Restaurant Type *"
                         name="restaurantType"
                         value={form.restaurantType}
                         onChange={handleChange}
@@ -449,7 +459,7 @@ export default function ManagerRegisterScreen() {
                       {/* If 'Other' is selected, show a text input for custom value */}
                       {form.restaurantType === 'Other' && (
                         <FormInput
-                          placeholder="Enter Restaurant Type"
+                          label="Enter Restaurant Type *"
                           name="restaurantTypeOther"
                           value={form.restaurantTypeOther}
                           onChange={handleChange}
@@ -503,10 +513,10 @@ export default function ManagerRegisterScreen() {
                                 source={require("../assets/images/table_service.jpg")}
                                 style={styles.typeIconStep2}
                               />
-                              <Text style={styles.typeLabelStep2Small}>
-                                Table Service
-                              </Text>
                             </Pressable>
+                            <Text style={styles.typeLabelStep2Small}>
+                              Table Service
+                            </Text>
                           </View>
                           <View style={styles.typeFoodGridCol}>
                             <Pressable
@@ -523,10 +533,10 @@ export default function ManagerRegisterScreen() {
                                 source={require("../assets/images/self_service.jpg")}
                                 style={styles.typeIconStep2}
                               />
-                              <Text style={styles.typeLabelStep2Small}>
-                                Self Service
-                              </Text>
                             </Pressable>
+                            <Text style={styles.typeLabelStep2Small}>
+                              Self Service
+                            </Text>
                           </View>
                         </View>
                         <View style={styles.enableBothRowCenter}>
@@ -568,8 +578,8 @@ export default function ManagerRegisterScreen() {
                                 source={require("../assets/images/veg.png")}
                                 style={styles.foodCircleVegStep2}
                               />
-                              <Text style={styles.foodLabelStep2}>Pure Veg</Text>
                             </Pressable>
+                            <Text style={styles.foodLabelStep2}>Pure Veg</Text>
                           </View>
                           <View style={styles.typeFoodGridCol}>
                             <Pressable
@@ -585,8 +595,8 @@ export default function ManagerRegisterScreen() {
                                 source={require("../assets/images/non-veg.png")}
                                 style={styles.foodCircleNonVegStep2}
                               />
-                              <Text style={styles.foodLabelStep2}>Non Veg</Text>
                             </Pressable>
+                            <Text style={styles.foodLabelStep2}>Non Veg</Text>
                           </View>
                         </View>
                         <View style={styles.buffetRowGrid}>
@@ -605,15 +615,15 @@ export default function ManagerRegisterScreen() {
                             </Text>
                           </Pressable>
                         </View>
-                       
+
                       </View>
                     </View>
                   </View>
                 )}
                 </View>
-             
+
             {/* Fixed bottom bar for Next/Register button */}
-            <View >
+            <View style={styles.buttonContainer}>
               {step === 1 && (
                 <Button
                   mode="contained"
@@ -674,11 +684,14 @@ const styles = StyleSheet.create({
   },
   formWrapper: {
     flex: 1,
+    width: "100%",
+    alignItems: "center",
   },
   logo: {
     width: 180,
     height: 120,
-    marginBottom: 24,
+    marginBottom: 40,
+    marginTop: 20,
     alignSelf: "center",
   },
   typeFoodGridRow: {
@@ -686,8 +699,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     width: "100%",
-    marginBottom: 10,
-    gap: 18,
+    marginBottom: 20,
+    gap: 20,
   },
   input: {
     // ...existing input styles...
@@ -697,15 +710,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     display: "flex",
-    marginBottom: 12,
+    marginBottom: 16,
+    marginTop: 8,
     flexDirection: "row",
   },
   buffetRowGrid: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 16,
-    marginBottom: 16,
+    marginTop: 20,
+    marginBottom: 20,
     gap: 10,
     width: "100%",
     display: "flex",
@@ -718,13 +732,14 @@ const styles = StyleSheet.create({
     marginLeft: 0,
   },
   photoUploadBoxStep2: {
-    width: 400,
-    height: 120,
+    width: "100%",
+    height: 200,
     backgroundColor: "#D9D9D9",
-    borderRadius: 10,
+    borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
     alignSelf: "center",
+    marginBottom: 16,
   },
   typeIcon: { width: 60, height: 60, marginBottom: 5 },
   typeLabel: { fontSize: 14, fontWeight: "bold", color: "#333" },
@@ -854,8 +869,18 @@ const styles = StyleSheet.create({
     backgroundColor: "#8D8BEA",
     justifyContent: "flex-start",
     alignItems: "center",
-    paddingTop: 32,
+    paddingTop: 0,
     paddingHorizontal: 0,
+  },
+  backIconContainer: {
+    width: "100%",
+    alignItems: "flex-start",
+    paddingLeft: 8,
+    paddingTop: 16,
+    marginBottom: 16,
+  },
+  backIconButton: {
+    margin: 0,
   },
   stepFormArea: {
     width: "90%",
@@ -867,13 +892,15 @@ const styles = StyleSheet.create({
   },
   stepFormAreaScroll: {
     width: "100%",
+    maxWidth: 600,
     backgroundColor: "transparent",
-    alignItems: "flex-start",
+    alignItems: "center",
     marginBottom: 0,
     flex: 1,
     justifyContent: "flex-start",
     paddingHorizontal: 32,
-    paddingTop: 16,
+    paddingTop: 0,
+    alignSelf: "center",
   },
   inputStep: {
     width: "100%",
@@ -911,23 +938,32 @@ const styles = StyleSheet.create({
     padding: 12,
     zIndex: 10,
   },
+  buttonContainer: {
+    width: "100%",
+    paddingHorizontal: 32,
+    paddingTop: 24,
+    paddingBottom: 40,
+    alignItems: "center",
+  },
   bottomButtonStep: {
-    borderRadius: 14,
-    width: 400,
+    borderRadius: 12,
+    width: "100%",
+    minWidth: 280,
+    maxWidth: 600,
     alignSelf: "center",
-    paddingVertical: 8,
+    paddingVertical: 10,
     backgroundColor: "#6c6cf2",
-    marginTop: 20,
-    marginBottom: 40,
-    elevation: 0,
-    height:70
+    marginTop: 0,
+    marginBottom: 0,
+    marginHorizontal: "auto",
+    elevation: 3,
+    height: 60,
   },
   buttonTextStep: {
-    fontSize: 26,
+    fontSize: 24,
     color: "#fff",
-    fontWeight: "400",
-    letterSpacing: 1,
-    // lineHeight removed for button text
+    fontWeight: "600",
+    letterSpacing: 0.5,
   },
   buttonRow: {
     flexDirection: "row",
@@ -978,10 +1014,10 @@ const styles = StyleSheet.create({
     justifyContent: "flex-start",
   },
   locationBtnStep2: {
-    marginBottom: 18,
+    marginBottom: 24,
     backgroundColor: "#7b6eea",
     width: "100%",
-    borderRadius: 6,
+    borderRadius: 12,
     alignSelf: "center",
   },
   sectionTitleStep2: {
@@ -992,9 +1028,9 @@ const styles = StyleSheet.create({
     color: "#fff",
   },
   sectionTitleStep2Grid: {
-    fontSize: 17,
-    fontWeight: "600",
-    marginTop: 24,
+    fontSize: 16,
+    fontWeight: "400",
+    marginTop: 16,
     marginBottom: 16,
     textAlign: "center",
     color: "#fff",
@@ -1002,10 +1038,9 @@ const styles = StyleSheet.create({
   },
 
   typeFoodGridCol: {
-    flex: 1,
     flexDirection: "column",
     alignItems: "center",
-    gap: 18,
+    gap: 12,
   },
 
   enableTextStep2Grid: {
@@ -1031,18 +1066,23 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 12,
     borderRadius: 16,
-    backgroundColor: "#8D8BEA",
-    marginHorizontal: 10,
-    borderWidth: 3,
-    borderColor: "#8D8BEA",
-    width: 130,
-    height: 130,
+    backgroundColor: "#7B6EEA",
+    marginHorizontal: 0,
+    borderWidth: 4,
+    borderColor: "#7B6EEA",
+    width: 110,
+    height: 110,
   },
   typeBoxActiveStep2: {
     borderColor: "#fff",
-    backgroundColor: "#8D8BEA",
+    borderWidth: 4,
+    backgroundColor: "#7B6EEA",
   },
-  typeIconStep2: { width: 60, height: 60, marginBottom: 8 },
+  typeIconStep2: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 12,
+  },
   typeLabelStep2: {
     fontSize: 15,
     fontWeight: "bold",
@@ -1053,13 +1093,11 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   typeLabelStep2Small: {
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: 15,
+    fontWeight: "400",
     color: "#fff",
     textAlign: "center",
-    flexWrap: "wrap",
-    width: "100%",
-    marginTop: 4,
+    marginTop: 8,
   },
   foodTypeRowStep2: {
     flexDirection: "row",
@@ -1070,14 +1108,14 @@ const styles = StyleSheet.create({
   foodTypeBoxStep2: {
     alignItems: "center",
     justifyContent: "center",
-    padding: 12,
+    padding: 16,
     borderRadius: 16,
     backgroundColor: "#fff",
-    marginHorizontal: 10,
-    borderWidth: 3,
+    marginHorizontal: 0,
+    borderWidth: 5,
     borderColor: "#fff",
-    width: 130,
-    height: 130,
+    width: 110,
+    height: 110,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.18,
@@ -1085,21 +1123,23 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   foodTypeBoxVeg: {
-    borderColor: "#1ca11c",
+    borderColor: "#d0d0d0",
+    borderWidth: 5,
     backgroundColor: "#fff",
   },
   foodTypeBoxNonVeg: {
-    borderColor: "#c22a2a",
+    borderColor: "#d0d0d0",
+    borderWidth: 5,
     backgroundColor: "#fff",
   },
   foodTypeBoxVegActive: {
     borderColor: "#1ca11c",
-    borderWidth: 4,
+    borderWidth: 5,
     backgroundColor: "#fff",
   },
   foodTypeBoxNonVegActive: {
     borderColor: "#c22a2a",
-    borderWidth: 4,
+    borderWidth: 5,
     backgroundColor: "#fff",
   },
   foodCircleVegStep2: {
@@ -1115,10 +1155,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   foodLabelStep2: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
-    marginTop: 4,
+    fontSize: 15,
+    fontWeight: "400",
+    color: "#fff",
+    marginTop: 8,
+    textAlign: "center",
   },
   enableTextStep2: {
     fontSize: 13,

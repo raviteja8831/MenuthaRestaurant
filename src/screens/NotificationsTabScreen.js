@@ -97,7 +97,7 @@ export default function NotificationsTabScreen() {
           </View>
         </View>
       </ScrollView>
-      <TabBar></TabBar>
+      <TabBar activeTab="notifications" />
       </View>
   );
 }

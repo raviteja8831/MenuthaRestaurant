@@ -32,6 +32,8 @@ export default function ManagerDashboardScreenNew() {
   const [incomeDateFilter, setIncomeDateFilter] = useState("day");
   const [showSalesDropdown, setShowSalesDropdown] = useState(false);
   const [showIncomeDropdown, setShowIncomeDropdown] = useState(false);
+  const [salesDropdownLayout, setSalesDropdownLayout] = useState({ x: 0, y: 0 });
+  const [incomeDropdownLayout, setIncomeDropdownLayout] = useState({ x: 0, y: 0 });
   // Tab state management
 
   // QR Code states
@@ -111,15 +113,8 @@ export default function ManagerDashboardScreenNew() {
           ...item,
           value: isFinite(item.value) ? item.value : 0
         }));
-        const validIncomeData = (dash.incomeData || []).map(item => ({
-          ...item,
-          value: isFinite(item.value) ? item.value : 0
-        }));
-        //  const validSalesData = [];
-        //  const validIncomeData = [];
 
         setSalesData(validSalesData);
-        setIncomeData(validIncomeData);
         setChefLogins(dash.currentlyLoggedIn || 0);
         setChefLogouts(dash.chefLogouts || 0);
         setTotalChefLogins(dash.chefLogins || 0);
@@ -130,6 +125,32 @@ export default function ManagerDashboardScreenNew() {
     }
     fetchData();
   }, [salesDateFilter]);
+
+  // Fetch income data separately
+  useEffect(() => {
+    async function fetchIncomeData() {
+      try {
+        const userStr = await AsyncStorage.getItem("user_profile");
+        const token = await AsyncStorage.getItem("auth_token");
+        let user = null;
+        if (userStr) {
+          user = JSON.parse(userStr);
+        }
+        const restaurantId = user?.restaurant.id;
+        const dash = await fetchManagerDashboard(restaurantId, token, incomeDateFilter);
+
+        const validIncomeData = (dash.incomeData || []).map(item => ({
+          ...item,
+          value: isFinite(item.value) ? item.value : 0
+        }));
+
+        setIncomeData(validIncomeData);
+      } catch (_e) {
+        // fallback to static if needed
+      }
+    }
+    fetchIncomeData();
+  }, [incomeDateFilter]);
 
   const handleLogout = async () => {
     try {
@@ -259,7 +280,7 @@ export default function ManagerDashboardScreenNew() {
               <Text style={styles.todayText}>Today</Text>
               <Text style={styles.dayText}>{today}</Text>
               <Text style={styles.dateText}>{date}</Text>
-              <Text style={styles.greetText}>Welcome {managerName}</Text>
+              <Text style={styles.greetText}>Hi {managerName}</Text>
             </View>
             <Pressable
               style={styles.profileImg}
@@ -274,7 +295,7 @@ export default function ManagerDashboardScreenNew() {
           </View>
 
         <View style={styles.infoBuffetRow}>
-          <Surface style={[styles.infoCard, { flex: 2, marginRight: 8 }]}>
+          <Surface style={[styles.infoCard, { flex: 1.8, marginRight: 8 }]}>
             <Text style={styles.infoTitle}>Current Info</Text>
             <View style={{ width: "100%" }}>
               <View style={styles.infoRow}>
@@ -300,7 +321,7 @@ export default function ManagerDashboardScreenNew() {
             style={[
               styles.buffetCard,
               {
-                flex: 1,
+                flex: 1.2,
                 marginLeft: 8,
                 alignItems: "center",
                 flexDirection: "column",
@@ -312,9 +333,9 @@ export default function ManagerDashboardScreenNew() {
               style={{
                 flexDirection: "row",
                 alignItems: "center",
+                justifyContent: "space-between",
                 width: "100%",
-                right: -50,
-                position: "relative"
+                marginBottom: 8,
               }}
             >
               <Text style={styles.buffetTitle}>Buffet</Text>
@@ -519,7 +540,12 @@ export default function ManagerDashboardScreenNew() {
             <Text style={styles.chartTitle}>Produce Sales</Text>
             <Pressable
               style={styles.weekDropdown}
-              onPress={() => setShowSalesDropdown(true)}
+              onPress={(e) => {
+                e.currentTarget.measure((x, y, width, height, pageX, pageY) => {
+                  setSalesDropdownLayout({ x: pageX, y: pageY + height });
+                  setShowSalesDropdown(true);
+                });
+              }}
               activeOpacity={0.7}
             >
               <Text style={styles.weekDropdownText}>
@@ -531,34 +557,36 @@ export default function ManagerDashboardScreenNew() {
             <Modal
               visible={showSalesDropdown}
               transparent
-              animationType="fade"
+              animationType="none"
               onRequestClose={() => setShowSalesDropdown(false)}
             >
-              <Pressable style={styles.modalOverlay} onPress={() => setShowSalesDropdown(false)}>
-                <View style={styles.dropdownModal}>
-                  {[
-                    { label: 'Today', value: 'day' },
-                    { label: 'Week', value: 'week' },
-                    { label: 'Month', value: 'month' },
-                    { label: 'Year', value: 'year' },
-                  ].map(option => (
-                    <Pressable
-                      key={option.value}
-                      style={[
-                        styles.dropdownOption,
-                        salesDateFilter === option.value && styles.dropdownOptionSelected,
-                      ]}
-                      onPress={() => {
-                        setSalesDateFilter(option.value);
-                        setShowSalesDropdown(false);
-                      }}
-                    >
-                      <Text style={[
-                        styles.dropdownOptionText,
-                        salesDateFilter === option.value && styles.dropdownOptionTextSelected,
-                      ]}>{option.label}</Text>
-                    </Pressable>
-                  ))}
+              <Pressable style={styles.dropdownOverlay} onPress={() => setShowSalesDropdown(false)}>
+                <View style={[styles.dropdownModalContainer, { top: salesDropdownLayout.y, left: salesDropdownLayout.x - 60 }]}>
+                  <View style={styles.dropdownModal}>
+                    {[
+                      { label: 'Today', value: 'day' },
+                      { label: 'Week', value: 'week' },
+                      { label: 'Month', value: 'month' },
+                      { label: 'Year', value: 'year' },
+                    ].map(option => (
+                      <Pressable
+                        key={option.value}
+                        style={[
+                          styles.dropdownOption,
+                          salesDateFilter === option.value && styles.dropdownOptionSelected,
+                        ]}
+                        onPress={() => {
+                          setSalesDateFilter(option.value);
+                          setShowSalesDropdown(false);
+                        }}
+                      >
+                        <Text style={[
+                          styles.dropdownOptionText,
+                          salesDateFilter === option.value && styles.dropdownOptionTextSelected,
+                        ]}>{option.label}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
                 </View>
               </Pressable>
             </Modal>
@@ -607,7 +635,12 @@ export default function ManagerDashboardScreenNew() {
             <Text style={styles.chartTitle}>Income Graph</Text>
             <Pressable
               style={styles.weekDropdown}
-              onPress={() => setShowIncomeDropdown(true)}
+              onPress={(e) => {
+                e.currentTarget.measure((x, y, width, height, pageX, pageY) => {
+                  setIncomeDropdownLayout({ x: pageX, y: pageY + height });
+                  setShowIncomeDropdown(true);
+                });
+              }}
               activeOpacity={0.7}
             >
               <Text style={styles.weekDropdownText}>
@@ -619,34 +652,36 @@ export default function ManagerDashboardScreenNew() {
             <Modal
               visible={showIncomeDropdown}
               transparent
-              animationType="fade"
+              animationType="none"
               onRequestClose={() => setShowIncomeDropdown(false)}
             >
-              <Pressable style={styles.modalOverlay} onPress={() => setShowIncomeDropdown(false)}>
-                <View style={styles.dropdownModal}>
-                  {[
-                    { label: 'Today', value: 'day' },
-                    { label: 'Week', value: 'week' },
-                    { label: 'Month', value: 'month' },
-                    { label: 'Year', value: 'year' },
-                  ].map(option => (
-                    <Pressable
-                      key={option.value}
-                      style={[
-                        styles.dropdownOption,
-                        incomeDateFilter === option.value && styles.dropdownOptionSelected,
-                      ]}
-                      onPress={() => {
-                        setIncomeDateFilter(option.value);
-                        setShowIncomeDropdown(false);
-                      }}
-                    >
-                      <Text style={[
-                        styles.dropdownOptionText,
-                        incomeDateFilter === option.value && styles.dropdownOptionTextSelected,
-                      ]}>{option.label}</Text>
-                    </Pressable>
-                  ))}
+              <Pressable style={styles.dropdownOverlay} onPress={() => setShowIncomeDropdown(false)}>
+                <View style={[styles.dropdownModalContainer, { top: incomeDropdownLayout.y, left: incomeDropdownLayout.x - 60 }]}>
+                  <View style={styles.dropdownModal}>
+                    {[
+                      { label: 'Today', value: 'day' },
+                      { label: 'Week', value: 'week' },
+                      { label: 'Month', value: 'month' },
+                      { label: 'Year', value: 'year' },
+                    ].map(option => (
+                      <Pressable
+                        key={option.value}
+                        style={[
+                          styles.dropdownOption,
+                          incomeDateFilter === option.value && styles.dropdownOptionSelected,
+                        ]}
+                        onPress={() => {
+                          setIncomeDateFilter(option.value);
+                          setShowIncomeDropdown(false);
+                        }}
+                      >
+                        <Text style={[
+                          styles.dropdownOptionText,
+                          incomeDateFilter === option.value && styles.dropdownOptionTextSelected,
+                        ]}>{option.label}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
                 </View>
               </Pressable>
             </Modal>
@@ -749,7 +784,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "stretch",
     marginHorizontal: 20,
-    marginTop: 20,
+    marginTop: 16,
     marginBottom: 16,
   },
   infoBuffetCard: {
@@ -764,10 +799,10 @@ const styles = StyleSheet.create({
     padding: 18,
   },
   buffetImg: {
-    width: 60,
-    height: 60,
-    marginTop: 8,
-    marginBottom: 4,
+    width: 70,
+    height: 70,
+    marginTop: 12,
+    marginBottom: 12,
   },
   buffetMenuPopupNew: {
     backgroundColor: "#fff",
@@ -798,17 +833,18 @@ const styles = StyleSheet.create({
   },
   buffetCard: {
     backgroundColor: "#8D8BEA",
-    padding: 10,
+    padding: 16,
     minWidth: 120,
-    minHeight: 120,
+    minHeight: 180,
     alignItems: "center",
-
+    borderRadius: 20,
+    elevation: 0,
+    shadowOpacity: 0,
   },
   buffetTitle: {
     fontWeight: "bold",
-    fontSize: 18,
+    fontSize: 16,
     color: "#222",
-    
   },
   buffetMenuIcon: {
     padding: 4,
@@ -850,9 +886,10 @@ const styles = StyleSheet.create({
   },
   chefTitle: {
     fontWeight: "bold",
-    fontSize: 18,
+    fontSize: 16,
     color: "#6c63b5",
-    marginBottom: 8,
+    marginBottom: 12,
+    textAlign: "center",
   },
   chefRow: {
     flexDirection: "row",
@@ -866,11 +903,12 @@ const styles = StyleSheet.create({
   chefLabel: {
     fontSize: 14,
     color: "#222",
-    marginBottom: 4,
+    marginBottom: 6,
+    fontWeight: "400",
   },
   chefValue: {
     fontWeight: "bold",
-    fontSize: 18,
+    fontSize: 20,
     color: "#6c63b5",
   },
   // QR Code Tab Styles
@@ -1181,24 +1219,28 @@ const styles = StyleSheet.create({
   },
   headerLeft: {},
   todayText: {
-    fontSize: 18,
-    color: "#fff",
-    fontWeight: "bold",
-  },
-  dayText: {
-    fontSize: 22,
-    color: "#fff",
-    fontWeight: "bold",
-  },
-  dateText: {
-    fontSize: 18,
-    color: "#fff",
-    marginBottom: 8,
-  },
-  greetText: {
     fontSize: 16,
     color: "#fff",
+    fontWeight: "500",
+    marginBottom: 4,
+  },
+  dayText: {
+    fontSize: 24,
+    color: "#fff",
+    fontWeight: "bold",
+    marginBottom: 2,
+  },
+  dateText: {
+    fontSize: 20,
+    color: "#fff",
+    marginBottom: 12,
+    fontWeight: "400",
+  },
+  greetText: {
+    fontSize: 18,
+    color: "#fff",
     marginBottom: 8,
+    fontWeight: "500",
   },
   profileImg: {
     width: 60,
@@ -1215,7 +1257,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginTop: 12,
     marginBottom: 16,
-    padding: 20,
+    padding: 18,
     borderRadius: 20,
     backgroundColor: "#DAD6FE",
     elevation: 4,
@@ -1223,24 +1265,24 @@ const styles = StyleSheet.create({
   },
   infoTitle: {
     fontWeight: "bold",
-    fontSize: 15,
-    marginBottom: 8,
+    fontSize: 16,
+    marginBottom: 12,
     textAlign: "center",
     color: "#222",
   },
   infoRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 4,
+    marginBottom: 8,
     width: "100%",
   },
   infoLabel: {
-    fontSize: 14,
+    fontSize: 15,
     color: "#222",
-    fontWeight: "500",
+    fontWeight: "400",
   },
   infoValue: {
-    fontSize: 14,
+    fontSize: 16,
     color: "#7b6eea",
     fontWeight: "bold",
   },
@@ -1256,8 +1298,8 @@ const styles = StyleSheet.create({
   },
   statusTitle: {
     fontWeight: "bold",
-    fontSize: 15,
-    marginBottom: 8,
+    fontSize: 16,
+    marginBottom: 12,
     textAlign: "center",
     color: "#222",
   },
@@ -1271,12 +1313,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statusLabel: {
-    fontSize: 13,
+    fontSize: 14,
     color: "#222",
     textAlign: "center",
+    marginBottom: 4,
   },
   statusValue: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "bold",
     color: "#7b6eea",
     textAlign: "center",
@@ -1808,35 +1851,42 @@ const styles = StyleSheet.create({
   },
 });
 const dropdownModalStyles = {
+  dropdownOverlay: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  dropdownModalContainer: {
+    position: 'absolute',
+    zIndex: 9999,
+  },
   dropdownModal: {
     backgroundColor: '#fff',
     borderRadius: 12,
-    paddingVertical: 8,
+    paddingVertical: 4,
     paddingHorizontal: 0,
-    minWidth: 160,
+    minWidth: 130,
     alignItems: 'stretch',
     shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 10,
   },
   dropdownOption: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
   },
   dropdownOptionSelected: {
-    backgroundColor: '#ece9fa',
+    backgroundColor: '#6c63b5',
   },
   dropdownOptionText: {
-    fontSize: 16,
-    color: '#222 !important',
+    fontSize: 15,
+    color: '#222',
     fontWeight: '500',
+    textAlign: 'center',
   },
   dropdownOptionTextSelected: {
-    color: '#6c63b5',
-    fontWeight: 'bold',
+    color: '#fff',
+    fontWeight: '600',
   },
 };
 Object.assign(styles, dropdownModalStyles);

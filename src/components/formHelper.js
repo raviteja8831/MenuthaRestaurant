@@ -105,17 +105,20 @@ export function FormInput(props) {
   } else if (type === "select") {
     inputComponent = (
       <View style={styles.inputWrapper}>
-        <Text style={styles.selectLabel}>{labelText}</Text>
-        <Picker
-          selectedValue={value}
-          onValueChange={(itemValue) => onChange(name, itemValue)}
-          style={styles.selectPicker}
-        >
-          <Picker.Item label={props.placeholder || "Select"} value="" />
-          {options.map((opt) => (
-            <Picker.Item key={opt.value} label={opt.label} value={opt.value} />
-          ))}
-        </Picker>
+        <Text style={styles.inputLabel}>{labelText}</Text>
+        <View style={styles.pickerContainer}>
+          <Picker
+            selectedValue={value}
+            onValueChange={(itemValue) => onChange(name, itemValue)}
+            style={styles.selectPicker}
+            dropdownIconColor="#666"
+          >
+            <Picker.Item label={props.placeholder || "Select"} value="" />
+            {options.map((opt) => (
+              <Picker.Item key={opt.value} label={opt.label} value={opt.value} />
+            ))}
+          </Picker>
+        </View>
       </View>
     );
   } else if (type === "radio") {
@@ -144,7 +147,7 @@ export function FormInput(props) {
           value={value}
           onChangeText={(text) => onChange(name, text)}
           onBlur={() => onBlur(name)}
-          style={[styles.input, { minHeight: 80, minWidth: 210 }, showError && styles.inputError]}
+          style={[styles.input, { minHeight: 80 }, showError && styles.inputError]}
           multiline
           numberOfLines={3}
           textAlignVertical="top"
@@ -229,16 +232,13 @@ const styles = StyleSheet.create({
   },
   inputWrapper: {
     width: '100%',
-    minWidth: 400,
     alignSelf: 'center',
     marginBottom: 16,
-    paddingHorizontal: 6,
+    paddingHorizontal: 0,
   },
   input: {
     backgroundColor: '#f8f9fa',
     width: '100%',
-    minWidth: 400,
-    maxWidth: 400,
     alignSelf: 'center',
     borderRadius: 12,
     fontSize: 16,
@@ -252,9 +252,9 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 14,
-    color: '#333',
+    color: '#fff',
     marginBottom: 6,
-    fontWeight: '500',
+    fontWeight: '400',
   },
   inputError: {
     borderColor: '#dc3545',
@@ -280,9 +280,10 @@ const styles = StyleSheet.create({
     color: "#333",
   },
   selectLabel: {
-    fontSize: 15,
-    color: "#333",
+    fontSize: 14,
+    color: "#fff",
     marginBottom: 6,
+    fontWeight: '400',
   },
   selectOption: {
     padding: 10,
@@ -299,16 +300,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#333",
   },
+  pickerContainer: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#dee2e6',
+    overflow: 'hidden',
+    marginBottom: 0,
+  },
   selectPicker: {
-    minHeight: 44,
-    borderRadius: 6,
-    backgroundColor: "#fff",
-    paddingHorizontal: 12,
-    fontSize: 15,
-    borderWidth: 0,
-    color: "#222",
-    marginBottom: 24,
-    justifyContent: 'center',
+    height: 48,
+    backgroundColor: 'transparent',
+    color: "#212529",
+    fontSize: 16,
   },
   radioRow: {
     flexDirection: "row",

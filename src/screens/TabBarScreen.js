@@ -4,10 +4,10 @@ import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 const tabs = [
-  { key: 'dashboard', label: 'Home', icon: 'home', route: '/dashboard' },
-  { key: 'users', label: 'Users', icon: 'account', route: '/users' },
-  { key: 'qrcodes', label: 'QRCode', icon: 'qrcode', route: '/qrcodes' },
-  { key: 'notifications', label: 'Reviews', icon: 'bell', route: '/notifications' },
+  { key: 'dashboard', label: 'Home', icon: 'home-outline', route: '/dashboard' },
+  { key: 'users', label: 'Users', icon: 'account-outline', route: '/users' },
+  { key: 'qrcodes', label: 'Barcode', icon: 'barcode-scan', route: '/qrcodes' },
+  { key: 'notifications', label: 'Notifications', icon: 'bell-outline', route: '/notifications' },
 ];
 
 export default function TabBar({ activeTab }) {
@@ -17,23 +17,25 @@ export default function TabBar({ activeTab }) {
       {tabs.map((tab) => (
         <Pressable
           key={tab.key}
-          style={[
-            styles.tabItem,
-            { backgroundColor: activeTab === tab.key ? 'rgba(108, 99, 181, 0.15)' : 'transparent' }
-          ]}
+          style={styles.tabItem}
           onPress={() => router.replace(tab.route)}
         >
-          <MaterialCommunityIcons
-            name={tab.icon}
-            size={24}
-            color={activeTab === tab.key ? '#6c63b5' : '#666'}
-          />
-          <Text style={[
+          <View style={[
+            styles.iconContainer,
+            activeTab === tab.key && styles.iconContainerActive
+          ]}>
+            <MaterialCommunityIcons
+              name={activeTab === tab.key ? tab.icon.replace('-outline', '') : tab.icon}
+              size={26}
+              color={activeTab === tab.key ? '#6c63b5' : '#000'}
+            />
+          </View>
+          {/* <Text style={[
             styles.tabLabel,
-            { color: activeTab === tab.key ? '#6c63b5' : '#666' }
+            { color: activeTab === tab.key ? '#6c63b5' : '#000' }
           ]}>
             {tab.label}
-          </Text>
+          </Text> */}
         </Pressable>
       ))}
     </View>
@@ -49,28 +51,35 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingVertical: 8,
-    paddingBottom: 20,
-    elevation: 8,
+    paddingVertical: 10,
+    paddingBottom: 24,
+    elevation: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+   
   },
   tabItem: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-    borderRadius: 12,
-    marginHorizontal: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 6,
+  },
+  iconContainer: {
+    padding: 12,
+    borderRadius: 50,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  iconContainerActive: {
+    backgroundColor: 'rgba(108, 99, 181, 0.1)',
+    borderWidth: 3,
+    borderColor: '#6c63b5',
   },
   tabLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
-    marginTop: 4,
+    marginTop: 5,
   },
 });
