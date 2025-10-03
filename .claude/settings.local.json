@@ -5,7 +5,10 @@
       "Read(//c/Users/ravit/Downloads/**)",
       "Bash(chmod:*)",
       "Bash(npx expo prebuild:*)",
-      "Bash(java:*)"
+      "Bash(java:*)",
+      "Bash(npm install)",
+      "Bash(npm ls:*)",
+      "Bash(npm install:*)"
     ],
     "deny": [],
     "ask": []
