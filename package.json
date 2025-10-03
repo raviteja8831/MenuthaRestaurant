@@ -55,7 +55,7 @@
   },
   "devDependencies": {
     "@react-native-community/cli": "^10.2.0",
-  "@react-native-community/cli-server-api": "^9.5.2",
+  "@react-native/cli-server-api": "9.5.2",
     "@react-native/metro-config": "0.81.4",
     "@types/react": "19.1.0",
     "@types/react-native": "0.72.8",
