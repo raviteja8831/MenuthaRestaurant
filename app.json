@@ -25,7 +25,7 @@
         }
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.ft"
+      "package": "com.menutha.org"
     },
     "web": {
       "bundler": "metro",
