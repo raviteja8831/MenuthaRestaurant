@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
   StyleSheet,
   Alert,
@@ -13,14 +13,33 @@ import { TextInput as RNTextInput } from "react-native";
 import { Text } from "react-native-paper";
 import axios from "axios";
 import { useRouter } from "expo-router";   // ✅ useRouter instead of router
+import * as SplashScreen from 'expo-splash-screen';
 import { API_BASE_URL } from "../constants/api.constants";
 import { showApiError } from "../services/messagingService";
+
+// Keep the splash screen visible while we fetch resources
+SplashScreen.preventAutoHideAsync();
 
 export default function LoginScreen() {
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState(["", "", "", ""]);
   const otpInputs = [useRef(null), useRef(null), useRef(null), useRef(null)];
   const router = useRouter();   // ✅ create router instance
+
+  // Hide splash screen when component mounts
+  useEffect(() => {
+    const hideSplashScreen = async () => {
+      try {
+        // Small delay to ensure the screen is ready
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        await SplashScreen.hideAsync();
+      } catch (error) {
+        console.warn('Error hiding splash screen:', error);
+      }
+    };
+
+    hideSplashScreen();
+  }, []);
 
   const handleOtpChange = (text, idx) => {
     if (/^\d?$/.test(text)) {
