@@ -1,37 +1,55 @@
 {
   "expo": {
-    "name": "Menutha",
-    "slug": "Menutha",
+  "name": "Menutha",
+    "slug": "ft",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./src/assets/icon.png",
-    "userInterfaceStyle": "light",
+  "icon": "./assets/images/logo.png",
+    "scheme": "ft",
+    "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "scheme": "menutha",
-    "splash": {
-      "image": "./src/assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.menutha.app"
+      "config": {
+        "googleMapsApiKey": "AIzaSyB5P-PTRn7E0xkRlkiHWkjadh3nbT7yu7U"
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./src/assets/adaptive-icon.png",
+        "foregroundImage": "./assets/images/logo.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.menutha.app",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyB5P-PTRn7E0xkRlkiHWkjadh3nbT7yu7U"
+        }
+      },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false,
-      "jsEngine": "jsc"
+      "package": "com.anonymous.ft"
     },
     "web": {
-      "favicon": "./src/assets/favicon.png"
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-router"
-    ]
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ],
+      "expo-maps"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "DEFAULT_LANDING_PAGE": "/Customer-Login"
+    }
   }
 }
