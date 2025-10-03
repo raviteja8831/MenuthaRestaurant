@@ -1,5 +1,5 @@
 {
-  "name": "Menutha",
+  "name": "menutha",
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
@@ -16,7 +16,10 @@
     "@react-native-async-storage/async-storage": "2.1.2",
     "@react-native-community/cli": "latest",
     "@react-native-picker/picker": "2.11.1",
-    "@react-native-google-signin/google-signin": "^13.1.0",
+    "@react-navigation/bottom-tabs": "^7.3.10",
+    "@react-navigation/elements": "^2.3.8",
+    "@react-navigation/native": "^7.1.6",
+    "@react-navigation/stack": "^7.4.7",
     "@reduxjs/toolkit": "^2.8.2",
     "axios": "^1.11.0",
     "bcryptjs": "^3.0.2",
@@ -55,32 +58,18 @@
     "react-native-paper": "^5.14.5",
     "react-native-qrcode-svg": "^6.3.15",
     "react-native-reanimated": "~3.17.4",
-    "react-native-safe-area-context": "^5.4.0",
+    "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "~4.11.1",
-    "react-native-svg": "15.11.2",
-    "react-native-vector-icons": "^10.2.0",
     "react-native-web": "~0.20.0",
     "react-native-webview": "13.13.5",
     "react-redux": "^9.2.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
-    "@react-native/babel-preset": "^0.79.5",
-    "@react-native/metro-config": "^0.81.0",
-    "@types/bcryptjs": "^2.4.6",
     "@types/react": "~19.0.10",
-    "@types/react-dom": "^18.3.0",
-    "@types/react-native": "^0.73.0",
-    "@types/react-native-vector-icons": "^6.4.18",
-    "babel-plugin-react-native-web": "^0.19.12",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~9.2.0",
-    "metro": "^0.81.0",
     "typescript": "~5.8.3"
-  },
-  "peerDependencies": {
-    "react": "19.0.0",
-    "react-native": "0.79.5"
   },
   "private": true
 }
