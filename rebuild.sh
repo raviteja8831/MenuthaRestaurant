@@ -89,10 +89,12 @@ echo "📦 Generating JS bundle for Debug..."
 cd ..
 mkdir -p android/app/src/main/assets
 # Use Metro bundler with JSC engine (consistent with gradle.properties)
-npx metro build app/index.js \
+npx react-native bundle \
   --platform android \
   --dev false \
-  --out android/app/src/main/assets/index.android.bundle \
+  --entry-file app/index.js \
+  --bundle-output android/app/src/main/assets/index.android.bundle \
+  --assets-dest android/app/src/main/res \
   --reset-cache
 
 # Step 9: Build Debug APK with bundle

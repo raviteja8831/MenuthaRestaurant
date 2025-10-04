@@ -77,5 +77,10 @@
     "metro-react-native-babel-preset": "^0.77.0",
     "typescript": "~5.8.3"
   },
+  "overrides": {
+  "metro": "0.82.5",
+  "metro-config": "0.82.5",
+  "metro-transform-worker": "0.82.5"
+},
   "private": true
 }
