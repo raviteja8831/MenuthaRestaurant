@@ -27,7 +27,7 @@ export default function TabBar({ activeTab }) {
             <MaterialCommunityIcons
               name={activeTab === tab.key ? tab.icon.replace('-outline', '') : tab.icon}
               size={26}
-              color={activeTab === tab.key ? '#6c63b5' : '#000'}
+              color={activeTab === tab.key ? '#000' : '#000'}
             />
           </View>
           {/* <Text style={[
@@ -78,8 +78,8 @@ const styles = StyleSheet.create({
     borderColor: '#6c63b5',
   },
   tabLabel: {
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '800',
     marginTop: 5,
   },
 });

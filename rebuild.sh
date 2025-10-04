@@ -30,7 +30,7 @@ echo "🚀 Starting full clean build for Android..."
 
 # Step 1: Uninstall old app and clean everything
 echo "📱 Uninstalling old app from device..."
-adb uninstall com.anonymous.ft 2>/dev/null || echo "No existing app to uninstall"
+adb uninstall com.menutha.org 2>/dev/null || echo "No existing app to uninstall"
 
 echo "🧹 Removing old build artifacts..."
 rm -rf node_modules

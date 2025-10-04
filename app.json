@@ -40,7 +40,6 @@
       "typedRoutes": true
     },
     "extra": {
-      "DEFAULT_LANDING_PAGE": "/Customer-Login"
     }
   }
 }
