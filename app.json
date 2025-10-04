@@ -1,10 +1,10 @@
 {
   "expo": {
-  "name": "Menutha",
+    "name": "Menutha",
     "slug": "ft",
     "version": "1.0.0",
     "orientation": "portrait",
-  "icon": "./src/assets/images/logo.png",
+    "icon": "./src/assets/images/logo.png",
     "scheme": "ft",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -32,14 +32,12 @@
       "output": "static",
       "favicon": "./src/assets/favicon.png"
     },
-    "plugins": [
-      "expo-router",
-      "expo-maps"
-    ],
+    "plugins": ["expo-router", "expo-maps"],
     "experiments": {
       "typedRoutes": true
     },
     "extra": {
+      "DEFAULT_LANDING_PAGE": "/login"
     }
   }
 }

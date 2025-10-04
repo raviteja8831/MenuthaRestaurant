@@ -1,143 +1,72 @@
 #!/bin/bash
 set -euo pipefail
 
-# Detect Android SDK location and set env vars if possible
-echo "🔎 Locating Android SDK..."
-if [ -z "${ANDROID_SDK_ROOT:-}" ] && [ -z "${ANDROID_HOME:-}" ]; then
-    if [ -d "$HOME/android-sdk" ]; then
-        export ANDROID_SDK_ROOT="$HOME/android-sdk"
-        export ANDROID_HOME="$HOME/android-sdk"
-    elif [ -d "$HOME/Android/Sdk" ]; then
-        export ANDROID_SDK_ROOT="$HOME/Android/Sdk"
-        export ANDROID_HOME="$HOME/Android/Sdk"
-    elif [ -d "/home/ec2-user/android-sdk" ]; then
-        export ANDROID_SDK_ROOT="/home/ec2-user/android-sdk"
-        export ANDROID_HOME="/home/ec2-user/android-sdk"
-    fi
-fi
+#!/bin/bash
+set -euo pipefail
 
-if [ -n "${ANDROID_SDK_ROOT:-}" ]; then
-    export PATH="$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/tools:$ANDROID_SDK_ROOT/tools/bin:$PATH"
-    echo "Using Android SDK at: $ANDROID_SDK_ROOT"
-else
-    echo "ERROR: Android SDK not found. Expected \$ANDROID_SDK_ROOT or \$ANDROID_HOME, or $HOME/android-sdk or $HOME/Android/Sdk."
-    echo "You can create the expected path with:"
-    echo "  mkdir -p \$HOME/Android; ln -s \$HOME/android-sdk \$HOME/Android/Sdk"
-    exit 1
-fi
+echo "🚀 FULL CLEAN: Removing node_modules and android folder for a fresh start..."
 
-echo "🚀 Starting full clean build for Android..."
+# Go to project root (where script is placed)
+PROJECT_ROOT=$(pwd)
 
-# Step 1: Uninstall old app and clean everything
-echo "📱 Uninstalling old app from device..."
-adb uninstall com.menutha.org 2>/dev/null || echo "No existing app to uninstall"
-
-echo "🧹 Removing old build artifacts..."
-rm -rf node_modules
-rm -rf android
-rm -rf /tmp/react-* 2>/dev/null || true
-rm -rf /tmp/metro-* 2>/dev/null || true
-rm -rf /tmp/haste-* 2>/dev/null || true
-rm -rf .expo
+# Step 1: Remove node_modules and android folder
+rm -rf $PROJECT_ROOT/node_modules
+rm -rf $TMPDIR/react-*
+rm -rf $TMPDIR/metro-*
+rm -rf $TMPDIR/haste-*
 npm cache clean --force
 
 # Step 2: Install dependencies
 echo "📦 Installing dependencies..."
-npm install --force
+npm install
 
-# Step 3: Regenerate android folder using Expo prebuild
-echo "🔄 Regenerating android folder with expo prebuild..."
-npx expo prebuild --platform android --clean
 
-# Step 4: Copy network security config
-echo "📋 Copying network security config..."
-mkdir -p android/app/src/main/res/xml
-cat > android/app/src/main/res/xml/network_security_config.xml << 'EOF'
-<?xml version="1.0" encoding="utf-8"?>
-<network-security-config>
-    <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="true">frootcity.com</domain>
-        <domain includeSubdomains="true">localhost</domain>
-        <domain includeSubdomains="true">10.0.2.2</domain>
-    </domain-config>
-</network-security-config>
-EOF
+# Step 3: Prompt for app name and update app.json
+# read -p "Enter the app name to use (default: Menutha): " APPNAME
+# APPNAME=${APPNAME:-Menutha}
+# echo "Updating app.json with app name: $APPNAME"
+# if [ -f "$PROJECT_ROOT/app.json" ]; then
+# 	# Use jq if available, else fallback to sed
+# 	if command -v jq &> /dev/null; then
+# 		cat $PROJECT_ROOT/app.json | jq --arg name "$APPNAME" '.expo.name = $name' > $PROJECT_ROOT/app.tmp.json && mv $PROJECT_ROOT/app.tmp.json $PROJECT_ROOT/app.json
+# 	else
+# 		sed -i.bak "s/\("name"\): ".*"/\1: \"$APPNAME\"/" $PROJECT_ROOT/app.json
+# 	fi
+# fi
 
-# Step 4a: Add network security config to AndroidManifest
-sed -i 's/android:usesCleartextTraffic="true"/android:usesCleartextTraffic="true" android:networkSecurityConfig="@xml\/network_security_config"/g' android/app/src/main/AndroidManifest.xml
+# Step 4: Regenerate android folder using Expo prebuild
+# echo "🔄 Regenerating android folder with expo prebuild..."
+# npx expo prebuild
 
-# Step 4b: Disable Hermes to fix Symbol error (ensure it's set correctly)
-echo "🔧 Ensuring Hermes is disabled..."
-if grep -q "hermesEnabled=" android/gradle.properties; then
-    sed -i 's/hermesEnabled=.*/hermesEnabled=false/g' android/gradle.properties
-else
-    echo "hermesEnabled=false" >> android/gradle.properties
-fi
-echo "✅ Hermes disabled: $(grep hermesEnabled android/gradle.properties)"
-
-# Step 2a: Ensure android/gradle.properties exists
-if [ ! -f android/gradle.properties ]; then
-    echo "Creating android/gradle.properties..."
-    cat > android/gradle.properties << 'EOF'
-hermesEnabled=false
-EOF
-fi
-
-# Step 2b: Ensure expo-router layout exists
-if [ ! -f app/_layout.js ]; then
-    echo "Creating app/_layout.js for expo-router..."
-    cat > app/_layout.js << 'EOF'
-import { Stack } from 'expo-router';
-export default function Layout() {
-    return <Stack />;
-}
-EOF
-fi
-# Step 5: Navigate to android folder
+# # Step 4: Build Android app only (no emulator)
+# echo "🏗 Building Android app (no emulator)..."
+# npx expo prebuild --platform android
 cd android
 chmod +x gradlew
 
-# Step 6: Kill any existing Gradle daemons and clean
-echo "🧹 Stopping Gradle daemons and cleaning build..."
-./gradlew --stop 2>/dev/null || true
-pkill -f gradle 2>/dev/null || true
-rm -rf .gradle app/build build .cxx 2>/dev/null || true
-rm -rf ~/.gradle/caches/transforms-* ~/.gradle/caches/*/fileHashes 2>/dev/null || true
-./gradlew clean --no-daemon
+# Step 4: Clean Android build
+echo "🧹 Cleaning Android build..."
+./gradlew clean
+rm -rf .gradle app/build build .cxx
 
-# Step 7: Refresh Gradle dependencies
+# Step 5: Refresh Gradle dependencies
 echo "🔄 Refreshing Gradle dependencies..."
-./gradlew --refresh-dependencies --no-daemon
+./gradlew --refresh-dependencies
 
-# Step 8: Generate JS bundle for Debug APK
-echo "📦 Generating JS bundle for Debug..."
-cd ..
-mkdir -p android/app/src/main/assets
-# Use Metro bundler with JSC engine (consistent with gradle.properties)
-npx metro build app/index.js \
-  --platform android \
-  --dev false \
-  --out android/app/src/main/assets/index.android.bundle \
-  --reset-cache
-
-# Step 9: Build Debug APK with bundle
+# Step 6: Build Debug APK
 echo "🏗 Building Debug APK..."
-cd android
-./gradlew assembleDebug --no-daemon
+./gradlew assembleDebug
 
-# Step 10: Build Release APK (uses same bundle from step 8)
-#echo "🔑 Building Release APK..."
-#./gradlew assembleRelease --no-daemon
+# Step 7: Build Release APK + AAB
+echo "🔑 Building Release APK and AAB..."
+# ./gradlew assembleRelease
+#./gradlew bundleRelease
 
-# Step 11: Build Release AAB (optional - uncomment if needed)
-# echo "📦 Building Release AAB..."
-# ./gradlew bundleRelease
-
-# Step 12: Show output paths
+# Step 8: Show output paths
 echo ""
 echo "✅ Build complete!"
-echo "📂 Debug APK:   android/app/build/outputs/apk/debug/app-debug.apk"
-# echo "📂 Release APK: android/app/build/outputs/apk/release/app-release.apk"
-# echo "📂 Release AAB: android/app/build/outputs/bundle/release/app-release.aab"
-echo ""
-echo "To install debug APK on device: adb install android/app/build/outputs/apk/debug/app-debug.apk"
+echo "📂 Debug APK:   app/build/outputs/apk/debug/app-debug.apk"
+echo "📂 Release APK: app/build/outputs/apk/release/app-release.apk"
+echo "📂 Release AAB: app/build/outputs/bundle/release/app-release.aab"
+
+
