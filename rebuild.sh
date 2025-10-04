@@ -42,32 +42,32 @@ EOF
 sed -i 's/android:usesCleartextTraffic="true"/android:usesCleartextTraffic="true" android:networkSecurityConfig="@xml\/network_security_config"/g' android/app/src/main/AndroidManifest.xml
 
 # Step 4b: Disable Hermes to fix Symbol error (ensure it's set correctly)
-echo "🔧 Ensuring Hermes is disabled..."
-if grep -q "hermesEnabled=" android/gradle.properties; then
-    sed -i 's/hermesEnabled=.*/hermesEnabled=false/g' android/gradle.properties
-else
-    echo "hermesEnabled=false" >> android/gradle.properties
-fi
-echo "✅ Hermes disabled: $(grep hermesEnabled android/gradle.properties)"
+# echo "🔧 Ensuring Hermes is disabled..."
+# if grep -q "hermesEnabled=" android/gradle.properties; then
+#     sed -i 's/hermesEnabled=.*/hermesEnabled=false/g' android/gradle.properties
+# else
+#     echo "hermesEnabled=false" >> android/gradle.properties
+# fi
+# echo "✅ Hermes disabled: $(grep hermesEnabled android/gradle.properties)"
 
-# Step 2a: Ensure android/gradle.properties exists
-if [ ! -f android/gradle.properties ]; then
-    echo "Creating android/gradle.properties..."
-    cat > android/gradle.properties << 'EOF'
-hermesEnabled=false
-EOF
-fi
+# # Step 2a: Ensure android/gradle.properties exists
+# if [ ! -f android/gradle.properties ]; then
+#     echo "Creating android/gradle.properties..."
+#     cat > android/gradle.properties << 'EOF'
+# hermesEnabled=false
+# EOF
+# fi
 
-# Step 2b: Ensure expo-router layout exists
-if [ ! -f app/_layout.js ]; then
-    echo "Creating app/_layout.js for expo-router..."
-    cat > app/_layout.js << 'EOF'
-import { Stack } from 'expo-router';
-export default function Layout() {
-    return <Stack />;
-}
-EOF
-fi
+# # Step 2b: Ensure expo-router layout exists
+# if [ ! -f app/_layout.js ]; then
+#     echo "Creating app/_layout.js for expo-router..."
+#     cat > app/_layout.js << 'EOF'
+# import { Stack } from 'expo-router';
+# export default function Layout() {
+#     return <Stack />;
+# }
+# EOF
+# fi
 # Step 5: Navigate to android folder
 cd android
 chmod +x gradlew
