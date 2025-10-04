@@ -74,6 +74,7 @@
     "metro": "^0.83.3",
     "metro-config": "^0.83.3",
     "metro-core": "^0.83.3",
+    "metro-react-native-babel-preset": "^0.77.0",
     "typescript": "~5.8.3"
   },
   "private": true

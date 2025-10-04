@@ -1,31 +1,6 @@
 #!/bin/bash
 set -euo pipefail
 
-# Detect Android SDK location and set env vars if possible
-echo "🔎 Locating Android SDK..."
-if [ -z "${ANDROID_SDK_ROOT:-}" ] && [ -z "${ANDROID_HOME:-}" ]; then
-    if [ -d "$HOME/android-sdk" ]; then
-        export ANDROID_SDK_ROOT="$HOME/android-sdk"
-        export ANDROID_HOME="$HOME/android-sdk"
-    elif [ -d "$HOME/Android/Sdk" ]; then
-        export ANDROID_SDK_ROOT="$HOME/Android/Sdk"
-        export ANDROID_HOME="$HOME/Android/Sdk"
-    elif [ -d "/home/ec2-user/android-sdk" ]; then
-        export ANDROID_SDK_ROOT="/home/ec2-user/android-sdk"
-        export ANDROID_HOME="/home/ec2-user/android-sdk"
-    fi
-fi
-
-if [ -n "${ANDROID_SDK_ROOT:-}" ]; then
-    export PATH="$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/tools:$ANDROID_SDK_ROOT/tools/bin:$PATH"
-    echo "Using Android SDK at: $ANDROID_SDK_ROOT"
-else
-    echo "ERROR: Android SDK not found. Expected \$ANDROID_SDK_ROOT or \$ANDROID_HOME, or $HOME/android-sdk or $HOME/Android/Sdk."
-    echo "You can create the expected path with:"
-    echo "  mkdir -p \$HOME/Android; ln -s \$HOME/android-sdk \$HOME/Android/Sdk"
-    exit 1
-fi
-
 echo "🚀 Starting full clean build for Android..."
 
 # Step 1: Uninstall old app and clean everything
