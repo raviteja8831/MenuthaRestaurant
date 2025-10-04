@@ -3,7 +3,7 @@ console.log('APP INDEX: module loaded', new Date().toISOString());
 
 import { AppRegistry } from 'react-native';
 import LoginScreen from './../src/screens/LoginScreen';
-import { name as appName } from './app.json';
+import { name as appName } from '../app.json';
 
 function IndexScreen() {
   console.log('APP INDEX: rendering IndexScreen');
