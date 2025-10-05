@@ -8,12 +8,17 @@ import {
   Alert,
   Image,
   Dimensions,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useUserData } from "../services/getUserData";
 import { useCallback } from "react";
 import { createTableBooking, getAvailableTables } from "../api/tableBookingApi";
+
+// UPI Payment imports
+import UpiService from "../services/UpiService";
+import QRCode from "react-native-qrcode-svg";
 
 const { width, height } = Dimensions.get("window");
 
@@ -31,6 +36,10 @@ const TableDiningScreen = () => {
     reservedTableNumbers: [],
   });
   const [selectedTables, setSelectedTables] = useState([]);
+
+  // UPI Payment states
+  const [paying, setPaying] = useState(false);
+  const [upiUrl, setUpiUrl] = useState("");
 
   useFocusEffect(
     useCallback(() => {
@@ -104,20 +113,57 @@ const TableDiningScreen = () => {
 
   const handlePay = async () => {
     if (tableCount === 0) {
+      Alert.alert("No Tables Selected", "Please select at least one table to proceed.");
       return;
     }
-    const response = await createTableBooking({ userId, selectedTables });
-    if (response.success) {
-      setSelectedTables([]);
-      setTableCount(0);
-      setAvailableTablesList([]);
-      setTableOrderLength(0);
-      fetchTableBookings();
+
+    try {
+      setPaying(true);
+
+      // Calculate total amount (50 Rs per table)
+      const totalAmount = tableCount * 50;
+
+      // First create the table booking
+      const bookingResponse = await createTableBooking({ userId, selectedTables });
+
+      if (bookingResponse.success) {
+        // Generate UPI URL for payment
+        const upiResponse = await UpiService.initiatePayment({
+          restaurantId: params.hotelId,
+          name: "Table Reservation Payment",
+          amount: totalAmount,
+          transactionRef: `TABLE_${Date.now()}`,
+        });
+
+        if (upiResponse && upiResponse.url) {
+          setUpiUrl(upiResponse.url);
+          Alert.alert(
+            "Payment Required",
+            `Please complete the payment of ₹${totalAmount} for table reservation.`
+          );
+        }
+
+        // Reset state after successful booking
+        setSelectedTables([]);
+        setTableCount(0);
+        setAvailableTablesList([]);
+        setTableOrderLength(0);
+        fetchTableBookings();
+
+        console.log("Table booking created and UPI payment initiated:", {
+          selectedTables,
+          totalAmount,
+          upiResponse
+        });
+      } else {
+        Alert.alert("Booking Failed", "Failed to create table booking. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error in handlePay:", error);
+      Alert.alert("Error", "Failed to process payment. Please try again.");
+    } finally {
+      setPaying(false);
     }
-
-    console.log("Navigating to Payment with params:", selectedTables);
-
-    console.log("availableTablesList:", availableTablesList);
   };
 
   return (
@@ -237,17 +283,32 @@ const TableDiningScreen = () => {
         <Pressable
           style={[
             styles.payButton,
-            tableorderlength == 0 && tableCount == 0 && styles.disabledButton,
+            (tableorderlength == 0 && tableCount == 0) || paying ? styles.disabledButton : null,
           ]}
           onPress={handlePay}
-          disabled={tableorderlength === 0}
+          disabled={tableorderlength === 0 || paying}
         >
-          <Text style={styles.payButtonText}>
-            {tableorderlength === 0
-              ? "No Tables Available"
-              : `Pay ${tableCount > 0 ? "₹" + tableCount * 50 : ""}`}
-          </Text>
+          {paying ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.payButtonText}>
+              {tableorderlength === 0
+                ? "No Tables Available"
+                : `Pay ${tableCount > 0 ? "₹" + tableCount * 50 : ""}`}
+            </Text>
+          )}
         </Pressable>
+
+        {/* Show QR code for UPI payment */}
+        {upiUrl ? (
+          <View style={styles.qrCodeContainer}>
+            <Text style={styles.qrCodeTitle}>Scan to pay with any UPI app:</Text>
+            <QRCode value={upiUrl} size={180} />
+            <Text style={styles.qrCodeNote}>
+              Amount: ₹{tableCount * 50}
+            </Text>
+          </View>
+        ) : null}
       </View>
     </SafeAreaView>
   );
@@ -419,6 +480,32 @@ const styles = StyleSheet.create({
   disabledButton: {
     backgroundColor: "#9994cc", // lighter version of #6C63FF
     opacity: 0.7,
+  },
+  qrCodeContainer: {
+    alignItems: "center",
+    marginTop: height * 0.02,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 15,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  qrCodeTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 15,
+    textAlign: "center",
+  },
+  qrCodeNote: {
+    fontSize: 14,
+    color: "#666",
+    marginTop: 10,
+    textAlign: "center",
+    fontWeight: "600",
   },
 });
 
