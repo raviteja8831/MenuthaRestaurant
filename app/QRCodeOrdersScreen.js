@@ -299,7 +299,17 @@ export default function QRCodeOrdersScreen() {
                 alignItems: "center",
               }}
             >
-              <QRCode value={editValue} size={64} getRef={qrSvgRef} />
+              <QRCode
+                value={JSON.stringify({
+                  restaurantId: qrcode.id,
+                  tableId: qrcode.id,
+                  tableName: editValue,
+                  type: 'table_order',
+                  timestamp: Date.now()
+                })}
+                size={64}
+                getRef={qrSvgRef}
+              />
               <Pressable
                 onPress={handleDeleteQRCode}
                 style={{ marginLeft: 8 }}

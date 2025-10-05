@@ -28,17 +28,17 @@ const HotelDetails = () => {
   };
   const options = [
     {
-      icon: "book-outline",
+      image: require("../src/assets/images/hotel-menu.png"),
       label: "Menu",
       route: "/menu-list",
     },
     {
-      icon: "restaurant-outline",
+      image: require("../src/assets/images/book-table.png"),
       label: "Booking table\n(3 TA)",
       route: "/tableDining",
     },
     {
-      icon: "time-outline",
+      image: require("../src/assets/images/wait.png"),
       label: "Avg Waiting time.\n15Min",
     },
   ];
@@ -64,124 +64,104 @@ const HotelDetails = () => {
 
   const handleOptionPress = (option) => {
     if (option.route) {
+      // Only navigate if hotelData is loaded and has an id
+      if (!hotelData || !hotelData.id) {
+        Alert.alert("Please wait", "Hotel data is still loading. Try again in a moment.");
+        return;
+      }
       router.push({
         pathname: option.route,
         params: {
-          // hotelName: hotelData.name,
-          hotelId: hotelData.id,
-          ishotel: true,
+          hotelId: String(hotelData.id),
+          ishotel: "true",
+          hotelName: hotelData.name,
           // isbuffet: hotelData.enableBuffet,
         },
       });
-    } else if (option.label.includes("Booking")) {
-      Alert.alert("Booking", "Table booking feature coming soon!");
-    }
+    } 
   };
   return (
-    <SafeAreaView style={hoteldetailsstyles.container}>
-      <ScrollView>
-        {/* Header Image */}
-        {hotelData?.ambianceImage ? (
-          <Image
-            source={{ uri: `${IMG_BASE_URL}${hotelData?.ambianceImage}` }}
-            style={hoteldetailsstyles.headerImage}
-            defaultSource={require("../src/assets/images/logo.png")}
-          />
-        ) : (
-          <View
-            style={[hoteldetailsstyles.placeholderImage, { marginBottom: 50 }]}
-          />
-        )}
-
-        {/* Header Top: Back arrow + floating icons */}
-        <View
-          style={[
-            hoteldetailsstyles.headerTop,
-            // { position: "absolute", top: 0, left: 0, right: 0, zIndex: 1 },
-          ]}
-        >
+    <SafeAreaView style={[hoteldetailsstyles.container, { backgroundColor: '#b9b6f6' }]}> 
+      <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
+        {/* Header Image with overlay icons */}
+        <View style={{ position: 'relative' }}>
+          {hotelData?.ambianceImage ? (
+            <Image
+              source={{ uri: `${IMG_BASE_URL}/assets/images/1759388758320-8ff69799-ba0e-4034-995e-41a029364440.jpeg` }}
+              style={[hoteldetailsstyles.headerImage, { borderTopLeftRadius: 40, borderTopRightRadius: 40 }]}
+              defaultSource={require("../src/assets/images/logo.png")}
+            />
+          ) : (
+            <View style={[hoteldetailsstyles.placeholderImage, { marginBottom: 50 }]} />
+          )}
+          {/* Back button and share/fav icons on image */}
           <Pressable
-            style={hoteldetailsstyles.backButton}
+            style={{ position: 'absolute', top: 18, left: 18, zIndex: 2, backgroundColor: 'rgba(255,255,255,0.7)', borderRadius: 20, padding: 4 }}
             onPress={handleBackPress}
           >
-            <Ionicons name="chevron-back" size={34} color="black" />
+            <Ionicons name="chevron-back" size={28} color="black" />
           </Pressable>
-          <View style={hoteldetailsstyles.topIcons}>
-            <Pressable style={hoteldetailsstyles.iconCircle}>
-              <Ionicons name="heart-outline" size={24} color="black" />
+          <View style={{ position: 'absolute', top: 18, right: 18, flexDirection: 'row', zIndex: 2, gap: 12 }}>
+            <Pressable style={{ backgroundColor: 'rgba(255,255,255,0.7)', borderRadius: 20, padding: 6, marginRight: 8 }}>
+              <Ionicons name="heart-outline" size={22} color="black" />
             </Pressable>
-            <Pressable style={hoteldetailsstyles.iconCircle}>
-              <Ionicons name="share-social-outline" size={24} color="black" />
+            <Pressable style={{ backgroundColor: 'rgba(255,255,255,0.7)', borderRadius: 20, padding: 6 }}>
+              <Ionicons name="share-social-outline" size={22} color="black" />
             </Pressable>
           </View>
         </View>
 
-        {/* Hotel Info */}
-        <View style={hoteldetailsstyles.card}>
-          <Text style={hoteldetailsstyles.hotelName}>
-            {hotelData?.name} ({hotelData?.starRating} Star Hotel)
+        {/* Hotel Info Card */}
+        <View style={[hoteldetailsstyles.card, { backgroundColor: 'transparent', marginTop: 0, paddingTop: 18, paddingBottom: 8 }]}> 
+          <Text style={[hoteldetailsstyles.hotelName, { fontSize: 28, marginBottom: 6 }]}>
+            {hotelData?.name} ({hotelData?.starRating} star Hotel)
           </Text>
-          <Text style={hoteldetailsstyles.address}>{hotelData?.address}</Text>
-
+          <Text style={[hoteldetailsstyles.address, { fontSize: 15, marginBottom: 12 }]}>{hotelData?.address}</Text>
           {/* Options */}
-          <View style={hoteldetailsstyles.optionsRow}>
+          <View style={[hoteldetailsstyles.optionsRow, { marginVertical: 10, gap: 10 }]}> 
             {options?.map((opt, i) => (
               <Pressable
                 key={i}
-                style={hoteldetailsstyles.option}
+                style={[hoteldetailsstyles.option, { minWidth: 80, alignItems: 'center', gap: 2 }]}
                 onPress={() => handleOptionPress(opt)}
               >
-                <Ionicons name={opt.icon} size={28} color="black" />
-                <Text style={hoteldetailsstyles.optionText}>{opt.label}</Text>
+                <Image
+                  source={opt.image}
+                  style={{ width: 44, height: 44, marginBottom: 2, resizeMode: 'contain' }}
+                />
+                <Text style={[hoteldetailsstyles.optionText, { fontSize: 13, color: '#222' }]}>{opt.label}</Text>
               </Pressable>
-            )) || []}
+            ))}
           </View>
-
           {/* Hotel Star Rating */}
-          <View style={hoteldetailsstyles.ratingRow}>
+          <View style={[hoteldetailsstyles.ratingRow, { marginVertical: 10, gap: 2 }]}> 
             {[...Array(hotelData?.starRating)].map((_, i) => (
-              <FontAwesome key={i} name="star" size={28} color="#FFD700" />
+              <FontAwesome key={i} name="star" size={32} color="#FFD700" style={{ marginHorizontal: 1 }} />
             ))}
           </View>
         </View>
 
-        <View style={hoteldetailsstyles.borderContainer}></View>
+        <View style={[hoteldetailsstyles.borderContainer, { marginVertical: 8 }]}></View>
 
         {/* Reviews */}
         {hotelData?.restaurantReviews?.map((review, index) => (
-          <View key={index} style={hoteldetailsstyles.reviewCard}>
-            <View style={hoteldetailsstyles.reviewHeader}>
+          <View key={index} style={[hoteldetailsstyles.reviewCard, { backgroundColor: '#b9b6f6', borderRadius: 0, borderWidth: 1, borderColor: 'black', marginBottom: 0, marginHorizontal: 0, paddingVertical: 12, paddingHorizontal: 10 }]}> 
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
               <Ionicons name="person-circle" size={22} color="black" />
-              <View style={hoteldetailsstyles.reviewStars}>
+              <View style={{ flexDirection: 'row', marginLeft: 8, gap: 2 }}>
                 {[...Array(review.rating || 0)].map((_, i) => (
-                  <FontAwesome key={i} name="star" size={14} color="#FFD700" />
+                  <FontAwesome key={i} name="star" size={16} color="#FFD700" />
                 ))}
               </View>
-              {/* <Text style={hoteldetailsstyles.reviewText}>{review.review}</Text> */}
-              {/*  <Text style={hoteldetailsstyles.reviewDate}>
-                {new Date(review.createdAt).toLocaleDateString()}
-              </Text> */}
             </View>
             {review.review && (
-              <View /* style={hoteldetailsstyles.reviewContent} */>
-                <Text style={hoteldetailsstyles.reviewText}>
-                  {review.review}
-                </Text>
-                <Text style={hoteldetailsstyles.reviewDate}>
+              <View>
+                <Text style={{ fontSize: 15, color: '#222', lineHeight: 20, marginBottom: 2 }}>{review.review}</Text>
+                {/* <Text style={hoteldetailsstyles.reviewDate}>
                   {new Date(review.createdAt).toLocaleDateString()}
-                </Text>
+                </Text> */}
               </View>
             )}
-            {/*   {review.review && (
-              <View style={hoteldetailsstyles.reviewContent}>
-                <Text style={hoteldetailsstyles.reviewText}>
-                  {review.review}
-                </Text>
-                <Text style={hoteldetailsstyles.reviewDate}>
-                  {new Date(review.createdAt).toLocaleDateString()}
-                </Text>
-              </View>
-            )} */}
           </View>
         ))}
       </ScrollView>

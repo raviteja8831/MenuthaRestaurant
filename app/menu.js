@@ -30,32 +30,22 @@ export default function MenuScreen() {
     { label: "Liquor", icon: "liquor" },
   ];
   const categoryImages = {
-    "Hot & Cold beverages": require("../src/assets/images/bevereage.png"),
-    Soups: require("../src/assets/images/soup.png"),
-    Breakfast: require("../src/assets/images/breakfast.png"),
-    Starters: require("../src/assets/images/staters.png"),
-    "Indian Breads": require("../src/assets/images/indian-bread.png"),
-    "Main Course": require("../src/assets/images/main-course.png"),
-    Salads: require("../src/assets/images/salads.png"),
-    "Ice creams & Desserts": require("../src/assets/images/ice-cream-sesserts.png"),
-    Liquor: require("../src/assets/images/liquor.jpg"),
+    "beverage": require("../src/assets/images/bevereage.png"),
+    "soups": require("../src/assets/images/soup.png"),
+    "breakfast": require("../src/assets/images/breakfast.png"),
+    "starters": require("../src/assets/images/staters.png"),
+    "ibreads": require("../src/assets/images/indian-bread.png"),
+    "mc": require("../src/assets/images/main-course.png"),
+    "salads": require("../src/assets/images/salads.png"),
+    "iced": require("../src/assets/images/ice-cream-desserts.png"),
+    "liquor": require("../src/assets/images/liquor.jpg"),
   };
   const [enableAll, setEnableAll] = useState(false);
   // Placeholder: Replace with real menu item IDs from state/store
   const [menuItemIds, setMenuItemIds] = useState([1, 2, 3]);
   const [showAddModal, setShowAddModal] = useState(false);
   const alert = AlertService;
-  // TODO: Replace with real menuId from context/store/props
 
-  // const handleAddSave = async (item) => {
-  //   try {
-  //     await addMenuItem({ ...item, menuId });
-  //     alert.success('Menu item added successfully!');
-  //     setShowAddModal(false);
-  //   } catch (error) {
-  //     alert.error(error?.response?.data?.message || error?.message || 'Failed to add menu item');
-  //   }
-  // };
   const handleAddSave = async (item) => {
     try {
       const userProfile = await AsyncStorage.getItem("user_profile");

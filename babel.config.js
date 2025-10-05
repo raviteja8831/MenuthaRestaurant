@@ -1,5 +1,9 @@
 module.exports = {
-  presets: ['module:metro-react-native-babel-preset'],
+  presets: [
+    ['babel-preset-expo', {
+      unstable_transformProfile: 'hermes-stable',
+    }]
+  ],
   plugins: [
     'react-native-reanimated/plugin', // if you use reanimated
   ],

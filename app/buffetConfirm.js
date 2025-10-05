@@ -16,7 +16,7 @@ const BuffetConfirm = () => {
         style={styles.backButton}
         onPress={() =>
           router.push({
-            pathname: "/BuffetTime",
+            pathname: "/buffetTime",
             params: {
               hotelName: params.hotelName,
               hotelId: params.hotelId,

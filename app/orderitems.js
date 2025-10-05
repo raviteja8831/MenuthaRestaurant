@@ -19,6 +19,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import CommentModal from "../src/Modals/menueditModal"; // 👈 new component
 import { orderitemsstyle, responsiveStyles } from "../src/styles/responsive";
 import { AlertService } from "../src/services/alert.service";
+import { LinearGradient } from "expo-linear-gradient";
 import { getitemsbasedonmenu, getSpecificMenu } from "../src/api/menuApi";
 import {
   createOrder,
@@ -29,16 +30,92 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useUserData } from "../src/services/getUserData";
 // import { deleteOrderItems } from "../../server/app/controllers/order.controller";
 const categoryImages = {
-  "Hot & Cold beverages": require("../src/assets//images/bevereage.png"),
-  Soups: require("../src/assets//images/soup.png"),
-  Breakfast: require("../src/assets//images/breakfast.png"),
-  Starters: require("../src/assets//images/staters.png"),
-  "Indian Breads": require("../src/assets//images/indian-bread.png"),
-  "Main Course": require("../src/assets//images/main-course.png"),
-  Salads: require("../src/assets//images/salads.png"),
-  "Ice creams & Desserts": require("../src/assets//images/ice-cream-sesserts.png"),
-  Liquor: require("../src/assets//images/liquor.jpg"),
+  "Hot & Cold beverages": require("../src/assets/images/bevereage.png"),
+  "Hot & Cold Beverages": require("../src/assets/images/bevereage.png"),
+  "Beverages": require("../src/assets/images/bevereage.png"),
+  Soups: require("../src/assets/images/soup.png"),
+  Breakfast: require("../src/assets/images/breakfast.png"),
+  Starters: require("../src/assets/images/staters.png"),
+  "Indian Breads": require("../src/assets/images/indian-bread.png"),
+  "Indian Bread": require("../src/assets/images/indian-bread.png"),
+  "Main Course": require("../src/assets/images/main-course.png"),
+  "Main Courses": require("../src/assets/images/main-course.png"),
+  Salads: require("../src/assets/images/salads.png"),
+  Salad: require("../src/assets/images/salads.png"),
+  "Ice creams & Desserts": require("../src/assets/images/ice-cream-sesserts.png"),
+  "Ice Creams & Desserts": require("../src/assets/images/ice-cream-sesserts.png"),
+  "Desserts": require("../src/assets/images/ice-cream-sesserts.png"),
+  Liquor: require("../src/assets/images/liquor.jpg"),
 };
+
+// Icon mapping object - Maps icon names from API to MaterialCommunityIcons
+// Based on the Figma design, mapping common menu category icons
+const iconMapping = {
+  // Beverages - cup icons
+  "cup-outline": "cup-outline",
+  "coffee": "coffee",
+  "glass-cocktail": "glass-cocktail",
+  "cup": "cup-outline",
+  "beverage": "cup-outline",
+  "drinks": "cup-outline",
+
+  // Soups - bowl/pot icons
+  "bowl-mix-outline": "bowl-mix-outline",
+  "bowl-outline": "bowl-outline",
+  "pot-steam-outline": "pot-steam-outline",
+  "soup": "bowl-mix-outline",
+
+  // Breakfast - bread/egg icons
+  "bread-slice-outline": "bread-slice-outline",
+  "food-croissant": "food-croissant",
+  "egg-fried": "egg-fried",
+  "breakfast": "bread-slice-outline",
+  "bread": "bread-slice-outline",
+
+  // Starters - fork/knife icons
+  "food-drumstick-outline": "food-drumstick-outline",
+  "food-variant": "food-variant",
+  "silverware-fork-knife": "silverware-fork-knife",
+  "starters": "silverware-fork-knife",
+  "appetizers": "silverware-fork-knife",
+
+  // Indian Breads - layered/circle icons
+  "circle-outline": "circle-outline",
+  "food-off-outline": "food-off-outline",
+  "layers-outline": "layers-outline",
+  "indian_bread": "layers-outline",
+  "bread": "layers-outline",
+
+  // Main Course - main dish icons
+  "silverware-clean": "silverware-clean",
+  "food": "food",
+  "bowl-mix": "bowl-mix",
+  "main_course": "food",
+  "main": "food",
+
+  // Salads - leaf/apple icons
+  "leaf": "leaf",
+  "food-apple-outline": "food-apple-outline",
+  "salad": "food-apple-outline",
+  "salads": "food-apple-outline",
+
+  // Desserts/Ice cream - ice cream icons
+  "ice-cream": "ice-cream",
+  "cake-variant-outline": "cake-variant-outline",
+  "candy-outline": "candy-outline",
+  "dessert": "ice-cream",
+  "desserts": "ice-cream",
+  "ice_cream": "ice-cream",
+
+  // Default fallback
+  "food-outline": "food-outline"
+};
+
+// Default fallback icon
+const defaultIcon = "food-outline";
+
+// Default fallback image
+const defaultCategoryImage = require("../src/assets/images/menu.png");
 export default function ItemsListScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -356,12 +433,11 @@ export default function ItemsListScreen() {
   };
 
   return (
-    <SafeAreaView style={orderitemsstyle.container}>
-      <ImageBackground
-        source={require("../src/assets//images/menu-bg.png")}
-        style={orderitemsstyle.backgroundImage}
-        resizeMode="repeat"
-      />
+    <LinearGradient
+      colors={['#C4B5FD', '#A78BFA']}
+      style={orderitemsstyle.container}
+    >
+      <SafeAreaView style={{ flex: 1 }}>
       <View style={orderitemsstyle.header}>
         <Pressable
           style={orderitemsstyle.backButton}
@@ -375,13 +451,11 @@ export default function ItemsListScreen() {
             // { width: "100px", height: "100px" },
           ]}
         >
-          <Image
-            source={categoryImages[menuData.name]}
-            resizeMode="contain"
-            style={
-              orderitemsstyle.categoryImage //,
-              // { width: "100px", height: "100px" },
-            }
+          <MaterialCommunityIcons
+            name={iconMapping[menuData.icon] || defaultIcon}
+            size={50}
+            color="#333"
+            style={orderitemsstyle.categoryIcon}
           />
           <Text style={orderitemsstyle.title}>{params.categoryName}</Text>
         </View>
@@ -392,8 +466,23 @@ export default function ItemsListScreen() {
         style={orderitemsstyle.scrollView}
         showsVerticalScrollIndicator={false}
       >
-        {items.map((item) => (
-          <View key={item.id} style={orderitemsstyle.itemRow}>
+        {/* Group items by type */}
+        {(() => {
+          // Group items by itemType
+          const groupedItems = items.reduce((acc, item) => {
+            const type = item.itemType || 'Other';
+            if (!acc[type]) {
+              acc[type] = [];
+            }
+            acc[type].push(item);
+            return acc;
+          }, {});
+
+          return Object.entries(groupedItems).map(([type, typeItems]) => (
+            <View key={type}>
+              <Text style={orderitemsstyle.sectionHeader}>{type}</Text>
+              {typeItems.map((item) => (
+                <View key={item.id} style={orderitemsstyle.itemRow}>
             {params.ishotel == "false" && (
               <Pressable
                 style={orderitemsstyle.checkboxContainer}
@@ -451,9 +540,10 @@ export default function ItemsListScreen() {
                 ""
               ))}
           </View>
-        ))}
-        {/*  </View>
-        ))} */}
+              ))}
+            </View>
+          ));
+        })()}
         {params.ishotel == "false" && (
           <View style={orderitemsstyle.orderSummary}>
             <Text style={orderitemsstyle.summaryText}>
@@ -491,6 +581,7 @@ export default function ItemsListScreen() {
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleCommentSubmit}
       />
-    </SafeAreaView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
