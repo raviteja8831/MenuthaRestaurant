@@ -10,6 +10,8 @@ import {
   ScrollView,
   Dimensions,
   TextInput,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { buffetsimescreenstyles } from "../styles/responsive";
 import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
@@ -81,6 +83,39 @@ Object.assign(buffetsimescreenstyles, {
     color: "#6c63ff",
     alignSelf: "flex-end",
   },
+  qrCodeContainer: {
+    alignItems: "center",
+    marginTop: 20,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 15,
+    padding: 20,
+    marginHorizontal: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  qrCodeTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 15,
+    textAlign: "center",
+  },
+  qrCodeNote: {
+    fontSize: 16,
+    color: "#6c63ff",
+    marginTop: 10,
+    textAlign: "center",
+    fontWeight: "bold",
+  },
+  qrCodeDetails: {
+    fontSize: 14,
+    color: "#666",
+    marginTop: 5,
+    textAlign: "center",
+  },
 });
 // import { buffetData } from "./Mock/CustomerHome";
 import { useEffect } from "react";
@@ -88,12 +123,20 @@ import { createBuffetOrder } from "../api/buffetOrder";
 import { getRestaurantById } from "../api/restaurantApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getBuffetDetails } from "../api/buffetApi";
+
+// UPI Payment imports
+import UpiService from "../services/UpiService";
+import QRCode from "react-native-qrcode-svg";
 const BuffetTimeScreen = () => {
   const [persons, setPersons] = React.useState(0);
   const [currentBuffet, setcurrentBuffet] = React.useState([]);
   const [selectedBuffet, setSelectedBuffet] = React.useState(null);
   const [userId, setUserId] = React.useState(null);
   const params = useLocalSearchParams();
+
+  // UPI Payment states
+  const [paying, setPaying] = React.useState(false);
+  const [upiUrl, setUpiUrl] = React.useState("");
   // const currentBuffet = buffetData[0];
   useEffect(() => {
     const initializeProfile = async () => {
@@ -153,33 +196,62 @@ const BuffetTimeScreen = () => {
   );
   const handleCreateBuffetOrder = async () => {
     if (!selectedBuffet) {
-      alert("Please select a buffet option");
+      Alert.alert("Selection Required", "Please select a buffet option");
       return;
     }
-    // Logic to create buffet order and navigate to payment
+
+    if (persons === 0) {
+      Alert.alert("Invalid Count", "Please select number of persons");
+      return;
+    }
+
     try {
-      var obj = {
+      setPaying(true);
+
+      // Calculate total amount
+      const totalAmount = selectedBuffet.price * persons;
+
+      // Create buffet order object
+      const orderObj = {
         userId: userId,
         restaurantId: params.hotelId || 1,
         persons: persons,
         buffetId: selectedBuffet.id,
         price: selectedBuffet.price,
-        totalAmount: selectedBuffet.price * persons,
+        totalAmount: totalAmount,
       };
-      const response = await createBuffetOrder(obj);
+
+      // Create the buffet order
+      const response = await createBuffetOrder(orderObj);
+
       if (response) {
-        router.push({
-          pathname: "/buffetConfirm",
-          params: {
-            hotelName: params.hotelName,
-            hotelId: params.hotelId,
-            ishotel: params.ishotel,
-          },
+        // Generate UPI URL for payment
+        const upiResponse = await UpiService.initiatePayment({
+          restaurantId: params.hotelId,
+          name: "Buffet Order Payment",
+          amount: totalAmount,
+          transactionRef: `BUFFET_${Date.now()}`,
+        });
+
+        if (upiResponse && upiResponse.url) {
+          setUpiUrl(upiResponse.url);
+          Alert.alert(
+            "Payment Required",
+            `Please complete the payment of ₹${totalAmount} for your buffet order.\n\nPersons: ${persons}\nBuffet: ${selectedBuffet.name}`
+          );
+        }
+
+        console.log("Buffet order created and UPI payment initiated:", {
+          orderObj,
+          totalAmount,
+          upiResponse
         });
       }
     } catch (error) {
       console.error("Error creating buffet order:", error);
-      alert("Failed to create buffet order");
+      Alert.alert("Error", "Failed to create buffet order. Please try again.");
+    } finally {
+      setPaying(false);
     }
   };
 
@@ -321,14 +393,32 @@ const BuffetTimeScreen = () => {
           <Pressable
             style={[
               buffetsimescreenstyles.payButton,
-              persons === 0 && buffetsimescreenstyles.payButtonDisabled,
+              (persons === 0 || paying) && buffetsimescreenstyles.payButtonDisabled,
             ]}
             onPress={handleCreateBuffetOrder}
-            disabled={persons === 0}
+            disabled={persons === 0 || paying}
           >
-            <Text style={buffetsimescreenstyles.payText}>Pay</Text>
+            {paying ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={buffetsimescreenstyles.payText}>Pay</Text>
+            )}
           </Pressable>
         </View>
+
+        {/* Show QR code for UPI payment */}
+        {upiUrl ? (
+          <View style={buffetsimescreenstyles.qrCodeContainer}>
+            <Text style={buffetsimescreenstyles.qrCodeTitle}>Scan to pay with any UPI app:</Text>
+            <QRCode value={upiUrl} size={180} />
+            <Text style={buffetsimescreenstyles.qrCodeNote}>
+              Amount: ₹{(selectedBuffet?.price || 0) * persons}
+            </Text>
+            <Text style={buffetsimescreenstyles.qrCodeDetails}>
+              {persons} person{persons > 1 ? 's' : ''} • {selectedBuffet?.name}
+            </Text>
+          </View>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );

@@ -28,7 +28,8 @@
       "Read(//c/Users/ravit/Siddhu'sWorld/restaurant/server/app/models/**)",
       "Bash(dir:*)",
       "Read(//c/Users/ravit/Siddhu'sWorld/restaurant/server/app/middleware/**)",
-      "Read(//c/Users/ravit/Siddhu'sWorld/restaurant/server/**)"
+      "Read(//c/Users/ravit/Siddhu'sWorld/restaurant/server/**)",
+      "Read(//c/Users/ravit/Siddhu'sWorld/Menutha/src/screens/**)"
     ],
     "deny": [],
     "ask": []
