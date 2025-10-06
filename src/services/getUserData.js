@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { AlertService } from "./alert.service";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import React from "react";
 
 export function useUserData() {
   const [userId, setUserId] = useState(null);
@@ -9,31 +10,39 @@ export function useUserData() {
   const [error, setError] = useState(null);
   const router = useRouter();
 
-  useEffect(() => {
-    async function fetchUserData() {
-      try {
-        const userProfile = await AsyncStorage.getItem("user_profile");
-        //console.log("Raw user profile:", userProfile);
+  const fetchUserData = async () => {
+    try {
+      setLoading(true);
+      const userProfile = await AsyncStorage.getItem("user_profile");
+      console.log("useUserData - Checking user profile:", userProfile);
 
-        if (userProfile) {
-          const user = JSON.parse(userProfile);
-          //console.log("Parsed user profile:", user);
-          setUserId(user.id);
-        } else {
-          //console.log("No user profile found");
-          router.replace("/");
-        }
-      } catch (error) {
-        //console.error("Error initializing profile:", error);
-        setError(error);
-        AlertService.error("Error loading profile");
-      } finally {
-        setLoading(false);
+      if (userProfile) {
+        const user = JSON.parse(userProfile);
+        console.log("useUserData - Setting userId to:", user.id);
+        setUserId(user.id);
+      } else {
+        console.log("useUserData - No user profile found");
+        setUserId(null);
       }
+    } catch (error) {
+      console.error("useUserData - Error loading profile:", error);
+      setError(error);
+      AlertService.error("Error loading profile");
+    } finally {
+      setLoading(false);
     }
+  };
 
+  useEffect(() => {
     fetchUserData();
-  }, [router]);
+  }, []);
+
+  // Re-check user data when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchUserData();
+    }, [])
+  );
 
   return { userId, loading, error };
 }

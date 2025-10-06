@@ -4,10 +4,11 @@ import axiosService from "./axiosService";
 import { API_BASE_URL } from "../constants/api.constants";
 import { ORDER_API } from "../constants/orderApi";
 import { showApiError } from "../services/messagingService";
+import api from "./api";
 
 export const createOrder = async (orderData) => {
   try {
-    const res = await axiosService.post(
+    const res = await api.post(
       `${API_BASE_URL}${ORDER_API.CREATE_ORDER}`,
       orderData
     );
@@ -19,7 +20,7 @@ export const createOrder = async (orderData) => {
 };
 export const deleteOrderItems = async (data) => {
   try {
-    const res = await axiosService.post(
+    const res = await api.post(
       `${API_BASE_URL}${ORDER_API.DELETE_ORDER_ITEMS}`,
       data
     );
@@ -32,7 +33,7 @@ export const deleteOrderItems = async (data) => {
 
 export const getOrderItemCount = async (restaurantId, userId) => {
   try {
-    const res = await axiosService.get(
+    const res = await api.get(
       `${API_BASE_URL}/orders/pending/${restaurantId}/${userId}`
     );
     return res.data;
@@ -43,7 +44,7 @@ export const getOrderItemCount = async (restaurantId, userId) => {
 };
 export const getOrderItemList = async (orderId, userId) => {
   try {
-    const res = await axiosService.get(
+    const res = await api.get(
       `${API_BASE_URL}/orders/selected/items/${orderId}`
     );
     return res.data;
@@ -55,7 +56,7 @@ export const getOrderItemList = async (orderId, userId) => {
 
 export const updateOrderStatus = async (orderId, data) => {
   try {
-    const res = await axiosService.put(
+    const res = await api.put(
       `${API_BASE_URL}/orders/${orderId}`,
       data
     );
@@ -68,7 +69,7 @@ export const updateOrderStatus = async (orderId, data) => {
 
 export const deleteOrder = async (orderId) => {
   try {
-    const res = await axiosService.delete(
+    const res = await api.delete(
       `${API_BASE_URL}${ORDER_API.DELETE_ORDER}/${orderId}`
     );
     return res.data;
@@ -80,7 +81,7 @@ export const deleteOrder = async (orderId) => {
 
 export const updateOrderProductStatusList = async (orderId, data) => {
   try {
-    const res = await axiosService.post(
+    const res = await api.post(
       `${API_BASE_URL}/orders/orderproduct/${orderId}`,
       data
     );

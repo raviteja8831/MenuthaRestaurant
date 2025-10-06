@@ -1,4 +1,4 @@
-import api from "../api/api";
+import api from "./api";
 import { CHEF_API } from "../constants/chefApi";
 import { showApiError } from "../services/messagingService";
 
@@ -13,6 +13,7 @@ export const fetchChefOrders = async (user) => {
 };
 export const chefLogin = async ({ phone, password }) => {
   try {
+    console.log(CHEF_API.LOGIN, 'CHEF_API.LOGIN')
     const res = await api.post(CHEF_API.LOGIN, { phone, password });
     return res.data;
   } catch (error) {

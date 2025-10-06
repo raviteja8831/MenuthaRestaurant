@@ -1,11 +1,14 @@
 import axios from "axios";
 import { API_BASE_URL } from "../constants/api.constants";
+import api from "./api";
 
 // Create a new customer
 export const createCustomer = async (customerData) => {
   try {
-    const response = await axios.post(
-      `${API_BASE_URL}/customers`,
+   
+
+    const response = await api.post(
+      `/customers`,
       customerData
     );
     return response.data;
@@ -17,7 +20,7 @@ export const createCustomer = async (customerData) => {
 // Get customer by ID
 export const getCustomerById = async (id) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/customers/${id}`);
+    const response = await api.get(`${API_BASE_URL}/customers/${id}`);
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message;
@@ -27,7 +30,9 @@ export const getCustomerById = async (id) => {
 // Get customer by phone number
 export const getCustomerLogin = async (searchParams) => {
   try {
-    const response = await axios.post(
+     console.log(API_BASE_URL, 'API_BASE_URL')
+
+    const response = await api.post(
       `${API_BASE_URL}/customers/login`,
       searchParams
     );
@@ -39,8 +44,9 @@ export const getCustomerLogin = async (searchParams) => {
 
 // Update customer
 export const updateCustomer = async (id, customerData) => {
+  console.log(API_BASE_URL, 'API_BASE_URL')
   try {
-    const response = await axios.put(
+    const response = await api.put(
       `${API_BASE_URL}/customers/${id}`,
       customerData
     );
@@ -53,7 +59,7 @@ export const updateCustomer = async (id, customerData) => {
 // Delete customer
 export const deleteCustomer = async (id) => {
   try {
-    const response = await axios.delete(`${API_BASE_URL}/customers/${id}`);
+    const response = await api.delete(`${API_BASE_URL}/customers/${id}`);
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message;
@@ -63,7 +69,7 @@ export const deleteCustomer = async (id) => {
 // Get all customers
 export const getAllCustomers = async () => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/customers`);
+    const response = await api.get(`${API_BASE_URL}/customers`);
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message;

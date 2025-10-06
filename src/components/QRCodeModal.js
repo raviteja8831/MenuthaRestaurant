@@ -15,8 +15,17 @@ export default function QRCodeModal({ visible, onClose, onSave, loading, restaur
 
   // Extract tableId from name (assume name is tableId or similar)
   const tableId = name.trim();
-  // Generate QR code value with restaurantId and tableId as query params
-  const qrValue = restaurantId && tableId ? `https://yourdomain.com/order?restaurantId=${restaurantId}&tableId=${encodeURIComponent(tableId)}` : '';
+  // Generate QR code value with complete restaurant and table details
+  const qrCodeData = {
+    restaurantId: restaurantId,
+    tableId: tableId,
+    tableName: name,
+    type: 'table_order',
+    timestamp: Date.now()
+  };
+
+  // Create deep link URL for the app
+  const qrValue = restaurantId && tableId ? `menutha://order?data=${encodeURIComponent(JSON.stringify(qrCodeData))}` : '';
 
   const handleSave = () => {
     if (!name) return;

@@ -71,7 +71,14 @@ export const addMenuItemToUser = async (userId, menuitemId) => {
 
 export const registerUser = async (data) => {
   try {
-    const res = await api.post(USER_API.REGISTER, data);
+    // Create a new axios instance without authorization header for registration
+    const axios = require('axios');
+    const { API_BASE_URL } = require('../constants/api.constants');
+    const registerAxios = axios.create({
+      baseURL: API_BASE_URL,
+    });
+
+    const res = await registerAxios.post(USER_API.REGISTER, data);
     return res.data;
   } catch (error) {
     showApiError(error);
@@ -81,7 +88,14 @@ export const registerUser = async (data) => {
 
 export const loginUser = async (data) => {
   try {
-    const res = await api.post(USER_API.LOGIN, data);
+    // Create a new axios instance without authorization header for login
+    const axios = require('axios');
+    const { API_BASE_URL } = require('../constants/api.constants');
+    const loginAxios = axios.create({
+      baseURL: API_BASE_URL,
+    });
+
+    const res = await loginAxios.post(USER_API.LOGIN, data);
     return res.data;
   } catch (error) {
     showApiError(error);
@@ -101,7 +115,14 @@ export const getUser = async (id) => {
 
 export const registerRestaurantUser = async (data) => {
   try {
-    const res = await api.post(USER_API.REGISTER_RESTAURANT_USER, data);
+    // Create a new axios instance without authorization header for registration
+    const axios = require('axios');
+    const { API_BASE_URL } = require('../constants/api.constants');
+    const registerAxios = axios.create({
+      baseURL: API_BASE_URL,
+    });
+
+    const res = await registerAxios.post(USER_API.REGISTER_RESTAURANT_USER, data);
     return res.data;
   } catch (error) {
     showApiError(error);
@@ -111,7 +132,14 @@ export const registerRestaurantUser = async (data) => {
 
 export const loginRestaurantUser = async (data) => {
   try {
-    const res = await api.post(USER_API.LOGIN_RESTAURANT_USER, data);
+    // Create a new axios instance without authorization header for login
+    const axios = require('axios');
+    const { API_BASE_URL } = require('../constants/api.constants');
+    const loginAxios = axios.create({
+      baseURL: API_BASE_URL,
+    });
+
+    const res = await loginAxios.post(USER_API.LOGIN_RESTAURANT_USER, data);
     return res.data;
   } catch (error) {
     showApiError(error);

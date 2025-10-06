@@ -83,6 +83,7 @@ export default function ChefHomeScreen() {
            console.log("Logout:", logout);
           AsyncStorage.removeItem("auth_token");
           AsyncStorage.removeItem("user_profile");
+          AsyncStorage.removeItem("user_type");
 
           router.replace("/login");
         }}

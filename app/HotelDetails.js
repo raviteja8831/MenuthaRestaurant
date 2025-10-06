@@ -6,8 +6,8 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
-  Alert,
 } from "react-native";
+import { AlertService } from "../src/services/alert.service";
 import { Ionicons, FontAwesome } from "@expo/vector-icons";
 // import Tooltip from "react-native-walkthrough-tooltip";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -52,7 +52,7 @@ const HotelDetails = () => {
         }
       } catch (error) {
         console.error("Error fetching restaurant details:", error);
-        Alert.alert("Error", "Failed to load restaurant details");
+        AlertService.error("Failed to load restaurant details", "Error");
       }
     };
 
@@ -66,7 +66,7 @@ const HotelDetails = () => {
     if (option.route) {
       // Only navigate if hotelData is loaded and has an id
       if (!hotelData || !hotelData.id) {
-        Alert.alert("Please wait", "Hotel data is still loading. Try again in a moment.");
+        AlertService.info("Hotel data is still loading. Try again in a moment.", "Please wait");
         return;
       }
       router.push({

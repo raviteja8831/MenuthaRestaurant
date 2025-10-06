@@ -15,6 +15,7 @@ import {
   Platform,
   TextInput,
 } from "react-native";
+import { AlertService } from "../src/services/alert.service";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { fetchQRCodeOrders } from "../src/services/qrcodeService";
 import { updateTable, deleteTable } from "../src/constants/tableApi";
@@ -57,7 +58,7 @@ export default function QRCodeOrdersScreen() {
     try {
       await updateTable(qrcode.id, { name: editValue });
       setShowEditModal(false);
-      Alert.alert("Success", "Table name updated");
+      AlertService.success("Table name updated", "Success");
       // Optionally reload orders or parent QR list
     } catch (err) {
       showApiError(err);
@@ -68,7 +69,7 @@ export default function QRCodeOrdersScreen() {
   const handleDownloadQRCode = async () => {
     try {
       if (!qrSvgRef.current) {
-        Alert.alert("Error", "QR code not available");
+        AlertService.error("QR code not available", "Error");
         return;
       }
       qrSvgRef.current.toDataURL(async (data) => {
@@ -104,7 +105,7 @@ export default function QRCodeOrdersScreen() {
         }
       });
     } catch (_e) {
-      Alert.alert("Failed to download QR code");
+      AlertService.error("Failed to download QR code");
     }
   };
   // Delete table (with confirm)
@@ -113,7 +114,7 @@ export default function QRCodeOrdersScreen() {
     try {
       await deleteTable(qrcode.id);
       setShowEditModal(false);
-      Alert.alert("Deleted", "Table deleted");
+      AlertService.success("Table deleted", "Deleted");
       // Optionally reload parent QR list or navigate away
     } catch (err) {
       showApiError(err);
@@ -131,7 +132,7 @@ export default function QRCodeOrdersScreen() {
           try {
             await deleteTable(qrcode.id);
             setShowEditModal(false);
-            Alert.alert("Deleted", "Table deleted");
+            AlertService.success("Table deleted", "Deleted");
             // Optionally reload parent QR list or navigate away
             router.push("/qrcodes"); // Navigate to home or main screen
           } catch (err) {
@@ -197,7 +198,7 @@ export default function QRCodeOrdersScreen() {
         dialogTitle: "Share or Save PDF",
       });
     } catch (err) {
-      Alert.alert("Error", "Failed to generate PDF");
+      AlertService.error("Failed to generate PDF", "Error");
     }
   };
   const handleDownloadOrder = (order) => {
@@ -210,7 +211,7 @@ export default function QRCodeOrdersScreen() {
       const data = await fetchQRCodeOrders(qrcode.id, period);
       setOrders(data);
     } catch (err) {
-      Alert.alert("Error", err.message || "Failed to load orders");
+      AlertService.error(err.message || "Failed to load orders", "Error");
     }
     setLoading(false);
   };

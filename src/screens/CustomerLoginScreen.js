@@ -1,13 +1,13 @@
 import React, { useRef, useState } from "react";
 import {
   StyleSheet,
-  Alert,
   View,
   KeyboardAvoidingView,
   Platform,
   Image,
   Pressable,
 } from "react-native";
+import { AlertService } from "../services/alert.service";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { TextInput, Text } from "react-native-paper";
 import axios from "axios";
@@ -43,7 +43,7 @@ export default function CustomerLoginScreen() {
 
   const handleLogin = async () => {
     if (!phone.trim()) {
-      Alert.alert("Error", "Please enter your phone number");
+      AlertService.error("Please enter your phone number", "Error");
       return;
     }
 
@@ -57,14 +57,15 @@ export default function CustomerLoginScreen() {
       if (response) {
         // Save user data
         await AsyncStorage.setItem("user_profile", JSON.stringify(response));
+        await AsyncStorage.setItem("user_type", "customer"); // Set user type
         if (response.token) {
           await AsyncStorage.setItem("auth_token", response.token);
         }
-        // Navigate to customer home
-        router.push("/customer-home");
+        // Navigate to customer home and replace the current route
+        router.replace("/customer-home");
       }
     } catch (err) {
-      Alert.alert("Login Failed", err?.message || "Invalid credentials");
+      AlertService.error(err?.message || "Invalid credentials", "Login Failed");
     }
   };
 

@@ -23,6 +23,7 @@ export default function IndexScreen() {
   const router = useRouter();
 
   useEffect(() => {
+    console.log('INDEX: Starting authentication check');
     checkAuthAndRedirect();
   }, []);
 
@@ -30,23 +31,15 @@ export default function IndexScreen() {
     try {
       setIsLoading(true);
 
-      // Initialize auth on app start
-      await initializeAuth();
+      // Initialize auth on app start (this validates tokens silently)
+      const initResult = await initializeAuth();
 
-      // Check if user is authenticated
+      // Check if user is authenticated after initialization
       const authenticated = await isAuthenticated();
 
-      if (!authenticated) {
-        // Not authenticated, redirect to customer login as default
-        router.replace('/Customer-Login');
-        return;
-      }
-
-      // Validate and refresh token if needed
-      const tokenValid = await validateAndRefreshToken();
-
-      if (!tokenValid) {
-        // Token invalid, redirect to customer login as default
+      if (!authenticated || !initResult) {
+        // Not authenticated or token invalid, redirect to customer login
+        console.log('Not authenticated or token invalid, redirecting to login');
         router.replace('/Customer-Login');
         return;
       }
@@ -54,12 +47,15 @@ export default function IndexScreen() {
       // Get user type and redirect to appropriate home screen
       const userType = await getUserType();
 
+      console.log('User authenticated, userType:', userType);
+
       if (userType === USER_TYPES.CUSTOMER) {
         router.replace('/customer-home');
       } else if (userType === USER_TYPES.RESTAURANT) {
         router.replace('/chef-home');
       } else {
         // Unknown user type, redirect to customer login
+        console.log('Unknown user type, redirecting to login');
         router.replace('/Customer-Login');
       }
     } catch (error) {

@@ -8,9 +8,9 @@ import {
   ScrollView,
   // Dimensions, (unused)
   ActivityIndicator,
-  Alert,
   // Platform, (unused)
 } from "react-native";
+import { AlertService } from "../src/services/alert.service";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import {
@@ -67,7 +67,7 @@ export default function OrderSummaryScreen() {
       router_call();
     } catch (error) {
       console.error("Failed to delete order:", error);
-      Alert.alert("Error", "Failed to delete order. Please try again.");
+      AlertService.error("Failed to delete order. Please try again.", "Error");
     }
   };
 
@@ -134,10 +134,7 @@ export default function OrderSummaryScreen() {
 
   const handleSubmitAndPay = async () => {
     if (totalAmount <= 0) {
-      Alert.alert(
-        "Invalid amount",
-        "Total amount must be greater than 0 to pay."
-      );
+      AlertService.error("Total amount must be greater than 0 to pay.", "Invalid amount");
       return;
     }
     let payAmount = totalAmount;

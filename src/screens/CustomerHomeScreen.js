@@ -1,7 +1,7 @@
  
 import FilterModal from "../Modals/FilterModal";
 import React, { useState, useEffect, useRef } from "react";
-  
+
 import {
   View,
   StyleSheet,
@@ -20,12 +20,11 @@ import { MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 // import SearchModal from "../Modals/SearchModal";
 import * as Location from "expo-location";
-import {
-  GoogleMap,
-  Marker,
-  InfoWindow,
-  useJsApiLoader,
-} from "@react-google-maps/api";
+import { useMemo } from "react";
+import Constants from 'expo-constants';
+// NOTE: we dynamically load the web Google Maps components at runtime
+// so they are not bundled into native builds. For native platforms
+// we load `expo-maps` on Android and `react-native-maps` on iOS below.
 import { getAllRestaurants } from "../api/restaurantApi";
 // import { use } from "react";
 
@@ -65,14 +64,30 @@ function CustomerHomeScreen() {
   const [restaurants, setRestaurants] = useState([]);
 
 
-  // Only for web: load Google Maps API
-  const { isLoaded } =
-    Platform.OS === "web"
-      ? // eslint-disable-next-line react-hooks/rules-of-hooks
-        useJsApiLoader({
-          googleMapsApiKey: "AIzaSyCJT87ZYDqm6bVLxRsg4Zde87HyefUfASQ",
-        })
-      : { isLoaded: true };
+  // Web: dynamic loader for react-native-maps to avoid bundling @react-google-maps
+  // on web we prefer `react-native-maps` (works with react-native-web) and also
+  // when running inside Expo Go (Constants.appOwnership === 'expo') we cannot
+  // rely on native `expo-maps` so we load `react-native-maps` instead.
+  const [webLoaded, setWebLoaded] = React.useState(Platform.OS !== "web");
+  const [WebComponents, setWebComponents] = React.useState(null);
+  useEffect(() => {
+    if (Platform.OS === "web") {
+      (async () => {
+        try {
+          const mod = await import('react-native-maps');
+          // the module may export default or named MapView/Marker
+          setWebComponents({
+            MapView: mod.default || mod.MapView || mod,
+            Marker: mod.Marker || mod.default?.Marker || mod,
+          });
+          setWebLoaded(true);
+        } catch (err) {
+          console.warn('Failed to load react-native-maps on web:', err);
+          setWebLoaded(false);
+        }
+      })();
+    }
+  }, []);
   // Navigation button handler (must be after filteredRestaurants is defined)
   const handleNavigationPress = () => {
     if (!filteredRestaurants.length) {
@@ -322,84 +337,72 @@ function CustomerHomeScreen() {
   // Platform-specific map rendering
   let mapContent = null;
   if (Platform.OS === "web") {
-    if (!isLoaded) {
+    // render react-native-maps MapView on web
+    if (!webLoaded || !WebComponents || !WebComponents.MapView) {
       mapContent = <Text>Loading map...</Text>;
     } else {
+      const WebMapView = WebComponents.MapView;
+      const WebMarker = WebComponents.Marker;
       mapContent = (
-        <GoogleMap
-          mapContainerStyle={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            width: "100vw",
-            height: "100vh",
-            margin: 0,
-            padding: 0,
-            borderRadius: 0,
-            overflow: "hidden",
-          }}
-          center={cityCenter ? { lat: cityCenter.latitude, lng: cityCenter.longitude } : { lat: userLocation.latitude, lng: userLocation.longitude }}
-          zoom={cityCenter ? cityZoom : 13}
-          options={{
-            fullscreenControl: false,
-            streetViewControl: false,
-            mapTypeControl: false,
-            zoomControl: false,
+        <WebMapView
+          style={styles.map}
+          initialRegion={{
+            latitude: userLocation.latitude,
+            longitude: userLocation.longitude,
+            latitudeDelta: 0.0922,
+            longitudeDelta: 0.0421,
           }}
         >
-          {/* User marker */}
-          <Marker
-            position={{
-              lat: userLocation.latitude,
-              lng: userLocation.longitude,
-            }}
-            label="You"
-          />
-          {/* Restaurant markers */}
+          <WebMarker coordinate={userLocation} title="You" />
           {filteredRestaurants
             .filter(r => typeof r.latitude === "number" && typeof r.longitude === "number" && !isNaN(r.latitude) && !isNaN(r.longitude))
             .map((r) => (
-              <Marker
+              <WebMarker
                 key={r.id}
-                position={{ lat: r.latitude, lng: r.longitude }}
-                label={r.name}
-                onClick={() => setSelectedRestaurant(r)}
-                icon={{
-                  url: "../assets/images/restaurant-marker.jpeg",
-                  scaledSize: new window.google.maps.Size(60, 60),
-                }}
-                opacity={
-                  selectedRestaurant && selectedRestaurant.id === r.id ? 1 : 0.7
-                }
-              >
-                {selectedRestaurant && selectedRestaurant.id === r.id && (
-                  <InfoWindow
-                    position={{ lat: r.latitude, lng: r.longitude }}
-                    onCloseClick={() => setSelectedRestaurant(null)}
-                  >
-                    <div>
-                      <h4>{r.name}</h4>
-                      <p>{r.cuisine}</p>
-                    </div>
-                  </InfoWindow>
-                )}
-              </Marker>
+                coordinate={{ latitude: r.latitude, longitude: r.longitude }}
+                title={r.name}
+                description={r.cuisine}
+                onPress={() => setSelectedRestaurant(r)}
+              />
             ))}
-        </GoogleMap>
+        </WebMapView>
       );
     }
   } else {
-    let MapView, NativeMarker;
+    // For native platforms, prefer `expo-maps` for both iOS and Android when
+    // available (standalone/dev-client). When running inside Expo Go (no
+    // native module) fall back to `react-native-maps`.
+    let MapView = null;
+    let NativeMarker = null;
     try {
-      const maps = require("expo-maps");
-      MapView = maps.MapView;
-      NativeMarker = maps.Marker;
-    } catch (_e) {
+      const runningInExpoGo = Constants && Constants.appOwnership === 'expo';
+      if (runningInExpoGo) {
+        // Expo Go doesn't include the new expo-maps native runtime. Use react-native-maps
+        const RNMaps = require('react-native-maps');
+        MapView = RNMaps.MapView || RNMaps.default?.MapView || RNMaps.default;
+        NativeMarker = RNMaps.Marker || RNMaps.default?.Marker || RNMaps.default;
+        console.log('✅ react-native-maps loaded inside Expo Go');
+      } else {
+        // try expo-maps first (standalone / dev-client / EAS build)
+        try {
+          const ExpoMaps = require('expo-maps');
+          MapView = ExpoMaps.MapView;
+          NativeMarker = ExpoMaps.Marker;
+          console.log('✅ expo-maps loaded');
+        } catch (err) {
+          // fallback to react-native-maps if expo-maps not available
+          const RNMaps = require('react-native-maps');
+          MapView = RNMaps.MapView || RNMaps.default?.MapView || RNMaps.default;
+          NativeMarker = RNMaps.Marker || RNMaps.default?.Marker || RNMaps.default;
+          console.log('⚠️ expo-maps not available, falling back to react-native-maps');
+        }
+      }
+    } catch (error) {
+      console.warn('Native maps not available:', error?.message || error);
       MapView = null;
       NativeMarker = null;
     }
+
     mapContent = MapView ? (
       <MapView
         style={styles.map}
@@ -431,7 +434,19 @@ function CustomerHomeScreen() {
         ))}
       </MapView>
     ) : (
-      <Text style={styles.mapText}>Map not available</Text>
+      <View style={styles.mapFallback}>
+        <MaterialIcons name="map" size={48} color="#6B4EFF" />
+        <Text style={styles.mapText}>Map not available</Text>
+        <Text style={styles.mapSubText}>
+          {Platform.OS === 'web'
+            ? 'Google Maps failed to load. Please check your internet connection.'
+            : 'Expo Maps is not installed. Please run "npx expo install expo-maps" and rebuild the app.'
+          }
+        </Text>
+        <Text style={styles.mapHelpText}>
+          Restaurants will still be available in the list below
+        </Text>
+      </View>
     );
   }
 
@@ -736,9 +751,33 @@ const styles = StyleSheet.create({
     padding: 2,
   },
 
+  mapFallback: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f8f9fa",
+    padding: 20,
+  },
   mapText: {
     fontSize: 18,
+    color: "#333",
+    fontWeight: "600",
+    marginTop: 12,
+    textAlign: "center",
+  },
+  mapSubText: {
+    fontSize: 14,
     color: "#666",
+    marginTop: 8,
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  mapHelpText: {
+    fontSize: 12,
+    color: "#888",
+    marginTop: 12,
+    textAlign: "center",
+    fontStyle: "italic",
   },
   bottomNavigation: {
     position: "absolute",
@@ -750,8 +789,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   navButton: {
-    // backgroundColor: "#BBBAEF",
-    backgroundColor: "#6682b6ff",
+    backgroundColor: "#5A4FCF", // More vibrant purple
     borderRadius: 16,
     padding: 16,
     shadowColor: "#000",

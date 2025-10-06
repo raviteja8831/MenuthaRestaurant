@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, Alert, Image } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, Image } from 'react-native';
+import { AlertService } from '../services/alert.service';
 import { chefLogin } from '../api/chefApi';
 import { showApiError } from '../services/messagingService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -14,16 +15,18 @@ export default function ChefLoginScreen({ navigation }) {
     try {
       const res = await chefLogin({ phone, password });
       if (res && res.token) {
-        await AsyncStorage.setItem('chef_token', res.token);
-        // Optionally store chef profile as well
-        await AsyncStorage.setItem('chef_profile', JSON.stringify(res.user));
-        Alert.alert('Success', 'Login successful');
+        // Store auth data consistently with customer login
+        await AsyncStorage.setItem('auth_token', res.token);
+        await AsyncStorage.setItem('user_profile', JSON.stringify(res.user));
+        await AsyncStorage.setItem('user_type', 'restaurant'); // Set user type as restaurant
+
+        AlertService.success('Login successful', 'Success');
         router.replace('/chef-home');
       } else {
-        Alert.alert('Login failed', 'Invalid credentials');
+        AlertService.error('Invalid credentials', 'Login failed');
       }
     } catch (err) {
-      showApiError(err);
+       AlertService.error(err, 'Login failed');
     }
   };
 

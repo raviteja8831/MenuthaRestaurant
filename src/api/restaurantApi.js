@@ -2,6 +2,7 @@ import axiosService from "./axiosService";
 import { API_BASE_URL } from "../constants/api.constants";
 import { RESTAURANT_API } from "../constants/restaurantApi";
 import { showApiError } from "../services/messagingService";
+import api from "./api";
 
 /* export const createRestaurant = async (data) => {
   try {
@@ -18,9 +19,8 @@ import { showApiError } from "../services/messagingService";
 
 export const getAllRestaurants = async () => {
   try {
-    const res = await axiosService.get(
-      `${API_BASE_URL}${RESTAURANT_API.GET_ALL}`
-    );
+
+    const res = await api.get(RESTAURANT_API.GET_ALL);
     return res.data;
   } catch (error) {
     showApiError(error);
@@ -30,7 +30,7 @@ export const getAllRestaurants = async () => {
 
 export const getRestaurantById = async (id) => {
   try {
-    const res = await axiosService.get(
+    const res = await api.get(
       `${API_BASE_URL}${RESTAURANT_API.GET_ONE(id)}`
     );
     return res.data;
