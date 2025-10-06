@@ -51,16 +51,18 @@ export default function IndexScreen() {
 
       if (userType === USER_TYPES.CUSTOMER) {
         router.replace('/customer-home');
-      } else if (userType === USER_TYPES.RESTAURANT) {
+      } else if (userType === USER_TYPES.CHEF) {
         router.replace('/chef-home');
+      } else if (userType === USER_TYPES.MANAGER) {
+        router.replace('/dashboard');
       } else {
         // Unknown user type, redirect to customer login
         console.log('Unknown user type, redirecting to login');
-        router.replace('/Customer-Login');
+        router.replace('/login');
       }
     } catch (error) {
       console.error('Error checking auth on app start:', error);
-      router.replace('/Customer-Login');
+      router.replace('/login');
     } finally {
       setIsLoading(false);
     }

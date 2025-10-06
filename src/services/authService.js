@@ -10,7 +10,9 @@ export const AUTH_KEYS = {
 
 export const USER_TYPES = {
   CUSTOMER: 'customer',
-  RESTAURANT: 'restaurant',
+  MANAGER: 'manager',
+  CHEF: 'chef',
+
 };
 
 /**

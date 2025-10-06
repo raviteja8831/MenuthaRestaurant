@@ -1,13 +1,13 @@
 import React, { useRef, useState, useEffect } from "react";
 import {
   StyleSheet,
+  Alert,
   View,
   KeyboardAvoidingView,
   Platform,
   Image,
   Pressable
 } from "react-native";
-import { AlertService } from "../services/alert.service";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { TextInput as RNTextInput } from "react-native";
 import { Text } from "react-native-paper";
@@ -15,6 +15,8 @@ import axios from "axios";
 import { useRouter } from "expo-router";   // ✅ useRouter instead of router
 import * as SplashScreen from 'expo-splash-screen';
 import { API_BASE_URL } from "../constants/api.constants";
+import { showApiError } from "../services/messagingService";
+import { storeAuthData, USER_TYPES } from "../services/authService";
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -63,18 +65,12 @@ export default function LoginScreen() {
 
   const handleLogin = async (phoneValue, otpValue) => {
     if (!phoneValue || otpValue.some((d) => d.length !== 1)) {
-      AlertService.error("Please enter a valid phone and OTP", "Error");
+     showApiError("Error", "Please enter a valid phone and OTP");
       return;
     }
     try {
       console.log("Logging in with phone:", phoneValue);
-
-      // Create a clean axios instance without authorization header for login
-      const loginAxios = axios.create({
-        baseURL: API_BASE_URL,
-      });
-
-      const response = await loginAxios.post(`/users/login`, {
+      const response = await axios.post(`${API_BASE_URL}/users/login`, {
         phone: phoneValue,
         otp: otpValue.join(""),
       });
@@ -85,27 +81,27 @@ export default function LoginScreen() {
 
       // Save token and user details using AsyncStorage
       if (user.token) {
-        await AsyncStorage.setItem("auth_token", String(user.token));
+          await storeAuthData(response.token, response, role === "manager" ? USER_TYPES.MANAGER : USER_TYPES.CHEF );
       }
-      await AsyncStorage.setItem("user_profile", JSON.stringify(user));
-      await AsyncStorage.setItem("user_type", "restaurant"); // All restaurant staff
 
       console.log("Navigating to:", role === "manager" ? "/dashboard" : "/chef-home");
 
       if (role === "manager") {
-        AlertService.success("Login successful", "Welcome Manager");
-        router.replace("/dashboard");
+
+        router.push("/dashboard");
       } else if (role === "chef") {
-        AlertService.success("Login successful", "Welcome Chef");
-        router.replace("/chef-home");
+        router.push("/chef-home");
       } else {
-        AlertService.error("Unknown user role: " + (user?.role || "none"), "Login Failed");
+       showApiError(
+          "Login Failed",
+          "Unknown user role: " + (user?.role || "none")
+        );
       }
     } catch (err) {
       console.error("Login error:", err);
-      AlertService.error(
-        err?.response?.data?.message || err?.message || "Invalid credentials",
-        "Login Failed"
+     showApiError(
+        "Login Failed",
+        err?.response?.data?.message || err?.message || "Invalid credentials"
       );
     }
   };

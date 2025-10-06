@@ -13,6 +13,7 @@ import { TextInput, Text } from "react-native-paper";
 import axios from "axios";
 import { useRouter } from "expo-router";
 import { getCustomerLogin } from "../api/customerApi";
+import { storeAuthData, USER_TYPES } from "../services/authService";
 
 export default function CustomerLoginScreen() {
   const [phone, setPhone] = useState("");
@@ -56,10 +57,9 @@ export default function CustomerLoginScreen() {
 
       if (response) {
         // Save user data
-        await AsyncStorage.setItem("user_profile", JSON.stringify(response));
-        await AsyncStorage.setItem("user_type", "customer"); // Set user type
+      
         if (response.token) {
-          await AsyncStorage.setItem("auth_token", response.token);
+          await storeAuthData(response.token, response, USER_TYPES.CUSTOMER);
         }
         // Navigate to customer home and replace the current route
         router.replace("/customer-home");
