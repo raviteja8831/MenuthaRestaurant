@@ -10,7 +10,7 @@ function getBaseURL(): string {
   //   return "http://localhost:8080/api";
   // } else {
     // For web/laptop browser
-    return "http://frootcity.com:8090/api";
+    return "http://menutha.com:8080/api";
   //}
 }
 export const IMG_BASE_URL = getImgBaseURL();

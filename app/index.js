@@ -24,7 +24,26 @@ export default function IndexScreen() {
 
   useEffect(() => {
     console.log('INDEX: Starting authentication check');
-    checkAuthAndRedirect();
+    let didFinish = false;
+
+    // Safety timeout: if auth check doesn't finish in 8s, redirect to login
+    const timeout = setTimeout(() => {
+      if (!didFinish) {
+        console.warn('INDEX: Auth check timed out, redirecting to Customer-Login');
+        try {
+          router.replace('/Customer-Login');
+        } catch (e) {
+          console.error('INDEX: router.replace failed during timeout redirect', e);
+        }
+        setIsLoading(false);
+      }
+    }, 8000);
+
+    (async () => {
+      await checkAuthAndRedirect();
+      didFinish = true;
+      clearTimeout(timeout);
+    })();
   }, []);
 
   const checkAuthAndRedirect = async () => {
@@ -32,10 +51,13 @@ export default function IndexScreen() {
       setIsLoading(true);
 
       // Initialize auth on app start (this validates tokens silently)
+      console.log('INDEX: calling initializeAuth()');
       const initResult = await initializeAuth();
+      console.log('INDEX: initializeAuth result:', initResult);
 
       // Check if user is authenticated after initialization
-      const authenticated = await isAuthenticated();
+  const authenticated = await isAuthenticated();
+  console.log('INDEX: isAuthenticated ->', authenticated);
 
       if (!authenticated || !initResult) {
         // Not authenticated or token invalid, redirect to customer login

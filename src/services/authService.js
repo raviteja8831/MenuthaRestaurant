@@ -144,15 +144,45 @@ export const validateAndRefreshToken = async (showAlert = true) => {
   try {
     const token = await getAuthToken();
     if (!token) {
+      console.log('validateAndRefreshToken: no token found');
       return false;
     }
+    // Try to decode JWT payload in a safe way (atob is not available in React Native
+    // and would throw). We'll attempt to use Buffer if available, otherwise skip
+    // decoding and assume the token is valid (so app doesn't crash on startup).
+    let payload = null;
+    try {
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        const base64Url = parts[1];
+        // Convert from base64url to base64
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
 
-    // Decode JWT to check expiration (without verification)
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    const currentTime = Date.now() / 1000;
+        let decoded = null;
+        // Prefer Buffer (Node polyfill) if present
+        if (typeof Buffer !== 'undefined' && Buffer.from) {
+          decoded = Buffer.from(base64, 'base64').toString('utf8');
+        } else if (typeof globalThis.atob === 'function') {
+          // If atob is polyfilled somewhere, use it
+          decoded = globalThis.atob(base64);
+        }
 
-    // If token expires in less than 5 minutes, consider it expired
-    if (payload.exp && payload.exp < currentTime + 300) {
+        if (decoded) {
+          payload = JSON.parse(decoded);
+        }
+      }
+    } catch (e) {
+      console.warn('Token payload decode failed, skipping expiry check', e);
+      payload = null;
+    }
+
+  const currentTime = Date.now() / 1000;
+  console.log('validateAndRefreshToken: token payload decoded:', payload);
+
+    // If we could decode the payload, check expiry. If not, assume token is valid
+    // to avoid crashing the app during startup. Server calls will still fail for
+    // invalid/expired tokens and handle it appropriately.
+    if (payload && payload.exp && payload.exp < currentTime + 300) {
       console.log('Token expired or expiring soon');
 
       // Clear auth data first
