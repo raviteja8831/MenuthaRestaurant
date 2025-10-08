@@ -405,18 +405,25 @@ function CustomerHomeScreen() {
   // } else {
   // try expo-maps first (standalone / dev-client / EAS build)
   try {
-    const ExpoMaps = require("expo-maps");
-    MapView = ExpoMaps.MapView;
-    NativeMarker = ExpoMaps.Marker;
-    console.log("✅ expo-maps loaded");
+    // Only attempt to load expo-maps on Android native builds (not in Expo Go/web).
+    const runningInExpoGo = Constants && Constants.appOwnership === "expo";
+    if (Platform.OS === "android" && !runningInExpoGo) {
+      const ExpoMaps = require("expo-maps");
+      MapView = ExpoMaps.MapView;
+      NativeMarker = ExpoMaps.Marker;
+      console.log("✅ expo-maps loaded (android native)");
+    } else {
+      // For iOS, Expo Go, or web, prefer react-native-maps
+      const RNMaps = require("react-native-maps");
+      MapView = RNMaps.MapView || RNMaps.default?.MapView || RNMaps.default;
+      NativeMarker = RNMaps.Marker || RNMaps.default?.Marker || RNMaps.default;
+      console.log("ℹ️ using react-native-maps (iOS/ExpoGo/web or android-expo-go)");
+    }
   } catch (err) {
-    // fallback to react-native-maps if expo-maps not available
-    const RNMaps = require("react-native-maps");
-    MapView = RNMaps.MapView || RNMaps.default?.MapView || RNMaps.default;
-    NativeMarker = RNMaps.Marker || RNMaps.default?.Marker || RNMaps.default;
-    console.log(
-      "⚠️ expo-maps not available, falling back to react-native-maps"
-    );
+    // If any require fails, null out and show fallback UI
+    console.warn("Native maps not available:", err?.message || err);
+    MapView = null;
+    NativeMarker = null;
   }
   //   }
   // } catch (error) {
