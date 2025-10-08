@@ -33,7 +33,7 @@
     "expo-location": "~18.1.6",
     "expo-maps": "^0.12.8",
     "expo-media-library": "^17.1.7",
-    "expo-modules-core": "^2.5.0",
+    "expo-modules-core": "^3.0.20",
     "expo-print": "~14.1.4",
     "expo-router": "~5.1.4",
     "expo-sharing": "~13.1.5",
