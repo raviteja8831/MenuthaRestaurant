@@ -140,7 +140,8 @@ EOF
   print_success "Created Restaurant App index.js"
 }
 
-# 🆕 Configure Android HTTP cleartext policy\configure_cleartext_policy() {
+# 🆕 Configure Android HTTP cleartext policy
+configure_cleartext_policy() {
   print_status "Configuring Android cleartext network policy..."
   mkdir -p android/app/src/main/res/xml
   cat > android/app/src/main/res/xml/network_security_config.xml << 'EOF'
