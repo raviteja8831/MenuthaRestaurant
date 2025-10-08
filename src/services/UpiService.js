@@ -1,13 +1,14 @@
 // services/UpiService.js
-import { Linking, Alert } from "react-native";
+import { Linking } from "react-native";
 import { getRestaurantById } from "../api/restaurantApi";
+import { showError } from "./messagingService";
 
 class UpiService {
   static async initiatePayment({ restaurantId, amount, transactionRef }) {
     const response = await getRestaurantById(restaurantId);
 
     if (!response?.upi || !amount) {
-      Alert.alert("Missing Info", "UPI ID and Amount are required.");
+      showError("UPI ID and Amount are required.", "Missing Info");
       return;
     }
     const upiId = response.upi;
@@ -27,7 +28,7 @@ class UpiService {
         await Linking.openURL(url);
         return { status: "initiated", url };
       } else {
-        Alert.alert("No UPI app found", "Please install a UPI supported app.");
+        showError("Please install a UPI supported app.", "No UPI app found");
         return { status: "failed", reason: "no_app" };
       }
     } catch (err) {

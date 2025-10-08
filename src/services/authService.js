@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Alert } from 'react-native';
 import { setAuthToken } from '../api/axiosService';
+import { AlertService } from '../contexts/AlertContext';
 
 export const AUTH_KEYS = {
   TOKEN: 'auth_token',
@@ -190,19 +190,11 @@ export const validateAndRefreshToken = async (showAlert = true) => {
 
       // Show user-friendly alert message if requested
       if (showAlert) {
-        Alert.alert(
-          "Session Expired",
+        AlertService.error(
           "Your session has expired. Please login again to continue.",
-          [
-            {
-              text: "OK",
-              onPress: async () => {
-                // Navigate to appropriate login screen
-                await logout();
-              }
-            }
-          ]
+          "Session Expired"
         );
+        await logout();
       }
 
       return false;
@@ -217,19 +209,11 @@ export const validateAndRefreshToken = async (showAlert = true) => {
 
     // Show error alert for invalid token if requested
     if (showAlert) {
-      Alert.alert(
-        "Authentication Error",
+      AlertService.error(
         "Your session is invalid. Please login again.",
-        [
-          {
-            text: "OK",
-            onPress: async () => {
-              // Navigate to appropriate login screen
-              await logout();
-            }
-          }
-        ]
+        "Authentication Error"
       );
+      await logout();
     }
 
     return false;

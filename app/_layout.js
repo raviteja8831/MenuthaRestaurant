@@ -5,6 +5,7 @@ import React, { useEffect } from 'react';
 import * as SplashScreen from 'expo-splash-screen';
 import { LoaderProvider } from '../src/components/LoaderContext';
 import Loader from '../src/components/Loader';
+import { AlertProvider } from '../src/contexts/AlertContext';
 
 export default function RootLayout() {
   useEffect(() => {
@@ -45,21 +46,23 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <LoaderProvider>
-      <StatusBar style="auto" />
-      <Loader />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-        }}
-      >
-        <Stack.Screen name="index" />
-        <Stack.Screen name="Customer-Login" />
-        <Stack.Screen name="chef-login" />
-        <Stack.Screen name="customer-home" />
-        <Stack.Screen name="chef-home" />
-        <Stack.Screen name="dashboard" />
-      </Stack>
-    </LoaderProvider>
+    <AlertProvider>
+      <LoaderProvider>
+        <StatusBar style="auto" />
+        <Loader />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+          }}
+        >
+          <Stack.Screen name="index" />
+          <Stack.Screen name="Customer-Login" />
+          <Stack.Screen name="chef-login" />
+          <Stack.Screen name="customer-home" />
+          <Stack.Screen name="chef-home" />
+          <Stack.Screen name="dashboard" />
+        </Stack>
+      </LoaderProvider>
+    </AlertProvider>
   );
 }

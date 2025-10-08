@@ -81,7 +81,7 @@ export default function LoginScreen() {
 
       // Save token and user details using AsyncStorage
       if (user.token) {
-          await storeAuthData(response.token, response, role === "manager" ? USER_TYPES.MANAGER : USER_TYPES.CHEF );
+          await storeAuthData(user.token, user, role === "manager" ? USER_TYPES.MANAGER : USER_TYPES.CHEF );
       }
 
       console.log("Navigating to:", role === "manager" ? "/dashboard" : "/chef-home");

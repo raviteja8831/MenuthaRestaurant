@@ -53,6 +53,14 @@ export const AlertProvider = ({ children }) => {
     hide: hideAlert,
   };
 
+  // Auto-register this instance with AlertService for static access
+  React.useEffect(() => {
+    AlertService.setInstance(contextValue);
+    return () => {
+      AlertService.setInstance(null);
+    };
+  }, [contextValue]);
+
   return (
     <AlertContext.Provider value={contextValue}>
       {children}

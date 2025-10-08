@@ -1,4 +1,3 @@
- 
 import FilterModal from "../Modals/FilterModal";
 import React, { useState, useEffect, useRef } from "react";
 
@@ -21,7 +20,7 @@ import { useRouter } from "expo-router";
 // import SearchModal from "../Modals/SearchModal";
 import * as Location from "expo-location";
 import { useMemo } from "react";
-import Constants from 'expo-constants';
+import Constants from "expo-constants";
 // NOTE: we dynamically load the web Google Maps components at runtime
 // so they are not bundled into native builds. For native platforms
 // we load `expo-maps` on Android and `react-native-maps` on iOS below.
@@ -44,7 +43,6 @@ function CustomerHomeScreen() {
     });
   };
 
-
   const router = useRouter();
   const [userLocation, setUserLocation] = useState({
     latitude: 17.4375,
@@ -63,35 +61,37 @@ function CustomerHomeScreen() {
   const [loading, setLoading] = useState(true);
   const [restaurants, setRestaurants] = useState([]);
 
-
   // Web: dynamic loader for react-native-maps to avoid bundling @react-google-maps
   // on web we prefer `react-native-maps` (works with react-native-web) and also
   // when running inside Expo Go (Constants.appOwnership === 'expo') we cannot
   // rely on native `expo-maps` so we load `react-native-maps` instead.
   const [webLoaded, setWebLoaded] = React.useState(Platform.OS !== "web");
   const [WebComponents, setWebComponents] = React.useState(null);
-  useEffect(() => {
-    if (Platform.OS === "web") {
-      (async () => {
-        try {
-          const mod = await import('react-native-maps');
-          // the module may export default or named MapView/Marker
-          setWebComponents({
-            MapView: mod.default || mod.MapView || mod,
-            Marker: mod.Marker || mod.default?.Marker || mod,
-          });
-          setWebLoaded(true);
-        } catch (err) {
-          console.warn('Failed to load react-native-maps on web:', err);
-          setWebLoaded(false);
-        }
-      })();
-    }
-  }, []);
+  // useEffect(() => {
+  //   if (Platform.OS === "web") {
+  //     (async () => {
+  //       try {
+  //         const mod = await import("react-native-maps");
+  //         // the module may export default or named MapView/Marker
+  //         setWebComponents({
+  //           MapView: mod.default || mod.MapView || mod,
+  //           Marker: mod.Marker || mod.default?.Marker || mod,
+  //         });
+  //         setWebLoaded(true);
+  //       } catch (err) {
+  //         console.warn("Failed to load react-native-maps on web:", err);
+  //         setWebLoaded(false);
+  //       }
+  //     })();
+  //   }
+  // }, []);
   // Navigation button handler (must be after filteredRestaurants is defined)
   const handleNavigationPress = () => {
     if (!filteredRestaurants.length) {
-      Alert.alert("No restaurants found", "No filtered restaurants to navigate to.");
+      Alert.alert(
+        "No restaurants found",
+        "No filtered restaurants to navigate to."
+      );
       return;
     }
     if (filteredRestaurants.length === 1) {
@@ -129,11 +129,15 @@ function CustomerHomeScreen() {
           const resp = await fetch(url);
           const json = await resp.json();
           if (json.status === "OK" && json.results.length > 0) {
-            const cityComp = json.results[0].address_components.find((c) => c.types.includes("locality"));
+            const cityComp = json.results[0].address_components.find((c) =>
+              c.types.includes("locality")
+            );
             const city = cityComp ? cityComp.long_name : null;
             if (city) {
               // Get city center by geocoding city name
-              const cityUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(city)}&key=${apiKey}`;
+              const cityUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+                city
+              )}&key=${apiKey}`;
               const cityResp = await fetch(cityUrl);
               const cityJson = await cityResp.json();
               if (cityJson.status === "OK" && cityJson.results.length > 0) {
@@ -154,7 +158,9 @@ function CustomerHomeScreen() {
           if (!address) return null;
           try {
             const apiKey = "AIzaSyCJT87ZYDqm6bVLxRsg4Zde87HyefUfASQ";
-            const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`;
+            const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+              address
+            )}&key=${apiKey}`;
             const resp = await fetch(url);
             const json = await resp.json();
             if (json.status === "OK" && json.results.length > 0) {
@@ -177,14 +183,16 @@ function CustomerHomeScreen() {
             }
             const coords = await geocodeAddress(r.address);
             if (coords) {
-              return { ...r, latitude: coords.latitude, longitude: coords.longitude };
+              return {
+                ...r,
+                latitude: coords.latitude,
+                longitude: coords.longitude,
+              };
             }
             return r;
           })
         );
         setRestaurants(updated);
-        
-        
       } catch (_e) {
         setRestaurants([]);
       }
@@ -208,7 +216,8 @@ function CustomerHomeScreen() {
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
       Math.cos((lat1 * Math.PI) / 180) *
         Math.cos((lat2 * Math.PI) / 180) *
-        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     const d = R * c; // Distance in km
     return d;
@@ -248,15 +257,28 @@ function CustomerHomeScreen() {
         );
         return dist <= 5;
       }
-      if (filterName === "Only Veg Restaurant") return r.enableVeg === true && r.enableNonveg === false;
-      if (filterName === "Only Non Veg Restaurant") return r.enableNonveg === true && r.enableVeg === false;
+      if (filterName === "Only Veg Restaurant")
+        return r.enableVeg === true && r.enableNonveg === false;
+      if (filterName === "Only Non Veg Restaurant")
+        return r.enableNonveg === true && r.enableVeg === false;
       if (filterName === "Only Buffet") return r.enableBuffet === true;
-      if (filterName === "Only Table Service") return r.enableTableService === true;
-      if (filterName === "Only Self Service") return r.enableSelfService === true;
-      if (filterName === "3 Star Hotel") return r.restaurantType && r.restaurantType.toLowerCase().includes("3 star");
-      if (filterName === "5 Star Hotel") return r.restaurantType && r.restaurantType.toLowerCase().includes("5 star");
+      if (filterName === "Only Table Service")
+        return r.enableTableService === true;
+      if (filterName === "Only Self Service")
+        return r.enableSelfService === true;
+      if (filterName === "3 Star Hotel")
+        return (
+          r.restaurantType && r.restaurantType.toLowerCase().includes("3 star")
+        );
+      if (filterName === "5 Star Hotel")
+        return (
+          r.restaurantType && r.restaurantType.toLowerCase().includes("5 star")
+        );
       if (filterName === "5 Star Rating") return r.rating && r.rating >= 5;
-      if (filterName === "Only Bar & Restaurant") return r.restaurantType && r.restaurantType.toLowerCase().includes("bar");
+      if (filterName === "Only Bar & Restaurant")
+        return (
+          r.restaurantType && r.restaurantType.toLowerCase().includes("bar")
+        );
       // fallback: show all
       return true;
     });
@@ -265,8 +287,8 @@ function CustomerHomeScreen() {
   // Debug: log restaurants and filteredRestaurants after data load
   useEffect(() => {
     if (!loading) {
-      console.log('restaurants:', restaurants);
-      console.log('filteredRestaurants:', filteredRestaurants);
+      console.log("restaurants:", restaurants);
+      console.log("filteredRestaurants:", filteredRestaurants);
     }
   }, [loading, restaurants, filteredRestaurants]);
   // Handlers
@@ -329,10 +351,8 @@ function CustomerHomeScreen() {
           ishotel: "false",
         },
       });
-
     }
-  },
- [selectedRestaurant, router]);
+  }, [selectedRestaurant, router]);
 
   // Platform-specific map rendering
   let mapContent = null;
@@ -369,86 +389,83 @@ function CustomerHomeScreen() {
   //     );
   //   }
   // } else {
-    // For native platforms, prefer `expo-maps` for both iOS and Android when
-    // available (standalone/dev-client). When running inside Expo Go (no
-    // native module) fall back to `react-native-maps`.
-    let MapView = null;
-    let NativeMarker = null;
+  // For native platforms, prefer `expo-maps` for both iOS and Android when
+  // available (standalone/dev-client). When running inside Expo Go (no
+  // native module) fall back to `react-native-maps`.
+  let MapView = null;
+  let NativeMarker = null;
   //  try {
-      // const runningInExpoGo = Constants && Constants.appOwnership === 'expo';
-      // if (runningInExpoGo) {
-        // Expo Go doesn't include the new expo-maps native runtime. Use react-native-maps
-      //   const RNMaps = require('react-native-maps');
-      //   MapView = RNMaps.MapView || RNMaps.default?.MapView || RNMaps.default;
-      //   NativeMarker = RNMaps.Marker || RNMaps.default?.Marker || RNMaps.default;
-      //   console.log('✅ react-native-maps loaded inside Expo Go');
-      // } else {
-        // try expo-maps first (standalone / dev-client / EAS build)
-        try {
-          const ExpoMaps = require('expo-maps');
-          MapView = ExpoMaps.MapView;
-          NativeMarker = ExpoMaps.Marker;
-          console.log('✅ expo-maps loaded');
-        } catch (err) {
-          // fallback to react-native-maps if expo-maps not available
-          const RNMaps = require('react-native-maps');
-          MapView = RNMaps.MapView || RNMaps.default?.MapView || RNMaps.default;
-          NativeMarker = RNMaps.Marker || RNMaps.default?.Marker || RNMaps.default;
-          console.log('⚠️ expo-maps not available, falling back to react-native-maps');
-        }
-    //   }
-    // } catch (error) {
-    //   console.warn('Native maps not available:', error?.message || error);
-    //   MapView = null;
-    //   NativeMarker = null;
-    // }
-
-    mapContent = MapView ? (
-      <MapView
-        style={styles.map}
-        initialRegion={{
-          latitude: userLocation.latitude,
-          longitude: userLocation.longitude,
-          latitudeDelta: 0.0922,
-          longitudeDelta: 0.0421,
-        }}
-      >
-        <NativeMarker
-          coordinate={userLocation}
-          title="You"
-          pinColor="#6B4EFF"
-        />
-        {filteredRestaurants.map((r) => (
-          <NativeMarker
-            key={r.id}
-            coordinate={{ latitude: r.latitude, longitude: r.longitude }}
-            title={r.name}
-            description={r.cuisine}
-            pinColor={
-              selectedRestaurant && selectedRestaurant.id === r.id
-                ? "#6B4EFF"
-                : "#43a047"
-            }
-            onPress={() => setSelectedRestaurant(r)}
-          />
-        ))}
-      </MapView>
-    ) : (
-      <View style={styles.mapFallback}>
-        <MaterialIcons name="map" size={48} color="#6B4EFF" />
-        <Text style={styles.mapText}>Map not available</Text>
-        <Text style={styles.mapSubText}>
-          {Platform.OS === 'web'
-            ? 'Google Maps failed to load. Please check your internet connection.'
-            : 'Expo Maps is not installed. Please run "npx expo install expo-maps" and rebuild the app.'
-          }
-        </Text>
-        <Text style={styles.mapHelpText}>
-          Restaurants will still be available in the list below
-        </Text>
-      </View>
+  // const runningInExpoGo = Constants && Constants.appOwnership === 'expo';
+  // if (runningInExpoGo) {
+  // Expo Go doesn't include the new expo-maps native runtime. Use react-native-maps
+  //   const RNMaps = require('react-native-maps');
+  //   MapView = RNMaps.MapView || RNMaps.default?.MapView || RNMaps.default;
+  //   NativeMarker = RNMaps.Marker || RNMaps.default?.Marker || RNMaps.default;
+  //   console.log('✅ react-native-maps loaded inside Expo Go');
+  // } else {
+  // try expo-maps first (standalone / dev-client / EAS build)
+  try {
+    const ExpoMaps = require("expo-maps");
+    MapView = ExpoMaps.MapView;
+    NativeMarker = ExpoMaps.Marker;
+    console.log("✅ expo-maps loaded");
+  } catch (err) {
+    // fallback to react-native-maps if expo-maps not available
+    const RNMaps = require("react-native-maps");
+    MapView = RNMaps.MapView || RNMaps.default?.MapView || RNMaps.default;
+    NativeMarker = RNMaps.Marker || RNMaps.default?.Marker || RNMaps.default;
+    console.log(
+      "⚠️ expo-maps not available, falling back to react-native-maps"
     );
-// }
+  }
+  //   }
+  // } catch (error) {
+  //   console.warn('Native maps not available:', error?.message || error);
+  //   MapView = null;
+  //   NativeMarker = null;
+  // }
+
+  mapContent = MapView ? (
+    <MapView
+      style={styles.map}
+      initialRegion={{
+        latitude: userLocation.latitude,
+        longitude: userLocation.longitude,
+        latitudeDelta: 0.0922,
+        longitudeDelta: 0.0421,
+      }}
+    >
+      <NativeMarker coordinate={userLocation} title="You" pinColor="#6B4EFF" />
+      {filteredRestaurants.map((r) => (
+        <NativeMarker
+          key={r.id}
+          coordinate={{ latitude: r.latitude, longitude: r.longitude }}
+          title={r.name}
+          description={r.cuisine}
+          pinColor={
+            selectedRestaurant && selectedRestaurant.id === r.id
+              ? "#6B4EFF"
+              : "#43a047"
+          }
+          onPress={() => setSelectedRestaurant(r)}
+        />
+      ))}
+    </MapView>
+  ) : (
+    <View style={styles.mapFallback}>
+      <MaterialIcons name="map" size={48} color="#6B4EFF" />
+      <Text style={styles.mapText}>Map not available</Text>
+      <Text style={styles.mapSubText}>
+        {Platform.OS === "web"
+          ? "Google Maps failed to load. Please check your internet connection."
+          : 'Expo Maps is not installed. Please run "npx expo install expo-maps" and rebuild the app.'}
+      </Text>
+      <Text style={styles.mapHelpText}>
+        Restaurants will still be available in the list below
+      </Text>
+    </View>
+  );
+  // }
 
   if (loading) {
     return (
@@ -464,10 +481,7 @@ function CustomerHomeScreen() {
     >
       {/* Top Controls */}
       <View style={styles.topControls}>
-        <Pressable
-          style={styles.gpsIndicator}
-          onPress={handleFilterPress}
-        >
+        <Pressable style={styles.gpsIndicator} onPress={handleFilterPress}>
           <Image
             source={require("../assets/images/filter-image.png")}
             style={styles.filterImage}
@@ -476,12 +490,25 @@ function CustomerHomeScreen() {
         {/* Animated Search Bar */}
         <View style={styles.animatedSearchBarContainer}>
           {!searchOpen ? (
-            <Pressable style={styles.searchIconButton} onPress={handleOpenSearch}>
+            <Pressable
+              style={styles.searchIconButton}
+              onPress={handleOpenSearch}
+            >
               <MaterialIcons name="search" size={28} color="#6B4EFF" />
             </Pressable>
           ) : (
-            <View style={[styles.animatedSearchBar, searchOpen && styles.animatedSearchBarOpen]}>
-              <MaterialIcons name="search" size={22} color="#6B4EFF" style={{ marginLeft: 10, marginRight: 4 }} />
+            <View
+              style={[
+                styles.animatedSearchBar,
+                searchOpen && styles.animatedSearchBarOpen,
+              ]}
+            >
+              <MaterialIcons
+                name="search"
+                size={22}
+                color="#6B4EFF"
+                style={{ marginLeft: 10, marginRight: 4 }}
+              />
               <TextInput
                 ref={searchInputRef}
                 style={styles.animatedSearchInput}
@@ -502,7 +529,10 @@ function CustomerHomeScreen() {
                   <MaterialIcons name="close" size={20} color="#888" />
                 </Pressable>
               ) : (
-                <Pressable onPress={handleCloseSearch} style={styles.animatedSearchClose}>
+                <Pressable
+                  onPress={handleCloseSearch}
+                  style={styles.animatedSearchClose}
+                >
                   <MaterialIcons name="close" size={24} color="#6B4EFF" />
                 </Pressable>
               )}
@@ -523,14 +553,9 @@ function CustomerHomeScreen() {
         onClearAll={() => setSelectedFilters([])}
       />
 
-
-
       {/* Bottom Navigation */}
       <View style={styles.bottomNavigation}>
-        <Pressable
-          style={styles.navButton}
-          onPress={handlePersonTabPress}
-        >
+        <Pressable style={styles.navButton} onPress={handlePersonTabPress}>
           <MaterialIcons name="person" size={24} color="white" />
         </Pressable>
 
@@ -552,21 +577,54 @@ function CustomerHomeScreen() {
           animationType="slide"
           onRequestClose={() => setShowNavModal(false)}
         >
-          <View style={{ flex:1, backgroundColor:'rgba(0,0,0,0.4)', justifyContent:'center', alignItems:'center' }}>
-            <View style={{ backgroundColor:'#fff', borderRadius:12, padding:20, minWidth:280, maxHeight:'70%' }}>
-              <Text style={{ fontWeight:'bold', fontSize:18, marginBottom:12 }}>Select Restaurant</Text>
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: "rgba(0,0,0,0.4)",
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <View
+              style={{
+                backgroundColor: "#fff",
+                borderRadius: 12,
+                padding: 20,
+                minWidth: 280,
+                maxHeight: "70%",
+              }}
+            >
+              <Text
+                style={{ fontWeight: "bold", fontSize: 18, marginBottom: 12 }}
+              >
+                Select Restaurant
+              </Text>
               <FlatList
                 data={navOptions}
-                keyExtractor={item => item.id?.toString() || item.name}
-                renderItem={({item}) => (
-                  <Pressable onPress={() => handleNavSelect(item)} style={{ paddingVertical:10, borderBottomWidth:1, borderColor:'#eee' }}>
-                    <Text style={{ fontSize:16 }}>{item.name}</Text>
-                    <Text style={{ fontSize:13, color:'#888' }}>{item.address}</Text>
+                keyExtractor={(item) => item.id?.toString() || item.name}
+                renderItem={({ item }) => (
+                  <Pressable
+                    onPress={() => handleNavSelect(item)}
+                    style={{
+                      paddingVertical: 10,
+                      borderBottomWidth: 1,
+                      borderColor: "#eee",
+                    }}
+                  >
+                    <Text style={{ fontSize: 16 }}>{item.name}</Text>
+                    <Text style={{ fontSize: 13, color: "#888" }}>
+                      {item.address}
+                    </Text>
                   </Pressable>
                 )}
               />
-              <Pressable onPress={() => setShowNavModal(false)} style={{ marginTop:16, alignSelf:'flex-end' }}>
-                <Text style={{ color:'#6B4EFF', fontWeight:'bold' }}>Cancel</Text>
+              <Pressable
+                onPress={() => setShowNavModal(false)}
+                style={{ marginTop: 16, alignSelf: "flex-end" }}
+              >
+                <Text style={{ color: "#6B4EFF", fontWeight: "bold" }}>
+                  Cancel
+                </Text>
               </Pressable>
             </View>
           </View>
@@ -678,53 +736,53 @@ const styles = StyleSheet.create({
     fontSize: 36,
   },
   searchButton: {
-    display: 'none',
+    display: "none",
   },
   animatedSearchBarContainer: {
-    position: 'absolute',
+    position: "absolute",
     top: 10,
     right: 0,
     zIndex: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     minWidth: 48,
     minHeight: 48,
-    justifyContent: 'flex-end',
+    justifyContent: "flex-end",
   },
   searchIconButton: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.10,
+    shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
   },
   animatedSearchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: "#e0e0e0",
     minWidth: 60,
     width: 0,
     height: 48,
     paddingRight: 8,
     paddingLeft: 0,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.10,
+    shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
-    overflow: 'hidden',
-    transitionProperty: 'width',
-    transitionDuration: '0.3s',
-    transitionTimingFunction: 'ease',
+    overflow: "hidden",
+    transitionProperty: "width",
+    transitionDuration: "0.3s",
+    transitionTimingFunction: "ease",
   },
   animatedSearchBarOpen: {
     width: 340,
@@ -733,13 +791,13 @@ const styles = StyleSheet.create({
   animatedSearchInput: {
     flex: 1,
     fontSize: 17,
-    color: '#222',
-    backgroundColor: 'transparent',
+    color: "#222",
+    backgroundColor: "transparent",
     borderWidth: 0,
     paddingHorizontal: 8,
     paddingVertical: 0,
     height: 48,
-    outlineStyle: 'none',
+    outlineStyle: "none",
   },
   animatedSearchClear: {
     marginRight: 2,
