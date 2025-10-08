@@ -29,7 +29,8 @@
       "Bash(dir:*)",
       "Read(//c/Users/ravit/Siddhu'sWorld/restaurant/server/app/middleware/**)",
       "Read(//c/Users/ravit/Siddhu'sWorld/restaurant/server/**)",
-      "Read(//c/Users/ravit/Siddhu'sWorld/Menutha/src/screens/**)"
+      "Read(//c/Users/ravit/Siddhu'sWorld/Menutha/src/screens/**)",
+      "Bash(./gradlew:*)"
     ],
     "deny": [],
     "ask": []

@@ -9,8 +9,8 @@ function getBaseURL(): string {
   //   // For iOS simulator use localhost
   //   return "http://localhost:8080/api";
   // } else {
-    // For web/laptop browser
-    return "http://menutha.com:8080/api";
+  // For web/laptop browser
+  return "http://13.127.228.119:8090/api";
   //}
 }
 export const IMG_BASE_URL = getImgBaseURL();
@@ -22,8 +22,8 @@ function getImgBaseURL(): string {
   //   // For iOS simulator use localhost
   //   return "http://localhost:8080";
   // } else {
-    // For web/laptop browser
-    return "http://frootcity.com:8090";
+  // For web/laptop browser
+  return "http://13.127.228.119:8090/";
   //}
 }
 
