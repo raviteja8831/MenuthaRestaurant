@@ -165,21 +165,29 @@ EOF
   fi
 }
 
-# Update app.json
+# Update app.json with cleartext traffic support
 update_app_json() {
   local APP_TYPE=$1
   local APP_NAME=$2
   local PACKAGE_NAME=$3
-  print_status "Updating app.json for $APP_TYPE..."
+  print_status "Updating app.json for $APP_TYPE with cleartext traffic..."
   [ -f "app.json" ] && cp app.json app.json.backup
   if command -v jq &> /dev/null; then
-    jq ".expo.name = \"$APP_NAME\" | .expo.android.package = \"$PACKAGE_NAME\"" app.json > app.json.tmp && mv app.json.tmp app.json
+    jq ".expo.name = \"$APP_NAME\" | .expo.android.package = \"$PACKAGE_NAME\" | .expo.android.usesCleartextTraffic = true" app.json > app.json.tmp && mv app.json.tmp app.json
+    print_success "Updated app.json for $APP_TYPE (using jq)"
   else
     print_warning "jq not found, using sed replacement"
     sed -i.bak "s/\"name\": \".*\"/\"name\": \"$APP_NAME\"/" app.json
     sed -i.bak "s/\"package\": \".*\"/\"package\": \"$PACKAGE_NAME\"/" app.json
+    # Check if usesCleartextTraffic already exists
+    if grep -q "usesCleartextTraffic" app.json; then
+      sed -i.bak 's/"usesCleartextTraffic": false/"usesCleartextTraffic": true/' app.json
+    else
+      # Add usesCleartextTraffic after package line
+      sed -i.bak '/"package":/a\      "usesCleartextTraffic": true,' app.json
+    fi
+    print_success "Updated app.json for $APP_TYPE (using sed)"
   fi
-  print_success "Updated app.json for $APP_TYPE"
 }
 
 restore_app_json() { [ -f "app.json.backup" ] && mv app.json.backup app.json && print_success "Restored original app.json"; }
