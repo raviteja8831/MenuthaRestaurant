@@ -475,9 +475,7 @@ export const menuliststyles = {
   totalContainer: {
     width: "100%",
     alignItems: "center",
-    paddingVertical: Math.min(height * 0.02, 16),
-    borderRadius: 15,
-    elevation: 2,
+    elevation: 0,
   },
   totalText: {
     fontSize: Math.min(width * 0.045, 24),

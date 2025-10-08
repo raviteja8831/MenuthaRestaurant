@@ -58,3 +58,30 @@ Troubleshooting
 
 If you want help producing an EAS dev-client build or wiring API keys, tell me your OS
 and whether you prefer Android or iOS and I'll give exact commands.
+
+Environment / API URL overrides
+
+If the app can't reach the backend on Android devices (HTTP blocked), you can
+override the API base URL used by the app in two ways:
+
+- Expo runtime config (recommended for devices & EAS): add an `extra` field in
+   `app.json` or `app.config.js`:
+
+```json
+"expo": {
+   "extra": {
+      "API_BASE_URL": "http://13.127.228.119:8090/api"
+   }
+}
+```
+
+- Environment variable (useful for web or bundler): set `API_BASE_URL` in your
+   environment before starting Metro/EAS:
+
+```
+API_BASE_URL=http://13.127.228.119:8090/api npx expo start
+```
+
+Note: For Android devices, the native app includes a `network_security_config.xml`
+that permits cleartext HTTP to the configured host. For production you should
+use HTTPS and tighten network security configuration.

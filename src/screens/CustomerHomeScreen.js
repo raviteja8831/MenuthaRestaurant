@@ -26,7 +26,78 @@ import Constants from "expo-constants";
 // we load `expo-maps` on Android and `react-native-maps` on iOS below.
 import { getAllRestaurants } from "../api/restaurantApi";
 // import { use } from "react";
+// Custom Marker Component for restaurants
+const CustomMarker = ({ restaurant, isSelected, onPress }) => {
+  const isOpen = restaurant?.isOpen !== false; // treat missing as open
+  const label = "M";
+  return (
+    <Pressable
+      onPress={() => onPress && onPress(restaurant)}
+      accessibilityRole="button"
+      accessibilityLabel={`Restaurant ${restaurant?.name || "unknown"}`}
+      style={styles.markerContainer}
+    >
+      <View
+        style={[
+          styles.markerWrapper,
+          isSelected && styles.markerSelected,
+          !isOpen && styles.markerClosed,
+        ]}
+      >
+        <Text style={[styles.markerText, isSelected && styles.markerTextSelected]}>
+          {label}
+        </Text>
+      </View>
+      {typeof restaurant?.rating === "number" && (
+        <View style={styles.markerRating}>
+          <MaterialCommunityIcons name="star" size={12} color="#FFD700" />
+          <Text style={styles.markerRatingText}>{restaurant.rating}</Text>
+        </View>
+      )}
+    </Pressable>
+  );
+};
 
+// Restaurant Tooltip Component
+const RestaurantTooltip = ({ restaurant, onClose, onNavigate, onOpenMenu }) => (
+  <View style={styles.tooltip}>
+    <Pressable style={styles.tooltipClose} onPress={onClose} accessibilityRole="button">
+      <MaterialCommunityIcons name="close" size={18} color="#666" />
+    </Pressable>
+    {restaurant?.image ? (
+      <Image source={{ uri: restaurant.image }} style={styles.tooltipImage} />
+    ) : null}
+    <Text style={styles.tooltipTitle}>{restaurant?.name || "Unknown"}</Text>
+    {restaurant?.address ? (
+      <Text style={styles.tooltipAddress} numberOfLines={2}>
+        {restaurant.address}
+      </Text>
+    ) : null}
+    {restaurant?.restaurantType ? (
+      <Text style={styles.tooltipType}>{restaurant.restaurantType}</Text>
+    ) : null}
+    {typeof restaurant?.rating === "number" && (
+      <View style={styles.tooltipRating}>
+        <MaterialCommunityIcons name="star" size={16} color="#FFD700" />
+        <Text style={styles.tooltipRatingText}>{restaurant.rating}</Text>
+      </View>
+    )}
+    <View style={styles.tooltipActions}>
+      <Pressable
+        onPress={() => onNavigate && onNavigate(restaurant)}
+        style={[styles.tooltipButton, styles.tooltipPrimaryButton]}
+      >
+        <Text style={{ color: "#fff", fontWeight: "600" }}>Navigate</Text>
+      </Pressable>
+      <Pressable
+        onPress={() => onOpenMenu && onOpenMenu(restaurant)}
+        style={styles.tooltipButton}
+      >
+        <Text style={{ color: "#6B4EFF", fontWeight: "600" }}>Open Menu</Text>
+      </Pressable>
+    </View>
+  </View>
+);
 function CustomerHomeScreen() {
   // Navigation modal state
   const [showNavModal, setShowNavModal] = useState(false);
@@ -341,18 +412,25 @@ function CustomerHomeScreen() {
 
   const handlePersonTabPress = () => router.push("/user-profile");
   const handleScanPress = () => router.push("/qr-scanner");
+  // When a restaurant is selected we show the tooltip. Navigation to the
+  // menu is triggered explicitly from the tooltip's Open Menu button.
   useEffect(() => {
     console.log("Selected Restaurant:", selectedRestaurant);
-    if (selectedRestaurant && selectedRestaurant?.id) {
-      router.push({
-        pathname: "/menu-list",
-        params: {
-          restaurantId: selectedRestaurant ? selectedRestaurant.id : null,
-          ishotel: "false",
-        },
-      });
-    }
-  }, [selectedRestaurant, router]);
+  }, [selectedRestaurant]);
+
+  // Handler called from the tooltip to open the menu (navigates to menu-list)
+  const handleOpenMenuFromTooltip = (restaurant) => {
+    if (!restaurant || !restaurant.id) return;
+    // clear selection to hide tooltip and then navigate
+    setSelectedRestaurant(null);
+    router.push({
+      pathname: "/menu-list",
+      params: {
+        restaurantId: restaurant.id,
+        ishotel: "false",
+      },
+    });
+  };
 
   // Platform-specific map rendering
   let mapContent = null;
@@ -447,15 +525,16 @@ function CustomerHomeScreen() {
         <NativeMarker
           key={r.id}
           coordinate={{ latitude: r.latitude, longitude: r.longitude }}
-          title={r.name}
-          description={r.cuisine}
-          pinColor={
-            selectedRestaurant && selectedRestaurant.id === r.id
-              ? "#6B4EFF"
-              : "#43a047"
-          }
           onPress={() => setSelectedRestaurant(r)}
-        />
+          // anchor so custom view sits above the coordinate
+          anchor={{ x: 0.5, y: 1 }}
+        >
+          <CustomMarker
+            restaurant={r}
+            isSelected={selectedRestaurant && selectedRestaurant.id === r.id}
+            onPress={(res) => setSelectedRestaurant(res)}
+          />
+        </NativeMarker>
       ))}
     </MapView>
   ) : (
@@ -637,6 +716,17 @@ function CustomerHomeScreen() {
           </View>
         </Modal>
       </View>
+      {/* Persistent tooltip overlay for selected restaurant */}
+      {selectedRestaurant ? (
+        <View style={{ position: "absolute", left: 20, right: 20, bottom: 120, zIndex: 20 }}>
+          <RestaurantTooltip
+            restaurant={selectedRestaurant}
+            onClose={() => setSelectedRestaurant(null)}
+            onNavigate={(r) => openGoogleMapsDirections(r)}
+            onOpenMenu={(r) => handleOpenMenuFromTooltip(r)}
+          />
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -915,6 +1005,123 @@ const styles = StyleSheet.create({
     fontSize: 28,
     color: "#6B4EFF",
     fontWeight: "bold",
+  },
+  // Marker styles
+  markerContainer: {
+    alignItems: "center",
+  },
+  markerWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#43a047",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#fff",
+    elevation: 3,
+  },
+  markerSelected: {
+    backgroundColor: "#6B4EFF",
+  },
+  markerClosed: {
+    opacity: 0.5,
+    backgroundColor: "#888",
+  },
+  markerImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  markerText: {
+    color: "#fff",
+    fontWeight: "900",
+    fontSize: 18,
+    textShadowColor: 'rgba(0,0,0,0.25)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  markerTextSelected: {
+    color: "#fff",
+  },
+  markerRating: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 4,
+  },
+  markerRatingText: {
+    marginLeft: 4,
+    fontSize: 12,
+    color: "#333",
+    fontWeight: "600",
+  },
+  // Tooltip styles
+  tooltip: {
+    backgroundColor: "#fff",
+    padding: 12,
+    borderRadius: 10,
+    width: 260,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  tooltipClose: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    zIndex: 4,
+    padding: 6,
+  },
+  tooltipImage: {
+    width: "100%",
+    height: 110,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  tooltipTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#222",
+    marginBottom: 4,
+  },
+  tooltipAddress: {
+    fontSize: 13,
+    color: "#666",
+    marginBottom: 6,
+  },
+  tooltipType: {
+    fontSize: 13,
+    color: "#888",
+    marginBottom: 8,
+  },
+  tooltipRating: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  tooltipRatingText: {
+    marginLeft: 6,
+    fontSize: 14,
+    color: "#333",
+    fontWeight: "600",
+  },
+  tooltipActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 6,
+  },
+  tooltipButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e6e6f7",
+    backgroundColor: "#fff",
+  },
+  tooltipPrimaryButton: {
+    backgroundColor: "#6B4EFF",
+    borderColor: "#6B4EFF",
   },
 });
 

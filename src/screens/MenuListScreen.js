@@ -28,18 +28,17 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useUserData } from "../services/getUserData";
 
 // Image mapping object
-const categoryImages = {
-  "Hot & Cold beverages": require("../assets/images/bevereage.png"),
-  Soups: require("../assets/images/soup.png"),
-  Breakfast: require("../assets/images/breakfast.png"),
-  Starters: require("../assets/images/staters.png"),
-  "Indian Breads": require("../assets/images/indian-bread.png"),
-  "Main Course": require("../assets/images/main-course.png"),
-  Salads: require("../assets/images/salads.png"),
-  "Ice creams & Desserts": require("../assets/images/ice-cream-sesserts.png"),
-  Liquor: require("../assets/images/liquor.jpg"),
-};
-
+  const categoryImages = {
+    "beverage": require("../../src/assets/images/bevereage.png"),
+    "soups": require("../../src/assets/images/soup.png"),
+    "breakfast": require("../../src/assets/images/breakfast.png"),
+    "starters": require("../../src/assets/images/staters.png"),
+    "ibreads": require("../../src/assets/images/indian-bread.png"),
+    "mc": require("../../src/assets/images/main-course.png"),
+    "salads": require("../../src/assets/images/salads.png"),
+    "iced": require("../../src/assets/images/ice-cream-desserts.png"),
+    "liquor": require("../../src/assets/images/liquor.jpg"),
+  };
 const { width, height } = Dimensions.get("window");
 
 export default function MenuListScreen() {
@@ -240,7 +239,7 @@ export default function MenuListScreen() {
                   onPress={() => handleCategoryPress(category)}
                 >
                   <Image
-                    source={categoryImages[category.name]}
+                    source={categoryImages[category.icon]}
                     style={menuliststyles.categoryImage}
                     resizeMode="contain"
                   />
