@@ -1,6 +1,7 @@
+ 
 import FilterModal from "../Modals/FilterModal";
 import React, { useState, useEffect, useRef } from "react";
-
+  
 import {
   View,
   StyleSheet,
@@ -19,89 +20,59 @@ import { MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 // import SearchModal from "../Modals/SearchModal";
 import * as Location from "expo-location";
-import { useMemo } from "react";
-import Constants from "expo-constants";
-// NOTE: we dynamically load the web Google Maps components at runtime
-// so they are not bundled into native builds. For native platforms
-// we load `expo-maps` on Android and `react-native-maps` on iOS below.
+import {
+  GoogleMap,
+  Marker,
+  InfoWindow,
+  Circle,
+  useJsApiLoader,
+} from "@react-google-maps/api";
+// Note: expo-maps will be loaded dynamically inside the component (useEffect)
 import { getAllRestaurants } from "../api/restaurantApi";
 // import { use } from "react";
-// Custom Marker Component for restaurants
-const CustomMarker = ({ restaurant, isSelected, onPress }) => {
-  const isOpen = restaurant?.isOpen !== false; // treat missing as open
-  const label = "M";
-  return (
-    <Pressable
-      onPress={() => onPress && onPress(restaurant)}
-      accessibilityRole="button"
-      accessibilityLabel={`Restaurant ${restaurant?.name || "unknown"}`}
-      style={styles.markerContainer}
-    >
-      <View
-        style={[
-          styles.markerWrapper,
-          isSelected && styles.markerSelected,
-          !isOpen && styles.markerClosed,
-        ]}
-      >
-        <Text style={[styles.markerText, isSelected && styles.markerTextSelected]}>
-          {label}
-        </Text>
-      </View>
-      {typeof restaurant?.rating === "number" && (
-        <View style={styles.markerRating}>
-          <MaterialCommunityIcons name="star" size={12} color="#FFD700" />
-          <Text style={styles.markerRatingText}>{restaurant.rating}</Text>
-        </View>
-      )}
-    </Pressable>
-  );
-};
+
+// Custom M Marker Component
+const CustomMarker = ({ restaurant, isSelected, onPress }) => (
+  <Pressable onPress={() => onPress(restaurant)} style={styles.markerContainer}>
+    <View style={[styles.markerWrapper, isSelected && styles.markerSelected]}>
+      <Text style={[styles.markerText, isSelected && styles.markerTextSelected]}>M</Text>
+    </View>
+  </Pressable>
+);
 
 // Restaurant Tooltip Component
-const RestaurantTooltip = ({ restaurant, onClose, onNavigate, onOpenMenu }) => (
+const RestaurantTooltip = ({ restaurant, onClose }) => (
   <View style={styles.tooltip}>
-    <Pressable style={styles.tooltipClose} onPress={onClose} accessibilityRole="button">
-      <MaterialCommunityIcons name="close" size={18} color="#666" />
+    <Pressable style={styles.tooltipClose} onPress={onClose}>
+      <MaterialCommunityIcons name="close" size={16} color="#666" />
     </Pressable>
-    {restaurant?.image ? (
-      <Image source={{ uri: restaurant.image }} style={styles.tooltipImage} />
-    ) : null}
-    <Text style={styles.tooltipTitle}>{restaurant?.name || "Unknown"}</Text>
-    {restaurant?.address ? (
-      <Text style={styles.tooltipAddress} numberOfLines={2}>
-        {restaurant.address}
-      </Text>
-    ) : null}
-    {restaurant?.restaurantType ? (
-      <Text style={styles.tooltipType}>{restaurant.restaurantType}</Text>
-    ) : null}
-    {typeof restaurant?.rating === "number" && (
+    <Text style={styles.tooltipTitle}>{restaurant.name}</Text>
+    <Text style={styles.tooltipAddress}>{restaurant.address}</Text>
+    <Text style={styles.tooltipType}>{restaurant.restaurantType}</Text>
+    {restaurant.rating && (
       <View style={styles.tooltipRating}>
         <MaterialCommunityIcons name="star" size={16} color="#FFD700" />
         <Text style={styles.tooltipRatingText}>{restaurant.rating}</Text>
       </View>
     )}
-    <View style={styles.tooltipActions}>
-      <Pressable
-        onPress={() => onNavigate && onNavigate(restaurant)}
-        style={[styles.tooltipButton, styles.tooltipPrimaryButton]}
-      >
-        <Text style={{ color: "#fff", fontWeight: "600" }}>Navigate</Text>
-      </Pressable>
-      <Pressable
-        onPress={() => onOpenMenu && onOpenMenu(restaurant)}
-        style={styles.tooltipButton}
-      >
-        <Text style={{ color: "#6B4EFF", fontWeight: "600" }}>Open Menu</Text>
-      </Pressable>
-    </View>
   </View>
 );
+
 function CustomerHomeScreen() {
   // Navigation modal state
   const [showNavModal, setShowNavModal] = useState(false);
   const [navOptions, setNavOptions] = useState([]);
+
+  // Map library availability state
+  const [mapLibraryChecked, setMapLibraryChecked] = useState(false);
+  const [availableMapLibrary, setAvailableMapLibrary] = useState(null);
+  // expo-maps components loaded at runtime (MapView, Marker, Circle)
+  const [mapComponents, setMapComponents] = useState({ MapView: null, Marker: null, Circle: null });
+
+  // Tooltip state
+  const [selectedRestaurantTooltip, setSelectedRestaurantTooltip] = useState(null);
+  // Show all tooltips on load
+  const [showAllTooltips, setShowAllTooltips] = useState(true);
 
   // Helper to open Google Maps directions
   const openGoogleMapsDirections = (restaurant) => {
@@ -113,6 +84,7 @@ function CustomerHomeScreen() {
       Alert.alert("Error", "Unable to open Google Maps");
     });
   };
+
 
   const router = useRouter();
   const [userLocation, setUserLocation] = useState({
@@ -131,38 +103,165 @@ function CustomerHomeScreen() {
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
   const [loading, setLoading] = useState(true);
   const [restaurants, setRestaurants] = useState([]);
+  const [mapRegion, setMapRegion] = useState({
+    latitude: 17.4375,
+    longitude: 78.4456,
+    latitudeDelta: 0.0922,
+    longitudeDelta: 0.0421,
+  });
 
-  // Web: dynamic loader for react-native-maps to avoid bundling @react-google-maps
-  // on web we prefer `react-native-maps` (works with react-native-web) and also
-  // when running inside Expo Go (Constants.appOwnership === 'expo') we cannot
-  // rely on native `expo-maps` so we load `react-native-maps` instead.
-  const [webLoaded, setWebLoaded] = React.useState(Platform.OS !== "web");
-  const [WebComponents, setWebComponents] = React.useState(null);
-  // useEffect(() => {
-  //   if (Platform.OS === "web") {
-  //     (async () => {
-  //       try {
-  //         const mod = await import("react-native-maps");
-  //         // the module may export default or named MapView/Marker
-  //         setWebComponents({
-  //           MapView: mod.default || mod.MapView || mod,
-  //           Marker: mod.Marker || mod.default?.Marker || mod,
-  //         });
-  //         setWebLoaded(true);
-  //       } catch (err) {
-  //         console.warn("Failed to load react-native-maps on web:", err);
-  //         setWebLoaded(false);
-  //       }
-  //     })();
-  //   }
-  // }, []);
+  // Function to calculate optimal map region
+  const calculateMapRegion = (userLoc, restaurantList) => {
+    // Validate user location
+    const hasValidUserLoc = userLoc &&
+      typeof userLoc.latitude === 'number' &&
+      typeof userLoc.longitude === 'number' &&
+      !isNaN(userLoc.latitude) &&
+      !isNaN(userLoc.longitude);
+
+    if (!hasValidUserLoc || !restaurantList.length) {
+      return {
+        latitude: hasValidUserLoc ? userLoc.latitude : 17.4375,
+        longitude: hasValidUserLoc ? userLoc.longitude : 78.4456,
+        latitudeDelta: 0.0922,
+        longitudeDelta: 0.0421,
+      };
+    }
+
+    // Filter restaurants with valid coordinates
+    const validRestaurants = restaurantList.filter(r =>
+      typeof r.latitude === "number" &&
+      typeof r.longitude === "number" &&
+      !isNaN(r.latitude) &&
+      !isNaN(r.longitude)
+    );
+
+    if (validRestaurants.length === 0) {
+      return {
+        latitude: userLoc.latitude,
+        longitude: userLoc.longitude,
+        latitudeDelta: 0.0922,
+        longitudeDelta: 0.0421,
+      };
+    }
+
+    // Get all coordinates including user location
+    const allLatitudes = [userLoc.latitude, ...validRestaurants.map(r => r.latitude)];
+    const allLongitudes = [userLoc.longitude, ...validRestaurants.map(r => r.longitude)];
+
+    const minLat = Math.min(...allLatitudes);
+    const maxLat = Math.max(...allLatitudes);
+    const minLng = Math.min(...allLongitudes);
+    const maxLng = Math.max(...allLongitudes);
+
+    const latDelta = (maxLat - minLat) * 1.5; // Add 50% padding
+    const lngDelta = (maxLng - minLng) * 1.5; // Add 50% padding
+
+    return {
+      latitude: (minLat + maxLat) / 2,
+      longitude: (minLng + maxLng) / 2,
+      latitudeDelta: Math.max(latDelta, 0.01), // Minimum zoom level
+      longitudeDelta: Math.max(lngDelta, 0.01), // Minimum zoom level
+    };
+  };
+
+  // Check map library availability once on mount
+  useEffect(() => {
+    if (Platform.OS !== 'web' && !mapLibraryChecked) {
+      const checkMapLibraries = () => {
+        let mapLibrary = null;
+        try {
+          const expoMaps = require('expo-maps');
+          if (expoMaps && (expoMaps.MapView || expoMaps.default)) {
+            mapLibrary = { type: 'expo-maps', MapView: expoMaps.MapView || expoMaps.default, Marker: expoMaps.Marker };
+            console.log('✅ expo-maps available (require)');
+          }
+        } catch (e) {
+          // ignore
+        }
+
+        if (!mapLibrary) {
+          try {
+            const rnMaps = require('react-native-maps');
+            const rn = rnMaps.default || rnMaps;
+            if (rn && (rn.MapView || rn.default)) {
+              mapLibrary = { type: 'react-native-maps', MapView: rn.MapView || rn.default, Marker: rn.Marker };
+              console.log('✅ react-native-maps available (require)');
+            }
+          } catch (e) {
+            // ignore
+          }
+        }
+
+        if (!mapLibrary) console.log('❌ No native map library available (require)');
+        setAvailableMapLibrary(mapLibrary);
+        setMapLibraryChecked(true);
+      };
+
+      checkMapLibraries();
+    }
+  }, [mapLibraryChecked]);
+
+  // Load expo-maps dynamically for native platforms to avoid bundler issues on web
+  useEffect(() => {
+    let mounted = true;
+    if (Platform.OS !== 'web') {
+      (async () => {
+        try {
+          let loaded = { MapView: null, Marker: null, Circle: null, lib: null };
+
+
+          // If expo-maps wasn't loaded (or not running on Android), try react-native-maps
+          if (!loaded.MapView) {
+            try {
+              const RNMapsModule = await import('react-native-maps');
+              const RNMaps = RNMapsModule.default || RNMapsModule;
+              if (RNMaps && (RNMaps.MapView || RNMaps.default)) {
+                loaded.MapView = RNMaps.MapView || RNMaps.default || RNMaps;
+                loaded.Marker = RNMaps.Marker || null;
+                loaded.Circle = RNMaps.Circle || null;
+                loaded.lib = 'react-native-maps';
+                console.log('✅ react-native-maps loaded dynamically');
+              }
+            } catch (e) {
+              console.log('⚠️ react-native-maps dynamic import failed:', e?.message || e);
+            }
+          }
+
+          if (!mounted) return;
+
+          if (loaded.MapView) {
+            setMapComponents({ MapView: loaded.MapView, Marker: loaded.Marker, Circle: loaded.Circle });
+            setAvailableMapLibrary({ type: loaded.lib, MapView: loaded.MapView, Marker: loaded.Marker });
+          } else {
+            console.log('❌ No native map library available after dynamic import attempts');
+            setMapComponents({ MapView: null, Marker: null, Circle: null });
+            setAvailableMapLibrary(null);
+          }
+        } catch (err) {
+          console.log('⚠️ Dynamic map import failed (unexpected):', err?.message || err);
+          if (!mounted) return;
+          setMapComponents({ MapView: null, Marker: null, Circle: null });
+          setAvailableMapLibrary(null);
+        }
+      })();
+    }
+    return () => { mounted = false; };
+  }, []);
+
+
+  // Only for web: load Google Maps API
+  const { isLoaded } =
+    Platform.OS === "web"
+      ? // eslint-disable-next-line react-hooks/rules-of-hooks
+        useJsApiLoader({
+          googleMapsApiKey: "AIzaSyCJT87ZYDqm6bVLxRsg4Zde87HyefUfASQ",
+        })
+      : { isLoaded: true };
   // Navigation button handler (must be after filteredRestaurants is defined)
   const handleNavigationPress = () => {
     if (!filteredRestaurants.length) {
-      Alert.alert(
-        "No restaurants found",
-        "No filtered restaurants to navigate to."
-      );
+      Alert.alert("No restaurants found", "No filtered restaurants to navigate to.");
       return;
     }
     if (filteredRestaurants.length === 1) {
@@ -189,10 +288,12 @@ function CustomerHomeScreen() {
           return;
         }
         let location = await Location.getCurrentPositionAsync({});
-        setUserLocation({
+        const newUserLocation = {
           latitude: location.coords.latitude,
           longitude: location.coords.longitude,
-        });
+        };
+        console.log('📍 Got user location:', newUserLocation);
+        setUserLocation(newUserLocation);
         // Reverse geocode to get city and center
         try {
           const apiKey = "AIzaSyCJT87ZYDqm6bVLxRsg4Zde87HyefUfASQ";
@@ -200,15 +301,11 @@ function CustomerHomeScreen() {
           const resp = await fetch(url);
           const json = await resp.json();
           if (json.status === "OK" && json.results.length > 0) {
-            const cityComp = json.results[0].address_components.find((c) =>
-              c.types.includes("locality")
-            );
+            const cityComp = json.results[0].address_components.find((c) => c.types.includes("locality"));
             const city = cityComp ? cityComp.long_name : null;
             if (city) {
               // Get city center by geocoding city name
-              const cityUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
-                city
-              )}&key=${apiKey}`;
+              const cityUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(city)}&key=${apiKey}`;
               const cityResp = await fetch(cityUrl);
               const cityJson = await cityResp.json();
               if (cityJson.status === "OK" && cityJson.results.length > 0) {
@@ -229,9 +326,7 @@ function CustomerHomeScreen() {
           if (!address) return null;
           try {
             const apiKey = "AIzaSyCJT87ZYDqm6bVLxRsg4Zde87HyefUfASQ";
-            const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
-              address
-            )}&key=${apiKey}`;
+            const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`;
             const resp = await fetch(url);
             const json = await resp.json();
             if (json.status === "OK" && json.results.length > 0) {
@@ -254,16 +349,14 @@ function CustomerHomeScreen() {
             }
             const coords = await geocodeAddress(r.address);
             if (coords) {
-              return {
-                ...r,
-                latitude: coords.latitude,
-                longitude: coords.longitude,
-              };
+              return { ...r, latitude: coords.latitude, longitude: coords.longitude };
             }
             return r;
           })
         );
         setRestaurants(updated);
+        
+        
       } catch (_e) {
         setRestaurants([]);
       }
@@ -287,8 +380,7 @@ function CustomerHomeScreen() {
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
       Math.cos((lat1 * Math.PI) / 180) *
         Math.cos((lat2 * Math.PI) / 180) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     const d = R * c; // Distance in km
     return d;
@@ -328,38 +420,58 @@ function CustomerHomeScreen() {
         );
         return dist <= 5;
       }
-      if (filterName === "Only Veg Restaurant")
-        return r.enableVeg === true && r.enableNonveg === false;
-      if (filterName === "Only Non Veg Restaurant")
-        return r.enableNonveg === true && r.enableVeg === false;
+      if (filterName === "Only Veg Restaurant") return r.enableVeg === true && r.enableNonveg === false;
+      if (filterName === "Only Non Veg Restaurant") return r.enableNonveg === true && r.enableVeg === false;
       if (filterName === "Only Buffet") return r.enableBuffet === true;
-      if (filterName === "Only Table Service")
-        return r.enableTableService === true;
-      if (filterName === "Only Self Service")
-        return r.enableSelfService === true;
-      if (filterName === "3 Star Hotel")
-        return (
-          r.restaurantType && r.restaurantType.toLowerCase().includes("3 star")
-        );
-      if (filterName === "5 Star Hotel")
-        return (
-          r.restaurantType && r.restaurantType.toLowerCase().includes("5 star")
-        );
+      if (filterName === "Only Table Service") return r.enableTableService === true;
+      if (filterName === "Only Self Service") return r.enableSelfService === true;
+      if (filterName === "3 Star Hotel") return r.restaurantType && r.restaurantType.toLowerCase().includes("3 star");
+      if (filterName === "5 Star Hotel") return r.restaurantType && r.restaurantType.toLowerCase().includes("5 star");
       if (filterName === "5 Star Rating") return r.rating && r.rating >= 5;
-      if (filterName === "Only Bar & Restaurant")
-        return (
-          r.restaurantType && r.restaurantType.toLowerCase().includes("bar")
-        );
+      if (filterName === "Only Bar & Restaurant") return r.restaurantType && r.restaurantType.toLowerCase().includes("bar");
       // fallback: show all
       return true;
     });
   });
 
+  // Update map region when user city center changes (prefer city, fallback to user)
+  useEffect(() => {
+    let region;
+    if (cityCenter && typeof cityCenter.latitude === 'number' && typeof cityCenter.longitude === 'number') {
+      region = {
+        latitude: cityCenter.latitude,
+        longitude: cityCenter.longitude,
+        latitudeDelta: 0.18, // city-level zoom
+        longitudeDelta: 0.18,
+      };
+      setMapRegion(region);
+      console.log('🗺️ Updated map region centered on city:', region);
+    } else if (userLocation && typeof userLocation.latitude === 'number' && typeof userLocation.longitude === 'number') {
+      region = {
+        latitude: userLocation.latitude,
+        longitude: userLocation.longitude,
+        latitudeDelta: 0.0922,
+        longitudeDelta: 0.0421,
+      };
+      setMapRegion(region);
+      console.log('🗺️ Updated map region centered on user:', region);
+    } else {
+      region = {
+        latitude: 17.4375,
+        longitude: 78.4456,
+        latitudeDelta: 0.0922,
+        longitudeDelta: 0.0421,
+      };
+      setMapRegion(region);
+      console.log('🗺️ Using default map region:', region);
+    }
+  }, [cityCenter, userLocation]);
+
   // Debug: log restaurants and filteredRestaurants after data load
   useEffect(() => {
     if (!loading) {
-      console.log("restaurants:", restaurants);
-      console.log("filteredRestaurants:", filteredRestaurants);
+      console.log('restaurants:', restaurants);
+      console.log('filteredRestaurants:', filteredRestaurants);
     }
   }, [loading, restaurants, filteredRestaurants]);
   // Handlers
@@ -412,87 +524,318 @@ function CustomerHomeScreen() {
 
   const handlePersonTabPress = () => router.push("/user-profile");
   const handleScanPress = () => router.push("/qr-scanner");
-  // When a restaurant is selected we show the tooltip. Navigation to the
-  // menu is triggered explicitly from the tooltip's Open Menu button.
   useEffect(() => {
     console.log("Selected Restaurant:", selectedRestaurant);
-  }, [selectedRestaurant]);
+    if (selectedRestaurant && selectedRestaurant?.id) {
+      router.push({
+        pathname: "/menu-list",
+        params: {
+          restaurantId: selectedRestaurant ? selectedRestaurant.id : null,
+          ishotel: "false",
+        },
+      });
 
-  // Handler called from the tooltip to open the menu (navigates to menu-list)
-  const handleOpenMenuFromTooltip = (restaurant) => {
-    if (!restaurant || !restaurant.id) return;
-    // clear selection to hide tooltip and then navigate
-    setSelectedRestaurant(null);
-    router.push({
-      pathname: "/menu-list",
-      params: {
-        restaurantId: restaurant.id,
-        ishotel: "false",
-      },
-    });
-  };
+    }
+  },
+ [selectedRestaurant, router]);
 
-  // Platform-specific map rendering - using expo-maps only
+  // Platform-specific map rendering
   let mapContent = null;
-  let MapView = null;
-  let NativeMarker = null;
-
-  try {
-    const ExpoMaps = require("expo-maps");
-    MapView = ExpoMaps.MapView;
-    NativeMarker = ExpoMaps.Marker;
-    console.log("✅ expo-maps loaded successfully");
-    console.log("MapView:", MapView);
-    console.log("Marker:", NativeMarker);
-  } catch (err) {
-    console.error("❌ Failed to load expo-maps:", err);
-    MapView = null;
-    NativeMarker = null;
+  // Set customer location as center, city restaurants as around him
+  let centerForCircle = userLocation;
+  let radiusMeters = 3000;
+  if (cityCenter && userLocation) {
+    // Calculate max distance from user to any restaurant in the city
+    const cityRestaurants = restaurants.filter(r =>
+      typeof r.latitude === 'number' && typeof r.longitude === 'number' && !isNaN(r.latitude) && !isNaN(r.longitude)
+    );
+    let maxDist = 0;
+    cityRestaurants.forEach(r => {
+      const toRad = deg => deg * Math.PI / 180;
+      const R = 6371000; // meters
+      const dLat = toRad(r.latitude - userLocation.latitude);
+      const dLon = toRad(r.longitude - userLocation.longitude);
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(toRad(userLocation.latitude)) * Math.cos(toRad(r.latitude)) *
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      const dist = R * c;
+      if (dist > maxDist) maxDist = dist;
+    });
+    radiusMeters = Math.max(3000, maxDist * 1.2); // 1.2x for padding
+  } else if (userLocation) {
+    centerForCircle = userLocation;
+    radiusMeters = 3000;
+  } else if (cityCenter) {
+    centerForCircle = cityCenter;
+    radiusMeters = 6000;
   }
 
-  mapContent = MapView ? (
-    <MapView
-      style={styles.map}
-      initialRegion={{
-        latitude: userLocation.latitude,
-        longitude: userLocation.longitude,
-        latitudeDelta: 0.0922,
-        longitudeDelta: 0.0421,
-      }}
-      onMapReady={() => console.log('Map is ready!')}
-    >
-      <NativeMarker coordinate={userLocation} title="You" pinColor="#6B4EFF" />
-      {filteredRestaurants.filter(r => r.latitude && r.longitude).map((r) => (
-        <NativeMarker
-          key={r.id}
-          coordinate={{ latitude: r.latitude, longitude: r.longitude }}
-          onPress={() => setSelectedRestaurant(r)}
-          // anchor so custom view sits above the coordinate
-          anchor={{ x: 0.5, y: 1 }}
+  if (Platform.OS === "web") {
+    if (!isLoaded) {
+      mapContent = <Text>Loading map...</Text>;
+    } else {
+      const zoomLevel = Math.max(10, 15 - Math.log2(currentRegion.latitudeDelta * 100));
+
+      mapContent = (
+        <GoogleMap
+          key={`${currentRegion.latitude}-${currentRegion.longitude}`}
+          mapContainerStyle={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: "100vw",
+            height: "100vh",
+            margin: 0,
+            padding: 0,
+            borderRadius: 0,
+            overflow: "hidden",
+          }}
+          center={{ lat: currentRegion.latitude, lng: currentRegion.longitude }}
+          zoom={zoomLevel}
+          options={{
+            fullscreenControl: false,
+            streetViewControl: false,
+            mapTypeControl: false,
+            zoomControl: false,
+          }}
         >
-          <CustomMarker
-            restaurant={r}
-            isSelected={selectedRestaurant && selectedRestaurant.id === r.id}
-            onPress={(res) => setSelectedRestaurant(res)}
+          {/* User marker */}
+          <Marker
+            position={{
+              lat: userLocation.latitude,
+              lng: userLocation.longitude,
+            }}
+            label={"You"}
+            icon={{
+              url: `data:image/svg+xml,${encodeURIComponent(`
+                <svg width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="24" cy="24" r="22" fill="#fff" stroke="#6B4EFF" stroke-width="2"/>
+                  <circle cx="24" cy="20" r="10" fill="#6B4EFF"/>
+                  <ellipse cx="24" cy="36" rx="12" ry="5" fill="#E0E7FF"/>
+                  <text x="24" y="25" text-anchor="middle" fill="#fff" font-family="Arial, sans-serif" font-size="13" font-weight="bold">You</text>
+                </svg>
+              `)}`,
+              scaledSize: new window.google.maps.Size(48, 48),
+              anchor: new window.google.maps.Point(24, 24),
+            }}
           />
-        </NativeMarker>
-      ))}
-    </MapView>
-  ) : (
-    <View style={styles.mapFallback}>
-      <MaterialIcons name="map" size={48} color="#6B4EFF" />
-      <Text style={styles.mapText}>Map not available</Text>
-      <Text style={styles.mapSubText}>
-        {Platform.OS === "web"
-          ? "Google Maps failed to load. Please check your internet connection."
-          : 'Expo Maps is not installed. Please run "npx expo install expo-maps" and rebuild the app.'}
-      </Text>
-      <Text style={styles.mapHelpText}>
-        Restaurants will still be available in the list below
-      </Text>
-    </View>
-  );
-  // }
+          {/* Dynamic perimeter/circle */}
+          <Circle
+            center={{
+              lat: (centerForCircle && centerForCircle.latitude) || userLocation.latitude,
+              lng: (centerForCircle && centerForCircle.longitude) || userLocation.longitude,
+            }}
+            radius={radiusMeters}
+            options={{
+              fillColor: '#3838FB22',
+              strokeColor: '#3838FB',
+              strokeOpacity: 0.7,
+              strokeWeight: 2,
+            }}
+          />
+          {/* Restaurant markers and tooltips */}
+          {filteredRestaurants
+            .filter(r => typeof r.latitude === "number" && typeof r.longitude === "number" && !isNaN(r.latitude) && !isNaN(r.longitude))
+            .map((r) => (
+              <Marker
+                key={r.id}
+                position={{ lat: r.latitude, lng: r.longitude }}
+                onClick={() => {
+                  router.push({
+                    pathname: "/HotelDetails",
+                    params: {
+                      id: r.id,
+                      name: r.name,
+                      address: r.address,
+                      starRating: r.rating || 0,
+                    },
+                  });
+                }}
+                icon={{
+                  url: `data:image/svg+xml,${encodeURIComponent(`
+                    <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+                      <circle cx="20" cy="20" r="18" fill="#6854FF" stroke="#ffffff" stroke-width="2"/>
+                      <text x="20" y="26" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="16" font-weight="bold">M</text>
+                    </svg>
+                  `)}`,
+                  scaledSize: new window.google.maps.Size(40, 40),
+                  anchor: new window.google.maps.Point(20, 20),
+                }}
+              >
+                {(showAllTooltips || (selectedRestaurantTooltip && selectedRestaurantTooltip.id === r.id)) && (
+                  <InfoWindow
+                    position={{ lat: r.latitude, lng: r.longitude }}
+                    onCloseClick={() => {
+                      setSelectedRestaurant(null);
+                      setSelectedRestaurantTooltip(null);
+                      setShowAllTooltips(false);
+                    }}
+                  >
+                    <div style={{ padding: '8px', minWidth: '200px' }}>
+                      <h3 style={{ margin: '0 0 8px 0', color: '#333' }}>{r.name}</h3>
+                      <p style={{ margin: '4px 0', color: '#666', fontSize: '14px' }}>{r.address}</p>
+                      <p style={{ margin: '4px 0', color: '#666', fontSize: '14px' }}>{r.restaurantType}</p>
+                      {r.rating && (
+                        <div style={{ display: 'flex', alignItems: 'center', margin: '4px 0' }}>
+                          <span style={{ color: '#FFD700', marginRight: '4px' }}>⭐</span>
+                          <span style={{ color: '#333', fontSize: '14px' }}>{r.rating}</span>
+                        </div>
+                      )}
+                    </div>
+                  </InfoWindow>
+                )}
+              </Marker>
+            ))}
+        </GoogleMap>
+      );
+    }
+  } else {
+  // Use expo-maps directly on native platforms (Android/iOS); web uses @react-google-maps/api
+    const currentRegion = mapRegion || {
+      latitude: userLocation?.latitude || 17.4375,
+      longitude: userLocation?.longitude || 78.4456,
+      latitudeDelta: 0.0922,
+      longitudeDelta: 0.0421,
+    };
+
+    // If expo-maps is available, use it directly; otherwise show a friendly fallback
+    const { MapView: DynMapView, Marker: DynMarker, Circle: DynCircle } = mapComponents || {};
+    if (DynMapView) {
+      mapContent = (
+        <View style={styles.mapContainer}>
+          <DynMapView
+            style={styles.map}
+            initialRegion={currentRegion}
+            showsUserLocation={true}
+            showsMyLocationButton={false}
+            onMapReady={() => console.log("🗺️ expo-maps ready")}
+          >
+            {/* User marker / center marker */}
+            {DynMarker && (
+              <DynMarker
+                coordinate={centerForCircle}
+                title={cityCenter ? "City" : "You"}
+                pinColor={cityCenter ? "#6B4EFF" : "#6B4EFF"}
+              >
+                {!cityCenter && (
+                  <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+                    <View style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: 24,
+                      backgroundColor: '#fff',
+                      borderWidth: 2,
+                      borderColor: '#6B4EFF',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.15,
+                      shadowRadius: 4,
+                      elevation: 4,
+                    }}>
+                      <View style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 18,
+                        backgroundColor: '#6B4EFF',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}>
+                        <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15 }}>You</Text>
+                      </View>
+                      <View style={{
+                        position: 'absolute',
+                        bottom: 6,
+                        left: 4,
+                        right: 4,
+                        height: 10,
+                        borderRadius: 5,
+                        backgroundColor: '#E0E7FF',
+                        opacity: 0.7,
+                      }} />
+                    </View>
+                  </View>
+                )}
+              </DynMarker>
+            )}
+
+            {/* Circle if expo supports it */}
+            {DynCircle && (
+              <DynCircle
+                center={centerForCircle}
+                radius={radiusMeters}
+                strokeColor="#3838FB"
+                fillColor="#3838FB22"
+                strokeWidth={2}
+              />
+            )}
+
+            {/* Restaurant markers */}
+            {filteredRestaurants
+              .filter(r => typeof r.latitude === "number" && typeof r.longitude === "number" && !isNaN(r.latitude) && !isNaN(r.longitude))
+              .map((r) => (
+                DynMarker ? (
+                  <DynMarker
+                    key={r.id}
+                    coordinate={{ latitude: r.latitude, longitude: r.longitude }}
+                    title={r.name}
+                    description={`${r.restaurantType || ''} ${r.rating ? `⭐ ${r.rating}` : ''}`}
+                    onPress={() => {
+                      router.push({ pathname: "/HotelDetails", params: { id: r.id, name: r.name, address: r.address, starRating: r.rating || 0 } });
+                    }}
+                  >
+                    <CustomMarker
+                      restaurant={r}
+                      isSelected={selectedRestaurant && selectedRestaurant.id === r.id}
+                      onPress={(restaurant) => {
+                        setSelectedRestaurant(restaurant);
+                        setSelectedRestaurantTooltip(restaurant);
+                        setShowAllTooltips(false);
+                      }}
+                    />
+                    {(showAllTooltips || (selectedRestaurantTooltip && selectedRestaurantTooltip.id === r.id)) && (
+                      <View style={{ position: 'absolute', top: -90, left: -60, width: 180 }}>
+                        <RestaurantTooltip
+                          restaurant={r}
+                          onClose={() => {
+                            setSelectedRestaurant(null);
+                            setSelectedRestaurantTooltip(null);
+                            setShowAllTooltips(false);
+                          }}
+                        />
+                      </View>
+                    )}
+                  </DynMarker>
+                ) : (
+                  <View key={`nomap-${r.id}`} style={{ padding: 8 }}>
+                    <Text>{r.name} (map marker unavailable)</Text>
+                  </View>
+                )
+              ))}
+          </DynMapView>
+        </View>
+      );
+    } else {
+      mapContent = (
+        <View style={styles.mapNotAvailable}>
+          <MaterialCommunityIcons name="map-outline" size={64} color="#ccc" />
+          <Text style={styles.mapText}>Map View Unavailable</Text>
+          <Text style={styles.mapSubText}>
+            {Platform.OS === 'web'
+              ? "Use web browser for map features"
+              : "Native map library not installed. Run `npx expo install expo-maps` (for Expo) or install `react-native-maps` and rebuild the app."}
+          </Text>
+          <Text style={styles.mapSubTextSmall}>
+            Showing {filteredRestaurants.length} restaurants nearby
+          </Text>
+        </View>
+      );
+    }
+  }
 
   if (loading) {
     return (
@@ -508,7 +851,10 @@ function CustomerHomeScreen() {
     >
       {/* Top Controls */}
       <View style={styles.topControls}>
-        <Pressable style={styles.gpsIndicator} onPress={handleFilterPress}>
+        <Pressable
+          style={styles.gpsIndicator}
+          onPress={handleFilterPress}
+        >
           <Image
             source={require("../assets/images/filter-image.png")}
             style={styles.filterImage}
@@ -517,25 +863,12 @@ function CustomerHomeScreen() {
         {/* Animated Search Bar */}
         <View style={styles.animatedSearchBarContainer}>
           {!searchOpen ? (
-            <Pressable
-              style={styles.searchIconButton}
-              onPress={handleOpenSearch}
-            >
+            <Pressable style={styles.searchIconButton} onPress={handleOpenSearch}>
               <MaterialIcons name="search" size={28} color="#6B4EFF" />
             </Pressable>
           ) : (
-            <View
-              style={[
-                styles.animatedSearchBar,
-                searchOpen && styles.animatedSearchBarOpen,
-              ]}
-            >
-              <MaterialIcons
-                name="search"
-                size={22}
-                color="#6B4EFF"
-                style={{ marginLeft: 10, marginRight: 4 }}
-              />
+            <View style={[styles.animatedSearchBar, searchOpen && styles.animatedSearchBarOpen]}>
+              <MaterialIcons name="search" size={22} color="#6B4EFF" style={{ marginLeft: 10, marginRight: 4 }} />
               <TextInput
                 ref={searchInputRef}
                 style={styles.animatedSearchInput}
@@ -556,10 +889,7 @@ function CustomerHomeScreen() {
                   <MaterialIcons name="close" size={20} color="#888" />
                 </Pressable>
               ) : (
-                <Pressable
-                  onPress={handleCloseSearch}
-                  style={styles.animatedSearchClose}
-                >
+                <Pressable onPress={handleCloseSearch} style={styles.animatedSearchClose}>
                   <MaterialIcons name="close" size={24} color="#6B4EFF" />
                 </Pressable>
               )}
@@ -569,7 +899,22 @@ function CustomerHomeScreen() {
       </View>
 
       {/* Map Area */}
-      <View style={styles.mapWebContainer}>{mapContent}</View>
+      <View style={styles.mapWebContainer}>
+        {mapContent}
+
+        {/* Restaurant Tooltip Overlay for Native Maps */}
+        {Platform.OS !== 'web' && selectedRestaurantTooltip && (
+          <View style={styles.tooltipOverlay}>
+            <RestaurantTooltip
+              restaurant={selectedRestaurantTooltip}
+              onClose={() => {
+                setSelectedRestaurant(null);
+                setSelectedRestaurantTooltip(null);
+              }}
+            />
+          </View>
+        )}
+      </View>
 
       {/* Filter Modal */}
       <FilterModal
@@ -580,21 +925,29 @@ function CustomerHomeScreen() {
         onClearAll={() => setSelectedFilters([])}
       />
 
+
+
       {/* Bottom Navigation */}
       <View style={styles.bottomNavigation}>
-        <Pressable style={styles.navButton} onPress={handlePersonTabPress}>
-          <MaterialIcons name="person" size={24} color="white" />
+        <Pressable
+          style={styles.navIconButton}
+          onPress={handlePersonTabPress}
+        >
+          <MaterialIcons name="person" size={22} color="white" />
         </Pressable>
 
         <Pressable
-          style={[styles.navButton, styles.scanButton]}
+          style={styles.navIconButtonCenter}
           onPress={handleScanPress}
         >
-          <MaterialCommunityIcons name="qrcode-scan" size={28} color="white" />
+          <MaterialCommunityIcons name="qrcode-scan" size={36} color="white" />
         </Pressable>
 
-        <Pressable style={styles.navButton} onPress={handleNavigationPress}>
-          <MaterialIcons name="navigation" size={24} color="white" />
+        <Pressable
+          style={styles.navIconButton}
+          onPress={handleNavigationPress}
+        >
+          <MaterialIcons name="navigation" size={22} color="white" />
         </Pressable>
 
         {/* Navigation Modal for multiple restaurants */}
@@ -604,70 +957,26 @@ function CustomerHomeScreen() {
           animationType="slide"
           onRequestClose={() => setShowNavModal(false)}
         >
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: "rgba(0,0,0,0.4)",
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-          >
-            <View
-              style={{
-                backgroundColor: "#fff",
-                borderRadius: 12,
-                padding: 20,
-                minWidth: 280,
-                maxHeight: "70%",
-              }}
-            >
-              <Text
-                style={{ fontWeight: "bold", fontSize: 18, marginBottom: 12 }}
-              >
-                Select Restaurant
-              </Text>
+          <View style={{ flex:1, backgroundColor:'rgba(0,0,0,0.4)', justifyContent:'center', alignItems:'center' }}>
+            <View style={{ backgroundColor:'#fff', borderRadius:12, padding:20, minWidth:280, maxHeight:'70%' }}>
+              <Text style={{ fontWeight:'bold', fontSize:18, marginBottom:12 }}>Select Restaurant</Text>
               <FlatList
                 data={navOptions}
-                keyExtractor={(item) => item.id?.toString() || item.name}
-                renderItem={({ item }) => (
-                  <Pressable
-                    onPress={() => handleNavSelect(item)}
-                    style={{
-                      paddingVertical: 10,
-                      borderBottomWidth: 1,
-                      borderColor: "#eee",
-                    }}
-                  >
-                    <Text style={{ fontSize: 16 }}>{item.name}</Text>
-                    <Text style={{ fontSize: 13, color: "#888" }}>
-                      {item.address}
-                    </Text>
+                keyExtractor={item => item.id?.toString() || item.name}
+                renderItem={({item}) => (
+                  <Pressable onPress={() => handleNavSelect(item)} style={{ paddingVertical:10, borderBottomWidth:1, borderColor:'#eee' }}>
+                    <Text style={{ fontSize:16 }}>{item.name}</Text>
+                    <Text style={{ fontSize:13, color:'#888' }}>{item.address}</Text>
                   </Pressable>
                 )}
               />
-              <Pressable
-                onPress={() => setShowNavModal(false)}
-                style={{ marginTop: 16, alignSelf: "flex-end" }}
-              >
-                <Text style={{ color: "#6B4EFF", fontWeight: "bold" }}>
-                  Cancel
-                </Text>
+              <Pressable onPress={() => setShowNavModal(false)} style={{ marginTop:16, alignSelf:'flex-end' }}>
+                <Text style={{ color:'#6B4EFF', fontWeight:'bold' }}>Cancel</Text>
               </Pressable>
             </View>
           </View>
         </Modal>
       </View>
-      {/* Persistent tooltip overlay for selected restaurant */}
-      {selectedRestaurant ? (
-        <View style={{ position: "absolute", left: 20, right: 20, bottom: 120, zIndex: 20 }}>
-          <RestaurantTooltip
-            restaurant={selectedRestaurant}
-            onClose={() => setSelectedRestaurant(null)}
-            onNavigate={(r) => openGoogleMapsDirections(r)}
-            onOpenMenu={(r) => handleOpenMenuFromTooltip(r)}
-          />
-        </View>
-      ) : null}
     </View>
   );
 }
@@ -734,6 +1043,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
   },
+  centerContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 
   mapArea: {
     flex: 1,
@@ -745,6 +1058,9 @@ const styles = StyleSheet.create({
   },
   map: {
     ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+    minHeight: 300,
   },
 
   topControls: {
@@ -774,53 +1090,53 @@ const styles = StyleSheet.create({
     fontSize: 36,
   },
   searchButton: {
-    display: "none",
+    display: 'none',
   },
   animatedSearchBarContainer: {
-    position: "absolute",
+    position: 'absolute',
     top: 10,
     right: 0,
     zIndex: 10,
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     minWidth: 48,
     minHeight: 48,
-    justifyContent: "flex-end",
+    justifyContent: 'flex-end',
   },
   searchIconButton: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.10,
     shadowRadius: 4,
     elevation: 2,
   },
   animatedSearchBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "#e0e0e0",
+    borderColor: '#e0e0e0',
     minWidth: 60,
     width: 0,
     height: 48,
     paddingRight: 8,
     paddingLeft: 0,
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.10,
     shadowRadius: 4,
     elevation: 2,
-    overflow: "hidden",
-    transitionProperty: "width",
-    transitionDuration: "0.3s",
-    transitionTimingFunction: "ease",
+    overflow: 'hidden',
+    transitionProperty: 'width',
+    transitionDuration: '0.3s',
+    transitionTimingFunction: 'ease',
   },
   animatedSearchBarOpen: {
     width: 340,
@@ -829,13 +1145,13 @@ const styles = StyleSheet.create({
   animatedSearchInput: {
     flex: 1,
     fontSize: 17,
-    color: "#222",
-    backgroundColor: "transparent",
+    color: '#222',
+    backgroundColor: 'transparent',
     borderWidth: 0,
     paddingHorizontal: 8,
     paddingVertical: 0,
     height: 48,
-    outlineStyle: "none",
+    outlineStyle: 'none',
   },
   animatedSearchClear: {
     marginRight: 2,
@@ -847,33 +1163,28 @@ const styles = StyleSheet.create({
     padding: 2,
   },
 
-  mapFallback: {
+  mapNotAvailable: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#f8f9fa",
-    padding: 20,
+    backgroundColor: "#f5f5f5",
   },
   mapText: {
     fontSize: 18,
-    color: "#333",
-    fontWeight: "600",
-    marginTop: 12,
+    color: "#666",
     textAlign: "center",
   },
   mapSubText: {
     fontSize: 14,
-    color: "#666",
+    color: "#999",
+    textAlign: "center",
     marginTop: 8,
-    textAlign: "center",
-    lineHeight: 20,
   },
-  mapHelpText: {
+  mapSubTextSmall: {
     fontSize: 12,
-    color: "#888",
-    marginTop: 12,
+    color: "#bbb",
     textAlign: "center",
-    fontStyle: "italic",
+    marginTop: 4,
   },
   bottomNavigation: {
     position: "absolute",
@@ -883,20 +1194,37 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    zIndex: 1000,
+    elevation: 1000,
   },
-  navButton: {
-    backgroundColor: "#5A4FCF", // More vibrant purple
+  navIconButton: {
+    backgroundColor: '#3838FB',
     borderRadius: 16,
-    padding: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4.65,
-    elevation: 8,
+    width: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 8,
+    shadowColor: '#3838FB',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 6,
   },
-  scanButton: {
-    padding: 20,
-    transform: [{ scale: 1.1 }],
+  navIconButtonCenter: {
+    backgroundColor: '#3838FB',
+    borderRadius: 18,
+    width: 64,
+    height: 64,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 8,
+    shadowColor: '#3838FB',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 10,
+    top: -16,
   },
   filterBar: {
     position: "absolute",
@@ -947,122 +1275,99 @@ const styles = StyleSheet.create({
     color: "#6B4EFF",
     fontWeight: "bold",
   },
-  // Marker styles
+  // Custom marker styles
   markerContainer: {
-    alignItems: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   markerWrapper: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#43a047",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: "#fff",
-    elevation: 3,
-  },
-  markerSelected: {
-    backgroundColor: "#6B4EFF",
-  },
-  markerClosed: {
-    opacity: 0.5,
-    backgroundColor: "#888",
-  },
-  markerImage: {
     width: 40,
     height: 40,
     borderRadius: 20,
+    backgroundColor: '#6854FF',
+    borderWidth: 2,
+    borderColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  markerSelected: {
+    transform: [{ scale: 1.2 }],
+    backgroundColor: '#5a47d9',
   },
   markerText: {
-    color: "#fff",
-    fontWeight: "900",
-    fontSize: 18,
-    textShadowColor: 'rgba(0,0,0,0.25)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   markerTextSelected: {
-    color: "#fff",
-  },
-  markerRating: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 4,
-  },
-  markerRatingText: {
-    marginLeft: 4,
-    fontSize: 12,
-    color: "#333",
-    fontWeight: "600",
+    fontSize: 18,
   },
   // Tooltip styles
   tooltip: {
-    backgroundColor: "#fff",
-    padding: 12,
-    borderRadius: 10,
-    width: 260,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 5,
+    position: 'absolute',
+    bottom: 60,
+    left: 20,
+    right: 20,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
   tooltipClose: {
-    position: "absolute",
+    position: 'absolute',
     top: 8,
     right: 8,
-    zIndex: 4,
-    padding: 6,
-  },
-  tooltipImage: {
-    width: "100%",
-    height: 110,
-    borderRadius: 8,
-    marginBottom: 8,
+    padding: 4,
+    zIndex: 1,
   },
   tooltipTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#222",
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
     marginBottom: 4,
+    marginRight: 24,
   },
   tooltipAddress: {
-    fontSize: 13,
-    color: "#666",
-    marginBottom: 6,
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 2,
   },
   tooltipType: {
-    fontSize: 13,
-    color: "#888",
+    fontSize: 14,
+    color: '#888',
     marginBottom: 8,
   },
   tooltipRating: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   tooltipRatingText: {
-    marginLeft: 6,
     fontSize: 14,
-    color: "#333",
-    fontWeight: "600",
+    color: '#333',
+    marginLeft: 4,
+    fontWeight: '500',
   },
-  tooltipActions: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 6,
+  tooltipOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
   },
-  tooltipButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#e6e6f7",
-    backgroundColor: "#fff",
-  },
-  tooltipPrimaryButton: {
-    backgroundColor: "#6B4EFF",
-    borderColor: "#6B4EFF",
+  mapContainer: {
+    flex: 1,
+    position: 'relative',
   },
 });
 
