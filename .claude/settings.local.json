@@ -30,7 +30,9 @@
       "Read(//c/Users/ravit/Siddhu'sWorld/restaurant/server/app/middleware/**)",
       "Read(//c/Users/ravit/Siddhu'sWorld/restaurant/server/**)",
       "Read(//c/Users/ravit/Siddhu'sWorld/Menutha/src/screens/**)",
-      "Bash(./gradlew:*)"
+      "Bash(./gradlew:*)",
+      "Read(//v/naveen2/restaurent3/restaurant/server/app/routes/**)",
+      "Bash(keytool:*)"
     ],
     "deny": [],
     "ask": []
