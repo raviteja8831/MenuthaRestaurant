@@ -1,11 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <!-- Allow cleartext (HTTP) for specific domains and for debug builds -->
-    <domain-config cleartextTrafficPermitted="true">
-        <!-- API host used by the app -->
-        <domain includeSubdomains="false">13.127.228.119</domain>
-    </domain-config>
-
-    <!-- Fallback: permit cleartext for all (useful for local/dev). Remove or tighten for production -->
-    <base-config cleartextTrafficPermitted="true" />
+  <base-config cleartextTrafficPermitted="true" />
 </network-security-config>

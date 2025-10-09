@@ -141,53 +141,45 @@ EOF
 }
 
 # 🆕 Configure Android HTTP cleartext policy
-configure_cleartext_policy() {
-  print_status "Configuring Android cleartext network policy..."
-  mkdir -p android/app/src/main/res/xml
-  cat > android/app/src/main/res/xml/network_security_config.xml << 'EOF'
-<?xml version="1.0" encoding="utf-8"?>
-<network-security-config>
-  <domain-config cleartextTrafficPermitted="true">
-    <domain includeSubdomains="true">13.127.228.119</domain>
-  </domain-config>
-</network-security-config>
-EOF
+# configure_cleartext_policy() {
+#   print_status "Configuring Android cleartext network policy..."
+#   mkdir -p android/app/src/main/res/xml
+#   cat > android/app/src/main/res/xml/network_security_config.xml << 'EOF'
+# <?xml version="1.0" encoding="utf-8"?>
+# <network-security-config>
+#   <domain-config cleartextTrafficPermitted="true">
+#     <domain includeSubdomains="true">13.127.228.119</domain>
+#   </domain-config>
+# </network-security-config>
+# EOF
 
-  MANIFEST_FILE="android/app/src/main/AndroidManifest.xml"
-  if ! grep -q "android:networkSecurityConfig" "$MANIFEST_FILE"; then
-    print_status "Updating AndroidManifest.xml to include networkSecurityConfig..."
-    sed -i.bak '/<application/a\
-    android:usesCleartextTraffic="true"\
-    android:networkSecurityConfig="@xml/network_security_config"' "$MANIFEST_FILE"
-    print_success "AndroidManifest.xml updated successfully"
-  else
-    print_warning "Network security config already set in AndroidManifest.xml"
-  fi
-}
+#   MANIFEST_FILE="android/app/src/main/AndroidManifest.xml"
+#   if ! grep -q "android:networkSecurityConfig" "$MANIFEST_FILE"; then
+#     print_status "Updating AndroidManifest.xml to include networkSecurityConfig..."
+#     sed -i.bak '/<application/a\
+#     android:usesCleartextTraffic="true"\
+#     android:networkSecurityConfig="@xml/network_security_config"' "$MANIFEST_FILE"
+#     print_success "AndroidManifest.xml updated successfully"
+#   else
+#     print_warning "Network security config already set in AndroidManifest.xml"
+#   fi
+# }
 
-# Update app.json with cleartext traffic support
+# Update app.json
 update_app_json() {
   local APP_TYPE=$1
   local APP_NAME=$2
   local PACKAGE_NAME=$3
-  print_status "Updating app.json for $APP_TYPE with cleartext traffic..."
+  print_status "Updating app.json for $APP_TYPE..."
   [ -f "app.json" ] && cp app.json app.json.backup
   if command -v jq &> /dev/null; then
-    jq ".expo.name = \"$APP_NAME\" | .expo.android.package = \"$PACKAGE_NAME\" | .expo.android.usesCleartextTraffic = true" app.json > app.json.tmp && mv app.json.tmp app.json
-    print_success "Updated app.json for $APP_TYPE (using jq)"
+    jq ".expo.name = \"$APP_NAME\" | .expo.android.package = \"$PACKAGE_NAME\"" app.json > app.json.tmp && mv app.json.tmp app.json
   else
     print_warning "jq not found, using sed replacement"
     sed -i.bak "s/\"name\": \".*\"/\"name\": \"$APP_NAME\"/" app.json
     sed -i.bak "s/\"package\": \".*\"/\"package\": \"$PACKAGE_NAME\"/" app.json
-    # Check if usesCleartextTraffic already exists
-    if grep -q "usesCleartextTraffic" app.json; then
-      sed -i.bak 's/"usesCleartextTraffic": false/"usesCleartextTraffic": true/' app.json
-    else
-      # Add usesCleartextTraffic after package line
-      sed -i.bak '/"package":/a\      "usesCleartextTraffic": true,' app.json
-    fi
-    print_success "Updated app.json for $APP_TYPE (using sed)"
   fi
+  print_success "Updated app.json for $APP_TYPE"
 }
 
 restore_app_json() { [ -f "app.json.backup" ] && mv app.json.backup app.json && print_success "Restored original app.json"; }
@@ -217,8 +209,8 @@ main() {
   create_customer_index
   update_app_json "Customer App" "Menutha Customer" "com.menutha.customer"
   print_status "Applying network security config for Customer App..."
-  configure_cleartext_policy
-  npx expo prebuild --clean
+  #configure_cleartext_policy
+ # npx expo prebuild --clean
   build_app "CUSTOMER APP" "customer-release"
 
   # Build Restaurant App
@@ -226,8 +218,8 @@ main() {
   create_restaurant_index
   update_app_json "Restaurant App" "Menutha Restaurant" "com.menutha.restaurant"
   print_status "Applying network security config for Restaurant App..."
-  configure_cleartext_policy
-  npx expo prebuild --clean
+  #configure_cleartext_policy
+ # npx expo prebuild --clean
   build_app "RESTAURANT APP" "restaurant-release"
 
   restore_index
