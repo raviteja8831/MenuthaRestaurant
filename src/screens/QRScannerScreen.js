@@ -20,7 +20,6 @@ export default function QRScannerScreen() {
   const [hasPermission, setHasPermission] = useState(null);
   const [scanned, setScanned] = useState(false);
   const [scannedData, setScannedData] = useState(null);
-  // const [scannerAvailable, setScannerAvailable] = useState(null); // removed duplicate
 
   if (Platform.OS === 'web') {
     return (
@@ -33,15 +32,17 @@ export default function QRScannerScreen() {
       </SafeAreaView>
     );
   }
-  const [scannerAvailable, setScannerAvailable] = useState(null);
-
 
   useEffect(() => {
     (async () => {
-      const { status } = await CameraModule.requestCameraPermissionsAsync();
-      setHasPermission(status === 'granted');
-      // Check if modern barcode scanner is available
-      setScannerAvailable(Camera.isModernBarcodeScannerAvailable);
+      try {
+        const { status } = await CameraModule.requestCameraPermissionsAsync();
+        console.log('Camera permission status:', status);
+        setHasPermission(status === 'granted');
+      } catch (error) {
+        console.error('Error requesting camera permission:', error);
+        setHasPermission(false);
+      }
     })();
   }, []);
 
@@ -103,32 +104,6 @@ export default function QRScannerScreen() {
     router.push('/customer-home');
   };
 
-
-
-  // Render loading or error states after hooks
-
-  // Launch modal scanner if available and not already scanned
-  useEffect(() => {
-    const handleOpenScanner = async () => {
-      if (scannerAvailable && !scanned) {
-        try {
-          await Camera.launchScanner({ barcodeTypes: ['qr'] });
-          // Listen for scan event
-          Camera.onModernBarcodeScanned((event) => {
-            if (event && event.data) {
-              handleQRCodeScanned(event.data);
-            }
-          });
-        } catch (_e) {
-          // fallback or error
-        }
-      }
-    };
-    if (scannerAvailable) {
-      handleOpenScanner();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scannerAvailable]);
   if (hasPermission === null) {
     return (
       <SafeAreaView style={styles.container}>

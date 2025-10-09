@@ -432,30 +432,22 @@ function CustomerHomeScreen() {
     });
   };
 
-  // Platform-specific map rendering
+  // Platform-specific map rendering - using expo-maps only
   let mapContent = null;
-  // For native platforms, use react-native-maps which works reliably for both debug and release builds
   let MapView = null;
   let NativeMarker = null;
 
   try {
-    // Always use react-native-maps for consistent behavior
-    const RNMaps = require("react-native-maps");
-    MapView = RNMaps.default || RNMaps.MapView || RNMaps;
-    NativeMarker = RNMaps.Marker || RNMaps.default?.Marker;
-    console.log("✅ react-native-maps loaded successfully");
+    const ExpoMaps = require("expo-maps");
+    MapView = ExpoMaps.MapView;
+    NativeMarker = ExpoMaps.Marker;
+    console.log("✅ expo-maps loaded successfully");
+    console.log("MapView:", MapView);
+    console.log("Marker:", NativeMarker);
   } catch (err) {
-    // If react-native-maps fails, try expo-maps as fallback
-    try {
-      const ExpoMaps = require("expo-maps");
-      MapView = ExpoMaps.MapView;
-      NativeMarker = ExpoMaps.Marker;
-      console.log("✅ expo-maps loaded as fallback");
-    } catch (expoErr) {
-      console.warn("Maps not available:", err?.message || err);
-      MapView = null;
-      NativeMarker = null;
-    }
+    console.error("❌ Failed to load expo-maps:", err);
+    MapView = null;
+    NativeMarker = null;
   }
 
   mapContent = MapView ? (
@@ -467,9 +459,10 @@ function CustomerHomeScreen() {
         latitudeDelta: 0.0922,
         longitudeDelta: 0.0421,
       }}
+      onMapReady={() => console.log('Map is ready!')}
     >
       <NativeMarker coordinate={userLocation} title="You" pinColor="#6B4EFF" />
-      {filteredRestaurants.map((r) => (
+      {filteredRestaurants.filter(r => r.latitude && r.longitude).map((r) => (
         <NativeMarker
           key={r.id}
           coordinate={{ latitude: r.latitude, longitude: r.longitude }}

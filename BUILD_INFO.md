@@ -78,5 +78,37 @@
 3. **Keystore Security**: Store the keystore file in a secure, backed-up location separate from the codebase
 
 ---
+
+## QR Scanner Fix (Added: October 9, 2025)
+
+### Issue
+The app was crashing when navigating to the QR Scanner screen with error:
+```
+java.lang.RuntimeException: Unable to access internal_backingMap via reflection
+at expo.modules.kotlin.views.GroupViewManagerWrapper.updateProperties
+```
+
+### Root Cause
+**Incompatibility between Expo modules (expo-camera, expo-maps) and React Native's New Architecture (Fabric)**
+
+### Permanent Fix Applied
+
+**1. app.json (Line 10):**
+- Changed: `"newArchEnabled": false`
+
+**2. android/gradle.properties (Line 39):**
+- Changed: `newArchEnabled=false`
+- Added comment explaining Expo compatibility
+
+**3. android/app/src/main/java/com/menutha/org/MainActivity.kt (Line 44):**
+- Changed: `false // Disable Fabric to fix expo-camera crash`
+
+### What This Means
+- App now uses React Native's stable legacy bridge
+- All Expo modules (camera, maps, location) work correctly
+- No performance impact for this app
+- Can re-enable when Expo fully supports Fabric
+
+---
 Build Date: October 9, 2025
 Build System: Gradle 8.13
