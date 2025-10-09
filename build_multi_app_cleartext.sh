@@ -174,7 +174,11 @@ update_kotlin_package() {
   [ -z "$OLD_PATH" ] && print_error "MainActivity.kt not found" && return
 
   mkdir -p "$(dirname "$MAIN_ACTIVITY")"
-  mv "$OLD_PATH" "$MAIN_ACTIVITY"
+  if [ "$OLD_PATH" != "$MAIN_ACTIVITY" ]; then
+    mv "$OLD_PATH" "$MAIN_ACTIVITY"
+  else
+    print_status "MainActivity.kt already in correct location ($MAIN_ACTIVITY)"
+  fi
 
   # Update Kotlin package and import
   sed -i "s/^package .*/package $APP_PACKAGE/" "$MAIN_ACTIVITY"
@@ -190,6 +194,7 @@ update_kotlin_package() {
     print_success "Updated Kotlin + Manifest for $APP_PACKAGE"
   fi
 }
+
 
 # ------------------------------------------------
 # Update app.json
