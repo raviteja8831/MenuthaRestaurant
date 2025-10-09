@@ -1,9 +1,10 @@
 #!/bin/bash
 
 # ================================================================
-# Multi-App Build Script
-# ✅ Handles dynamic package updates (Kotlin + Manifest)
-# ✅ Configures Android cleartext policy
+# Multi-App Build Script (AWS Remote Ready)
+# ✅ Always sets API_BASE_URL to remote AWS endpoint
+# ✅ Handles dynamic Kotlin + Manifest updates
+# ✅ Configures Android cleartext policy safely
 # ✅ Builds both Customer and Restaurant apps
 # ================================================================
 
@@ -16,6 +17,32 @@ print_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
 print_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 print_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
 print_header() { echo -e "\n${CYAN}==========================================\n$1\n==========================================${NC}\n"; }
+
+# ------------------------------------------------
+# Remote API setup (AWS)
+# ------------------------------------------------
+set_remote_api_url() {
+  local REMOTE_URL="http://13.127.228.119:8090"
+  print_status "Setting API_BASE_URL to AWS remote endpoint..."
+
+  # If .env exists, update it; else create
+  if [ -f ".env" ]; then
+    if grep -q "API_BASE_URL=" .env; then
+      sed -i.bak "s|^API_BASE_URL=.*|API_BASE_URL=${REMOTE_URL}|" .env
+    else
+      echo "API_BASE_URL=${REMOTE_URL}" >> .env
+    fi
+  else
+    echo "API_BASE_URL=${REMOTE_URL}" > .env
+  fi
+
+  # Also patch src/config/api.js if exists
+  if [ -f "src/config/api.js" ]; then
+    sed -i.bak "s|http[s]*://[^\"']*|${REMOTE_URL}|g" src/config/api.js
+  fi
+
+  print_success "API_BASE_URL set to ${REMOTE_URL}"
+}
 
 # ------------------------------------------------
 # Helper: Backup & Restore
@@ -147,14 +174,15 @@ configure_cleartext_policy() {
 EOF
 
   local MANIFEST="android/app/src/main/AndroidManifest.xml"
+  if ! grep -q "android:usesCleartextTraffic" "$MANIFEST"; then
+    sed -i.bak '/<application/a\
+    android:usesCleartextTraffic="true"' "$MANIFEST"
+  fi
   if ! grep -q "android:networkSecurityConfig" "$MANIFEST"; then
     sed -i.bak '/<application/a\
-    android:usesCleartextTraffic="true"\
     android:networkSecurityConfig="@xml/network_security_config"' "$MANIFEST"
-    print_success "Manifest updated with cleartext config"
-  else
-    print_warning "Cleartext policy already set"
   fi
+  print_success "Manifest ensured for cleartext access"
 }
 
 # ------------------------------------------------
@@ -169,7 +197,6 @@ update_kotlin_package() {
 
   print_status "Updating Kotlin + Manifest for $APP_PACKAGE..."
 
-  # Find MainActivity (any existing)
   local OLD_PATH=$(find "$APP_PATH" -type f -name "MainActivity.kt" | head -n 1)
   [ -z "$OLD_PATH" ] && print_error "MainActivity.kt not found" && return
 
@@ -180,21 +207,12 @@ update_kotlin_package() {
     print_status "MainActivity.kt already in correct location ($MAIN_ACTIVITY)"
   fi
 
-  # Update Kotlin package and import
   sed -i "s/^package .*/package $APP_PACKAGE/" "$MAIN_ACTIVITY"
   sed -i "s|import .*BuildConfig|import $APP_PACKAGE.BuildConfig|" "$MAIN_ACTIVITY"
-
-  # Update AndroidManifest activity reference
   sed -i "s|android:name=\"[^\"]*MainActivity\"|android:name=\"${APP_PACKAGE}.MainActivity\"|" "$MANIFEST"
 
-  # Sanity check
-  if ! grep -q "$APP_PACKAGE" "$MAIN_ACTIVITY"; then
-    print_error "Failed to set Kotlin package to $APP_PACKAGE"
-  else
-    print_success "Updated Kotlin + Manifest for $APP_PACKAGE"
-  fi
+  grep -q "$APP_PACKAGE" "$MAIN_ACTIVITY" && print_success "Updated Kotlin + Manifest for $APP_PACKAGE" || print_error "Failed to update Kotlin package"
 }
-
 
 # ------------------------------------------------
 # Update app.json
@@ -233,11 +251,12 @@ build_app() {
 # Main
 # ------------------------------------------------
 main() {
-  print_header "Multi-App Build Script (Dynamic Kotlin + Manifest + Cleartext)"
+  print_header "Multi-App Build Script (AWS Remote Enabled)"
   [ ! -d android ] && print_error "Android folder not found — run 'npx expo prebuild' first" && exit 1
 
   npm install
   backup_index
+  set_remote_api_url
 
   # --- Customer App ---
   print_header "BUILDING CUSTOMER APP"
@@ -259,7 +278,7 @@ main() {
 
   restore_index
   restore_app_json
-  print_header "✅ All builds completed successfully!"
+  print_header "✅ All builds completed successfully with AWS Remote URL"
 }
 
 main
