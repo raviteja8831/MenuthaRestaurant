@@ -298,8 +298,12 @@ update_app_json() {
     fi
 
     # Update app.json with jq if available, otherwise use sed
+    # IMPORTANT: Preserve the 'extra' config which contains API_BASE_URL and IMG_BASE_URL
     if command -v jq &> /dev/null; then
-        jq ".expo.name = \"$APP_NAME\" | .expo.android.package = \"$PACKAGE_NAME\"" app.json > app.json.tmp && mv app.json.tmp app.json
+        jq ".expo.name = \"$APP_NAME\" |
+            .expo.android.package = \"$PACKAGE_NAME\" |
+            .expo.extra.API_BASE_URL = \"http://13.127.228.119:8090/api\" |
+            .expo.extra.IMG_BASE_URL = \"http://13.127.228.119:8090/\"" app.json > app.json.tmp && mv app.json.tmp app.json
     else
         print_warning "jq not found, using basic sed replacement"
         sed -i.bak "s/\"name\": \".*\"/\"name\": \"$APP_NAME\"/" app.json
