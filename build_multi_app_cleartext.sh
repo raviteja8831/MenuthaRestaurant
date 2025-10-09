@@ -1,7 +1,6 @@
 #!/bin/bash
 
-# Restaurant App - Multi-App Build Script (with HTTP cleartext policy setup)
-# Builds separate APKs and AABs for Customer and Restaurant apps
+# Restaurant & Customer Multi-App Build Script (with dynamic Kotlin package + HTTP cleartext policy)
 
 set -e  # Exit on any error
 
@@ -140,7 +139,7 @@ EOF
   print_success "Created Restaurant App index.js"
 }
 
-# 🆕 Configure Android HTTP cleartext policy
+# Configure Android HTTP cleartext policy
 configure_cleartext_policy() {
   print_status "Configuring Android cleartext network policy..."
   mkdir -p android/app/src/main/res/xml
@@ -160,6 +159,34 @@ EOF
     print_success "AndroidManifest.xml updated successfully"
   else
     print_warning "Network security config already set in AndroidManifest.xml"
+  fi
+}
+
+# 🧠 Update Kotlin package dynamically based on app type
+update_kotlin_package() {
+  local APP_PACKAGE=$1
+  local APP_PATH="android/app/src/main/java"
+  local PACKAGE_DIR=$(echo "$APP_PACKAGE" | tr '.' '/')
+  local MAIN_ACTIVITY_DIR="$APP_PATH/$PACKAGE_DIR"
+
+  print_status "Updating Kotlin package for $APP_PACKAGE..."
+
+  # Ensure folder structure matches package
+  mkdir -p "$MAIN_ACTIVITY_DIR"
+
+  # Move existing MainActivity.kt if needed
+  if [ -f "$APP_PATH/com/menutha/customer/MainActivity.kt" ] && [ "$APP_PACKAGE" = "com.menutha.restaurant" ]; then
+    mv "$APP_PATH/com/menutha/customer/MainActivity.kt" "$MAIN_ACTIVITY_DIR/"
+  elif [ -f "$APP_PATH/com/menutha/restaurant/MainActivity.kt" ] && [ "$APP_PACKAGE" = "com.menutha.customer" ]; then
+    mv "$APP_PATH/com/menutha/restaurant/MainActivity.kt" "$MAIN_ACTIVITY_DIR/"
+  fi
+
+  # Update the package declaration in the Kotlin file
+  if [ -f "$MAIN_ACTIVITY_DIR/MainActivity.kt" ]; then
+    sed -i.bak "s/^package .*/package $APP_PACKAGE/" "$MAIN_ACTIVITY_DIR/MainActivity.kt"
+    print_success "Updated MainActivity.kt package -> $APP_PACKAGE"
+  else
+    print_warning "MainActivity.kt not found in expected path ($MAIN_ACTIVITY_DIR)"
   fi
 }
 
@@ -197,7 +224,7 @@ build_app() {
 
 # Main
 main() {
-  print_header "Multi-App Build Script (with cleartext policy)"
+  print_header "Multi-App Build Script (Dynamic Kotlin + Cleartext Policy)"
   [ ! -d android ] && print_error "Android directory not found. Run 'npx expo prebuild' first" && exit 1
   npm install
   backup_index
@@ -206,6 +233,7 @@ main() {
   print_header "BUILDING CUSTOMER APP"
   create_customer_index
   update_app_json "Customer App" "Menutha Customer" "com.menutha.customer"
+  update_kotlin_package "com.menutha.customer"
   print_status "Applying network security config for Customer App..."
   npx expo prebuild --clean
   configure_cleartext_policy
@@ -215,6 +243,7 @@ main() {
   print_header "BUILDING RESTAURANT APP"
   create_restaurant_index
   update_app_json "Restaurant App" "Menutha Restaurant" "com.menutha.restaurant"
+  update_kotlin_package "com.menutha.restaurant"
   print_status "Applying network security config for Restaurant App..."
   npx expo prebuild --clean
   configure_cleartext_policy
