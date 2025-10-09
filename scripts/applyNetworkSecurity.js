@@ -14,8 +14,8 @@ if (!fs.existsSync(fullPath)) {
   process.exit(3);
 }
 
-// Ensure network_security_config.xml exists
-const resXmlDir = path.resolve(path.dirname(fullPath), '..', 'res', 'xml');
+// Ensure network_security_config.xml exists (under src/main/res/xml)
+const resXmlDir = path.resolve(path.dirname(fullPath), 'res', 'xml');
 const netsecPath = path.join(resXmlDir, 'network_security_config.xml');
 try {
   if (!fs.existsSync(resXmlDir)) fs.mkdirSync(resXmlDir, { recursive: true });

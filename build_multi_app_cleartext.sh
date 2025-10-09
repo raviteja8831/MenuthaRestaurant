@@ -282,6 +282,23 @@ main() {
     print_warning "node not found; falling back to sed-based manifest edits"
     configure_cleartext_policy
   fi
+  # Ensure the xml resource exists (prebuild may remove it)
+  if [ ! -f "android/app/src/main/res/xml/network_security_config.xml" ]; then
+    print_warning "network_security_config.xml missing; creating via shell"
+    mkdir -p android/app/src/main/res/xml
+    cat > android/app/src/main/res/xml/network_security_config.xml << 'EOF'
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+  <base-config cleartextTrafficPermitted="true" />
+</network-security-config>
+EOF
+    if [ -f "android/app/src/main/res/xml/network_security_config.xml" ]; then
+      print_success "Created network_security_config.xml"
+    else
+      print_error "Failed to create network_security_config.xml"
+      exit 1
+    fi
+  fi
   build_app "CUSTOMER APP" "customer-release"
 
   # --- Restaurant App ---
