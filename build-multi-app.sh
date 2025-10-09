@@ -321,6 +321,26 @@ restore_app_json() {
     fi
 }
 
+# Patch MainActivity.kt to disable Fabric (expo-camera compatibility fix)
+patch_mainactivity() {
+    local PACKAGE_PATH=$1
+    local MAIN_ACTIVITY_PATH="android/app/src/main/java/${PACKAGE_PATH//./\/}/MainActivity.kt"
+
+    print_status "Patching MainActivity.kt to disable Fabric..."
+
+    if [ -f "$MAIN_ACTIVITY_PATH" ]; then
+        # Replace BuildConfig.IS_NEW_ARCHITECTURE_ENABLED with false
+        sed -i 's/BuildConfig\.IS_NEW_ARCHITECTURE_ENABLED/false, \/\/ Disable New Architecture (Fabric) to fix expo-camera crash/' "$MAIN_ACTIVITY_PATH"
+
+        # Also ensure the second parameter in DefaultReactActivityDelegate is false
+        sed -i 's/fabricEnabled/false \/\/ Disable Fabric to fix expo-camera crash/' "$MAIN_ACTIVITY_PATH"
+
+        print_success "MainActivity.kt patched successfully"
+    else
+        print_warning "MainActivity.kt not found at $MAIN_ACTIVITY_PATH"
+    fi
+}
+
 # Build function
 build_app() {
     local APP_TYPE=$1
@@ -401,6 +421,9 @@ main() {
     print_status "Running expo prebuild for Customer App..."
     npx expo prebuild --clean
 
+    # Patch MainActivity.kt to disable Fabric
+    patch_mainactivity "com.menutha.customer"
+
     if build_app "CUSTOMER APP" "customer-release"; then
         print_success "Customer App built successfully!"
     else
@@ -418,6 +441,9 @@ main() {
     # Run expo prebuild for restaurant app
     print_status "Running expo prebuild for Restaurant App..."
     npx expo prebuild --clean
+
+    # Patch MainActivity.kt to disable Fabric
+    patch_mainactivity "com.menutha.restaurant"
 
     if build_app "RESTAURANT APP" "restaurant-release"; then
         print_success "Restaurant App built successfully!"

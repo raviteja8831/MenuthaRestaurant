@@ -37,7 +37,7 @@ class MainActivity : ReactActivity() {
   override fun createReactActivityDelegate(): ReactActivityDelegate {
     return ReactActivityDelegateWrapper(
           this,
-          BuildConfig.IS_NEW_ARCHITECTURE_ENABLED,
+          false, // Disable New Architecture (Fabric) to fix expo-camera crash
           object : DefaultReactActivityDelegate(
               this,
               mainComponentName,
