@@ -209,6 +209,17 @@ update_kotlin_package() {
 
   sed -i "s/^package .*/package $APP_PACKAGE/" "$MAIN_ACTIVITY"
   sed -i "s|import .*BuildConfig|import $APP_PACKAGE.BuildConfig|" "$MAIN_ACTIVITY"
+  # Also update MainApplication.kt if present
+  local MAIN_APP_SRC=$(find "$APP_PATH" -type f -name "MainApplication.kt" | head -n 1)
+  if [ -n "$MAIN_APP_SRC" ]; then
+    local MAIN_APPLICATION="$APP_PATH/$PACKAGE_DIR/MainApplication.kt"
+    mkdir -p "$(dirname "$MAIN_APPLICATION")"
+    if [ "$MAIN_APP_SRC" != "$MAIN_APPLICATION" ]; then
+      mv "$MAIN_APP_SRC" "$MAIN_APPLICATION"
+    fi
+    sed -i "s/^package .*/package $APP_PACKAGE/" "$MAIN_APPLICATION"
+    sed -i "s|import .*BuildConfig|import $APP_PACKAGE.BuildConfig|" "$MAIN_APPLICATION"
+  fi
   sed -i "s|android:name=\"[^\"]*MainActivity\"|android:name=\"${APP_PACKAGE}.MainActivity\"|" "$MANIFEST"
 
   grep -q "$APP_PACKAGE" "$MAIN_ACTIVITY" && print_success "Updated Kotlin + Manifest for $APP_PACKAGE" || print_error "Failed to update Kotlin package"
@@ -262,8 +273,8 @@ main() {
   print_header "BUILDING CUSTOMER APP"
   create_customer_index
   update_app_json "Customer App" "Menutha Customer" "com.menutha.customer"
-  update_kotlin_package "com.menutha.customer"
   npx expo prebuild --clean
+  update_kotlin_package "com.menutha.customer"
   # Ensure network security attributes are injected reliably (use Node helper)
   if command -v node &> /dev/null; then
     node scripts/applyNetworkSecurity.js android/app/src/main/AndroidManifest.xml || print_warning "Node helper failed to patch manifest"
@@ -277,8 +288,8 @@ main() {
   print_header "BUILDING RESTAURANT APP"
   create_restaurant_index
   update_app_json "Restaurant App" "Menutha Restaurant" "com.menutha.restaurant"
-  update_kotlin_package "com.menutha.restaurant"
   npx expo prebuild --clean
+  update_kotlin_package "com.menutha.restaurant"
   if command -v node &> /dev/null; then
     node scripts/applyNetworkSecurity.js android/app/src/main/AndroidManifest.xml || print_warning "Node helper failed to patch manifest"
   else
