@@ -191,8 +191,11 @@ patch_mainactivity() {
   local MAIN_ACTIVITY_PATH="android/app/src/main/java/${PACKAGE_PATH//./\/}/MainActivity.kt"
   print_status "Patching MainActivity.kt to disable Fabric..."
   if [ -f "$MAIN_ACTIVITY_PATH" ]; then
-    sed -i 's/BuildConfig\.IS_NEW_ARCHITECTURE_ENABLED/false, \/\/ Disable New Architecture (Fabric) to fix expo-camera crash/' "$MAIN_ACTIVITY_PATH"
-    sed -i 's/fabricEnabled/false \/\/ Disable Fabric to fix expo-camera crash/' "$MAIN_ACTIVITY_PATH"
+    # Replace BuildConfig.IS_NEW_ARCHITECTURE_ENABLED with false
+    sed -i 's/BuildConfig\.IS_NEW_ARCHITECTURE_ENABLED/false/' "$MAIN_ACTIVITY_PATH"
+    # Replace fabricEnabled with false (second parameter)
+    sed -i 's/fabricEnabled = true/fabricEnabled = false/' "$MAIN_ACTIVITY_PATH"
+    sed -i 's/fabricEnabled/false/' "$MAIN_ACTIVITY_PATH"
     print_success "MainActivity.kt patched successfully"
   else
     print_warning "MainActivity.kt not found at $MAIN_ACTIVITY_PATH"

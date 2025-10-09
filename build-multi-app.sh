@@ -330,10 +330,11 @@ patch_mainactivity() {
 
     if [ -f "$MAIN_ACTIVITY_PATH" ]; then
         # Replace BuildConfig.IS_NEW_ARCHITECTURE_ENABLED with false
-        sed -i 's/BuildConfig\.IS_NEW_ARCHITECTURE_ENABLED/false, \/\/ Disable New Architecture (Fabric) to fix expo-camera crash/' "$MAIN_ACTIVITY_PATH"
+        sed -i 's/BuildConfig\.IS_NEW_ARCHITECTURE_ENABLED/false/' "$MAIN_ACTIVITY_PATH"
 
         # Also ensure the second parameter in DefaultReactActivityDelegate is false
-        sed -i 's/fabricEnabled/false \/\/ Disable Fabric to fix expo-camera crash/' "$MAIN_ACTIVITY_PATH"
+        sed -i 's/fabricEnabled = true/fabricEnabled = false/' "$MAIN_ACTIVITY_PATH"
+        sed -i 's/fabricEnabled/false/' "$MAIN_ACTIVITY_PATH"
 
         print_success "MainActivity.kt patched successfully"
     else
