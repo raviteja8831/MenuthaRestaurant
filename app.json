@@ -4,7 +4,7 @@
     "slug": "ft",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./src/assets/images/logo.png",
+  "icon": "./src/assets/logo.png",
     "scheme": "ft",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": false,
@@ -16,7 +16,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./src/assets/images/logo.png",
+        "foregroundImage": "./src/assets/logo.png",
         "backgroundColor": "#ffffff"
       },
       "config": {
@@ -31,7 +31,7 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./src/assets/favicon.png"
+  "favicon": "./src/assets/logo.png"
     },
     "plugins": ["expo-router", "expo-maps"],
     "experiments": {

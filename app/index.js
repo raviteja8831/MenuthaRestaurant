@@ -7,8 +7,8 @@
 //   console.log('APP INDEX: rendering IndexScreen');
 //   return <LoginScreen />;
 // }
-import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import React, { useEffect, useState, useRef } from "react";
+import { View, Text, StyleSheet, BackHandler, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import {
   isAuthenticated,
@@ -20,6 +20,9 @@ import {
 
 export default function IndexScreen() {
   const [isLoading, setIsLoading] = useState(true);
+  // Keep a ref for synchronous access by the BackHandler
+  const isAuthRef = useRef(false);
+  const [isAuthenticatedState, setIsAuthenticatedState] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -51,6 +54,25 @@ export default function IndexScreen() {
     })();
   }, []);
 
+  // Android hardware back button: when the user is authenticated, block back navigation
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+
+    const onBackPress = () => {
+      // If user is authenticated, consume the back press so we don't go back to login
+      if (isAuthRef.current) {
+        console.log("INDEX: Android back press blocked because user is authenticated");
+        return true; // handled
+      }
+      return false; // allow default behavior
+    };
+
+    BackHandler.addEventListener("hardwareBackPress", onBackPress);
+    return () => {
+      BackHandler.removeEventListener("hardwareBackPress", onBackPress);
+    };
+  }, []);
+
   const checkAuthAndRedirect = async () => {
     try {
       setIsLoading(true);
@@ -61,7 +83,10 @@ export default function IndexScreen() {
       console.log("INDEX: initializeAuth result:", initResult);
 
       // Check if user is authenticated after initialization
-      const authenticated = await isAuthenticated();
+  const authenticated = await isAuthenticated();
+  // update ref and state so the BackHandler can read auth synchronously
+  isAuthRef.current = !!authenticated;
+  setIsAuthenticatedState(!!authenticated);
       console.log("INDEX: isAuthenticated ->", authenticated);
 
       if (!authenticated || !initResult) {

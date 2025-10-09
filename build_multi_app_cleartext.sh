@@ -236,12 +236,12 @@ update_kotlin_package() {
   local MAIN_ACTIVITY="$APP_PATH/$PACKAGE_DIR/MainActivity.kt"
   local MANIFEST="android/app/src/main/AndroidManifest.xml"
 
-  print_status "Patching build.gradle with release signing config..."
-  if command -v node &> /dev/null; then
-    node scripts/patchBuildGradle.js || print_warning "Failed to patch build.gradle"
-  else
-    print_warning "node not found; skipping build.gradle patch"
-  fi
+  # print_status "Patching build.gradle with release signing config..."
+  # if command -v node &> /dev/null; then
+  #   node scripts/patchBuildGradle.js || print_warning "Failed to patch build.gradle"
+  # else
+  #   print_warning "node not found; skipping build.gradle patch"
+  # fi
 
   print_status "Updating Kotlin + Manifest for $APP_PACKAGE..."
 
