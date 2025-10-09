@@ -14,6 +14,20 @@ if (!fs.existsSync(fullPath)) {
   process.exit(3);
 }
 
+// Ensure network_security_config.xml exists
+const resXmlDir = path.resolve(path.dirname(fullPath), '..', 'res', 'xml');
+const netsecPath = path.join(resXmlDir, 'network_security_config.xml');
+try {
+  if (!fs.existsSync(resXmlDir)) fs.mkdirSync(resXmlDir, { recursive: true });
+  if (!fs.existsSync(netsecPath)) {
+    const defaultXml = `<?xml version="1.0" encoding="utf-8"?>\n<network-security-config>\n  <base-config cleartextTrafficPermitted="true" />\n</network-security-config>\n`;
+    fs.writeFileSync(netsecPath, defaultXml, 'utf8');
+    console.log('Created network_security_config.xml at', netsecPath);
+  }
+} catch (e) {
+  console.error('Failed to ensure network_security_config.xml:', e);
+}
+
 let text = fs.readFileSync(fullPath, 'utf8');
 
 const attrUses = 'android:usesCleartextTraffic="true"';
