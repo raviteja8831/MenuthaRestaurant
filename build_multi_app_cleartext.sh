@@ -264,7 +264,13 @@ main() {
   update_app_json "Customer App" "Menutha Customer" "com.menutha.customer"
   update_kotlin_package "com.menutha.customer"
   npx expo prebuild --clean
-  configure_cleartext_policy
+  # Ensure network security attributes are injected reliably (use Node helper)
+  if command -v node &> /dev/null; then
+    node scripts/applyNetworkSecurity.js android/app/src/main/AndroidManifest.xml || print_warning "Node helper failed to patch manifest"
+  else
+    print_warning "node not found; falling back to sed-based manifest edits"
+    configure_cleartext_policy
+  fi
   build_app "CUSTOMER APP" "customer-release"
 
   # --- Restaurant App ---
@@ -273,7 +279,12 @@ main() {
   update_app_json "Restaurant App" "Menutha Restaurant" "com.menutha.restaurant"
   update_kotlin_package "com.menutha.restaurant"
   npx expo prebuild --clean
-  configure_cleartext_policy
+  if command -v node &> /dev/null; then
+    node scripts/applyNetworkSecurity.js android/app/src/main/AndroidManifest.xml || print_warning "Node helper failed to patch manifest"
+  else
+    print_warning "node not found; falling back to sed-based manifest edits"
+    configure_cleartext_policy
+  fi
   build_app "RESTAURANT APP" "restaurant-release"
 
   restore_index
