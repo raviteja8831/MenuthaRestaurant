@@ -186,6 +186,47 @@ EOF
 }
 
 # ------------------------------------------------
+# Add Camera Hardware Features to Manifest
+# ------------------------------------------------
+add_camera_features() {
+  print_status "Adding camera hardware features to manifest..."
+  local MANIFEST="android/app/src/main/AndroidManifest.xml"
+
+  # Check if camera features already exist
+  if grep -q "android.hardware.camera" "$MANIFEST"; then
+    print_success "Camera features already present in manifest"
+    return
+  fi
+
+  # Add camera features before the <queries> or <application> tag
+  if grep -q "<queries>" "$MANIFEST"; then
+    # Insert before <queries>
+    sed -i.bak '/<queries>/i\
+  <!-- Camera hardware features -->\
+  <uses-feature android:name="android.hardware.camera" android:required="false"/>\
+  <uses-feature android:name="android.hardware.camera.autofocus" android:required="false"/>\
+  <uses-feature android:name="android.hardware.camera.front" android:required="false"/>\
+  <uses-feature android:name="android.hardware.camera.any" android:required="false"/>\
+' "$MANIFEST"
+  elif grep -q "<application" "$MANIFEST"; then
+    # Insert before <application>
+    sed -i.bak '/<application/i\
+  <!-- Camera hardware features -->\
+  <uses-feature android:name="android.hardware.camera" android:required="false"/>\
+  <uses-feature android:name="android.hardware.camera.autofocus" android:required="false"/>\
+  <uses-feature android:name="android.hardware.camera.front" android:required="false"/>\
+  <uses-feature android:name="android.hardware.camera.any" android:required="false"/>\
+' "$MANIFEST"
+  fi
+
+  if grep -q "android.hardware.camera" "$MANIFEST"; then
+    print_success "Camera features added to manifest"
+  else
+    print_warning "Failed to add camera features via sed"
+  fi
+}
+
+# ------------------------------------------------
 # Update Kotlin MainActivity package + Manifest activity path
 # ------------------------------------------------
 update_kotlin_package() {
@@ -194,6 +235,13 @@ update_kotlin_package() {
   local PACKAGE_DIR=$(echo "$APP_PACKAGE" | tr '.' '/')
   local MAIN_ACTIVITY="$APP_PATH/$PACKAGE_DIR/MainActivity.kt"
   local MANIFEST="android/app/src/main/AndroidManifest.xml"
+
+  print_status "Patching build.gradle with release signing config..."
+  if command -v node &> /dev/null; then
+    node scripts/patchBuildGradle.js || print_warning "Failed to patch build.gradle"
+  else
+    print_warning "node not found; skipping build.gradle patch"
+  fi
 
   print_status "Updating Kotlin + Manifest for $APP_PACKAGE..."
 
@@ -275,6 +323,10 @@ main() {
   update_app_json "Customer App" "Menutha Customer" "com.menutha.customer"
   npx expo prebuild --clean
   update_kotlin_package "com.menutha.customer"
+
+  # Add camera hardware features for QR scanner
+  add_camera_features
+
   # Ensure network security attributes are injected reliably (use Node helper)
   if command -v node &> /dev/null; then
     node scripts/applyNetworkSecurity.js android/app/src/main/AndroidManifest.xml || print_warning "Node helper failed to patch manifest"
@@ -307,12 +359,36 @@ EOF
   update_app_json "Restaurant App" "Menutha Restaurant" "com.menutha.restaurant"
   npx expo prebuild --clean
   update_kotlin_package "com.menutha.restaurant"
+
+  # Add camera hardware features (restaurant may also use camera)
+  add_camera_features
+
+  # Ensure network security attributes
   if command -v node &> /dev/null; then
     node scripts/applyNetworkSecurity.js android/app/src/main/AndroidManifest.xml || print_warning "Node helper failed to patch manifest"
   else
     print_warning "node not found; falling back to sed-based manifest edits"
     configure_cleartext_policy
   fi
+
+  # Ensure network_security_config.xml exists
+  if [ ! -f "android/app/src/main/res/xml/network_security_config.xml" ]; then
+    print_warning "network_security_config.xml missing; creating via shell"
+    mkdir -p android/app/src/main/res/xml
+    cat > android/app/src/main/res/xml/network_security_config.xml << 'EOF'
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+  <base-config cleartextTrafficPermitted="true" />
+</network-security-config>
+EOF
+    if [ -f "android/app/src/main/res/xml/network_security_config.xml" ]; then
+      print_success "Created network_security_config.xml"
+    else
+      print_error "Failed to create network_security_config.xml"
+      exit 1
+    fi
+  fi
+
   build_app "RESTAURANT APP" "restaurant-release"
 
   restore_index
