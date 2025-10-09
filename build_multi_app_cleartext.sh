@@ -141,29 +141,27 @@ EOF
 }
 
 # 🆕 Configure Android HTTP cleartext policy
-# configure_cleartext_policy() {
-#   print_status "Configuring Android cleartext network policy..."
-#   mkdir -p android/app/src/main/res/xml
-#   cat > android/app/src/main/res/xml/network_security_config.xml << 'EOF'
-# <?xml version="1.0" encoding="utf-8"?>
-# <network-security-config>
-#   <domain-config cleartextTrafficPermitted="true">
-#     <domain includeSubdomains="true">13.127.228.119</domain>
-#   </domain-config>
-# </network-security-config>
-# EOF
+configure_cleartext_policy() {
+  print_status "Configuring Android cleartext network policy..."
+  mkdir -p android/app/src/main/res/xml
+  cat > android/app/src/main/res/xml/network_security_config.xml << 'EOF'
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+  <base-config cleartextTrafficPermitted="true" />
+</network-security-config>
+EOF
 
-#   MANIFEST_FILE="android/app/src/main/AndroidManifest.xml"
-#   if ! grep -q "android:networkSecurityConfig" "$MANIFEST_FILE"; then
-#     print_status "Updating AndroidManifest.xml to include networkSecurityConfig..."
-#     sed -i.bak '/<application/a\
-#     android:usesCleartextTraffic="true"\
-#     android:networkSecurityConfig="@xml/network_security_config"' "$MANIFEST_FILE"
-#     print_success "AndroidManifest.xml updated successfully"
-#   else
-#     print_warning "Network security config already set in AndroidManifest.xml"
-#   fi
-# }
+  MANIFEST_FILE="android/app/src/main/AndroidManifest.xml"
+  if ! grep -q "android:networkSecurityConfig" "$MANIFEST_FILE"; then
+    print_status "Updating AndroidManifest.xml to include networkSecurityConfig..."
+    sed -i.bak '/<application/a\
+    android:usesCleartextTraffic="true"\
+    android:networkSecurityConfig="@xml/network_security_config"' "$MANIFEST_FILE"
+    print_success "AndroidManifest.xml updated successfully"
+  else
+    print_warning "Network security config already set in AndroidManifest.xml"
+  fi
+}
 
 # Update app.json
 update_app_json() {
@@ -209,8 +207,8 @@ main() {
   create_customer_index
   update_app_json "Customer App" "Menutha Customer" "com.menutha.customer"
   print_status "Applying network security config for Customer App..."
-  #configure_cleartext_policy
- # npx expo prebuild --clean
+  npx expo prebuild --clean
+  configure_cleartext_policy
   build_app "CUSTOMER APP" "customer-release"
 
   # Build Restaurant App
@@ -218,8 +216,8 @@ main() {
   create_restaurant_index
   update_app_json "Restaurant App" "Menutha Restaurant" "com.menutha.restaurant"
   print_status "Applying network security config for Restaurant App..."
-  #configure_cleartext_policy
- # npx expo prebuild --clean
+  npx expo prebuild --clean
+  configure_cleartext_policy
   build_app "RESTAURANT APP" "restaurant-release"
 
   restore_index
