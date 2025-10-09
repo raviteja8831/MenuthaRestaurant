@@ -298,8 +298,12 @@ update_app_json() {
     fi
 
     # Update app.json with jq if available, otherwise use sed
+    # IMPORTANT: Preserve the 'extra' config which contains API_BASE_URL and IMG_BASE_URL
     if command -v jq &> /dev/null; then
-        jq ".expo.name = \"$APP_NAME\" | .expo.android.package = \"$PACKAGE_NAME\"" app.json > app.json.tmp && mv app.json.tmp app.json
+        jq ".expo.name = \"$APP_NAME\" |
+            .expo.android.package = \"$PACKAGE_NAME\" |
+            .expo.extra.API_BASE_URL = \"http://13.127.228.119:8090/api\" |
+            .expo.extra.IMG_BASE_URL = \"http://13.127.228.119:8090/\"" app.json > app.json.tmp && mv app.json.tmp app.json
     else
         print_warning "jq not found, using basic sed replacement"
         sed -i.bak "s/\"name\": \".*\"/\"name\": \"$APP_NAME\"/" app.json
@@ -314,6 +318,27 @@ restore_app_json() {
     if [ -f "app.json.backup" ]; then
         mv app.json.backup app.json
         print_success "Restored original app.json"
+    fi
+}
+
+# Patch MainActivity.kt to disable Fabric (expo-camera compatibility fix)
+patch_mainactivity() {
+    local PACKAGE_PATH=$1
+    local MAIN_ACTIVITY_PATH="android/app/src/main/java/${PACKAGE_PATH//./\/}/MainActivity.kt"
+
+    print_status "Patching MainActivity.kt to disable Fabric..."
+
+    if [ -f "$MAIN_ACTIVITY_PATH" ]; then
+        # Replace BuildConfig.IS_NEW_ARCHITECTURE_ENABLED with false
+        sed -i 's/BuildConfig\.IS_NEW_ARCHITECTURE_ENABLED/false/' "$MAIN_ACTIVITY_PATH"
+
+        # Also ensure the second parameter in DefaultReactActivityDelegate is false
+        sed -i 's/fabricEnabled = true/fabricEnabled = false/' "$MAIN_ACTIVITY_PATH"
+        sed -i 's/fabricEnabled/false/' "$MAIN_ACTIVITY_PATH"
+
+        print_success "MainActivity.kt patched successfully"
+    else
+        print_warning "MainActivity.kt not found at $MAIN_ACTIVITY_PATH"
     fi
 }
 
@@ -397,6 +422,9 @@ main() {
     print_status "Running expo prebuild for Customer App..."
     npx expo prebuild --clean
 
+    # Patch MainActivity.kt to disable Fabric
+    patch_mainactivity "com.menutha.customer"
+
     if build_app "CUSTOMER APP" "customer-release"; then
         print_success "Customer App built successfully!"
     else
@@ -414,6 +442,9 @@ main() {
     # Run expo prebuild for restaurant app
     print_status "Running expo prebuild for Restaurant App..."
     npx expo prebuild --clean
+
+    # Patch MainActivity.kt to disable Fabric
+    patch_mainactivity "com.menutha.restaurant"
 
     if build_app "RESTAURANT APP" "restaurant-release"; then
         print_success "Restaurant App built successfully!"

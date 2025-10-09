@@ -1,5 +1,5 @@
 package com.menutha.org
-import com.menutha.restaurant.BuildConfig
+import com.menutha.org.BuildConfig
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build
@@ -37,11 +37,11 @@ class MainActivity : ReactActivity() {
   override fun createReactActivityDelegate(): ReactActivityDelegate {
     return ReactActivityDelegateWrapper(
           this,
-          BuildConfig.IS_NEW_ARCHITECTURE_ENABLED,
+          false, // Disable New Architecture (Fabric) to fix expo-camera crash
           object : DefaultReactActivityDelegate(
               this,
               mainComponentName,
-              fabricEnabled
+              false // Disable Fabric to fix expo-camera crash
           ){})
   }
 

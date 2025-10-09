@@ -198,7 +198,10 @@ update_app_json() {
   print_status "Updating app.json for $APP_TYPE..."
   [ -f "app.json" ] && cp app.json app.json.backup
   if command -v jq &> /dev/null; then
-    jq ".expo.name = \"$APP_NAME\" | .expo.android.package = \"$PACKAGE_NAME\"" app.json > app.json.tmp && mv app.json.tmp app.json
+    jq ".expo.name = \"$APP_NAME\" |
+        .expo.android.package = \"$PACKAGE_NAME\" |
+        .expo.extra.API_BASE_URL = \"http://13.127.228.119:8090/api\" |
+        .expo.extra.IMG_BASE_URL = \"http://13.127.228.119:8090/\"" app.json > app.json.tmp && mv app.json.tmp app.json
   else
     print_warning "jq not found, using sed replacement"
     sed -i.bak "s/\"name\": \".*\"/\"name\": \"$APP_NAME\"/" app.json
@@ -208,6 +211,23 @@ update_app_json() {
 }
 
 restore_app_json() { [ -f "app.json.backup" ] && mv app.json.backup app.json && print_success "Restored original app.json"; }
+
+# Patch MainActivity.kt to disable Fabric (expo-camera compatibility fix)
+patch_mainactivity() {
+  local PACKAGE_PATH=$1
+  local MAIN_ACTIVITY_PATH="android/app/src/main/java/${PACKAGE_PATH//./\/}/MainActivity.kt"
+  print_status "Patching MainActivity.kt to disable Fabric..."
+  if [ -f "$MAIN_ACTIVITY_PATH" ]; then
+    # Replace BuildConfig.IS_NEW_ARCHITECTURE_ENABLED with false
+    sed -i 's/BuildConfig\.IS_NEW_ARCHITECTURE_ENABLED/false/' "$MAIN_ACTIVITY_PATH"
+    # Replace fabricEnabled with false (second parameter)
+    sed -i 's/fabricEnabled = true/fabricEnabled = false/' "$MAIN_ACTIVITY_PATH"
+    sed -i 's/fabricEnabled/false/' "$MAIN_ACTIVITY_PATH"
+    print_success "MainActivity.kt patched successfully"
+  else
+    print_warning "MainActivity.kt not found at $MAIN_ACTIVITY_PATH"
+  fi
+}
 
 # Build function
 build_app() {
@@ -237,6 +257,7 @@ main() {
   print_status "Applying network security config for Customer App..."
   npx expo prebuild --clean
   configure_cleartext_policy
+  patch_mainactivity "com.menutha.customer"
   build_app "CUSTOMER APP" "customer-release"
 
   # Build Restaurant App
@@ -247,6 +268,7 @@ main() {
   print_status "Applying network security config for Restaurant App..."
   npx expo prebuild --clean
   configure_cleartext_policy
+  patch_mainactivity "com.menutha.restaurant"
   build_app "RESTAURANT APP" "restaurant-release"
 
   restore_index

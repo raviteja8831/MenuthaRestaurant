@@ -1,6 +1,6 @@
 package com.menutha.org
 
-import com.menutha.restaurant.BuildConfig
+import com.menutha.org.BuildConfig
 import android.app.Application
 import android.content.res.Configuration
 

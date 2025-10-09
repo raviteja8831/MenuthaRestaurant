@@ -432,83 +432,23 @@ function CustomerHomeScreen() {
     });
   };
 
-  // Platform-specific map rendering
+  // Platform-specific map rendering - using expo-maps only
   let mapContent = null;
-  // if (Platform.OS === "web") {
-  //   // render react-native-maps MapView on web
-  //   if (!webLoaded || !WebComponents || !WebComponents.MapView) {
-  //     mapContent = <Text>Loading map...</Text>;
-  //   } else {
-  //     const WebMapView = WebComponents.MapView;
-  //     const WebMarker = WebComponents.Marker;
-  //     mapContent = (
-  //       <WebMapView
-  //         style={styles.map}
-  //         initialRegion={{
-  //           latitude: userLocation.latitude,
-  //           longitude: userLocation.longitude,
-  //           latitudeDelta: 0.0922,
-  //           longitudeDelta: 0.0421,
-  //         }}
-  //       >
-  //         <WebMarker coordinate={userLocation} title="You" />
-  //         {filteredRestaurants
-  //           .filter(r => typeof r.latitude === "number" && typeof r.longitude === "number" && !isNaN(r.latitude) && !isNaN(r.longitude))
-  //           .map((r) => (
-  //             <WebMarker
-  //               key={r.id}
-  //               coordinate={{ latitude: r.latitude, longitude: r.longitude }}
-  //               title={r.name}
-  //               description={r.cuisine}
-  //               onPress={() => setSelectedRestaurant(r)}
-  //             />
-  //           ))}
-  //       </WebMapView>
-  //     );
-  //   }
-  // } else {
-  // For native platforms, prefer `expo-maps` for both iOS and Android when
-  // available (standalone/dev-client). When running inside Expo Go (no
-  // native module) fall back to `react-native-maps`.
   let MapView = null;
   let NativeMarker = null;
-  //  try {
-  // const runningInExpoGo = Constants && Constants.appOwnership === 'expo';
-  // if (runningInExpoGo) {
-  // Expo Go doesn't include the new expo-maps native runtime. Use react-native-maps
-  //   const RNMaps = require('react-native-maps');
-  //   MapView = RNMaps.MapView || RNMaps.default?.MapView || RNMaps.default;
-  //   NativeMarker = RNMaps.Marker || RNMaps.default?.Marker || RNMaps.default;
-  //   console.log('✅ react-native-maps loaded inside Expo Go');
-  // } else {
-  // try expo-maps first (standalone / dev-client / EAS build)
+
   try {
-    // Only attempt to load expo-maps on Android native builds (not in Expo Go/web).
-    const runningInExpoGo = Constants && Constants.appOwnership === "expo";
-    if (Platform.OS === "android" && !runningInExpoGo) {
-      const ExpoMaps = require("expo-maps");
-      MapView = ExpoMaps.MapView;
-      NativeMarker = ExpoMaps.Marker;
-      console.log("✅ expo-maps loaded (android native)");
-    } else {
-      // For iOS, Expo Go, or web, prefer react-native-maps
-      const RNMaps = require("react-native-maps");
-      MapView = RNMaps.MapView || RNMaps.default?.MapView || RNMaps.default;
-      NativeMarker = RNMaps.Marker || RNMaps.default?.Marker || RNMaps.default;
-      console.log("ℹ️ using react-native-maps (iOS/ExpoGo/web or android-expo-go)");
-    }
+    const ExpoMaps = require("expo-maps");
+    MapView = ExpoMaps.MapView;
+    NativeMarker = ExpoMaps.Marker;
+    console.log("✅ expo-maps loaded successfully");
+    console.log("MapView:", MapView);
+    console.log("Marker:", NativeMarker);
   } catch (err) {
-    // If any require fails, null out and show fallback UI
-    console.warn("Native maps not available:", err?.message || err);
+    console.error("❌ Failed to load expo-maps:", err);
     MapView = null;
     NativeMarker = null;
   }
-  //   }
-  // } catch (error) {
-  //   console.warn('Native maps not available:', error?.message || error);
-  //   MapView = null;
-  //   NativeMarker = null;
-  // }
 
   mapContent = MapView ? (
     <MapView
@@ -519,9 +459,10 @@ function CustomerHomeScreen() {
         latitudeDelta: 0.0922,
         longitudeDelta: 0.0421,
       }}
+      onMapReady={() => console.log('Map is ready!')}
     >
       <NativeMarker coordinate={userLocation} title="You" pinColor="#6B4EFF" />
-      {filteredRestaurants.map((r) => (
+      {filteredRestaurants.filter(r => r.latitude && r.longitude).map((r) => (
         <NativeMarker
           key={r.id}
           coordinate={{ latitude: r.latitude, longitude: r.longitude }}
