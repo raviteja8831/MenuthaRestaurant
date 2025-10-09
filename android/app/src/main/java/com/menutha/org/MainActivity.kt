@@ -1,4 +1,5 @@
 package com.menutha.org
+import com.menutha.restaurant.BuildConfig
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build
