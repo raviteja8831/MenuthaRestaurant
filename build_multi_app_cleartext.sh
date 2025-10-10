@@ -1,7 +1,7 @@
 #!/bin/bash
 # ================================================================
-# Multi-App Build Script (AWS Remote Ready, v6 - 2025)
-# ✅ Fix: removes obsolete Gradle JS bundle tasks
+# Multi-App Build Script (AWS Remote Ready, v7 - 2025)
+# ✅ Fix: skips obsolete Gradle JS bundle tasks
 # ✅ Adds cleartext + camera permissions
 # ✅ Handles AWS remote API config
 # ✅ Builds Customer + Restaurant apps cleanly
@@ -45,7 +45,7 @@ restore_index() { [ -f "app/index.js.backup" ] && mv app/index.js.backup app/ind
 restore_app_json() { [ -f "app.json.backup" ] && mv app.json.backup app.json && print_success "Restored app.json"; }
 
 # ------------------------------------------------
-# Customer app index.js
+# Customer index.js
 # ------------------------------------------------
 create_customer_index() {
   print_status "Creating Customer index.js..."
@@ -60,7 +60,6 @@ export default function IndexScreen() {
   const router = useRouter();
 
   useEffect(() => {
-    console.log("INDEX: Starting authentication check [CUSTOMER APP]");
     (async () => await checkAuthAndRedirect())();
   }, []);
 
@@ -75,8 +74,7 @@ export default function IndexScreen() {
       const userType = await getUserType();
       if (userType === USER_TYPES.CUSTOMER) router.replace("/customer-home");
       else router.replace("/Customer-Login");
-    } catch (e) {
-      console.error(e);
+    } catch {
       router.replace("/Customer-Login");
     } finally {
       setIsLoading(false);
@@ -95,11 +93,10 @@ const styles = StyleSheet.create({
   loadingText: { fontSize: 16, color: "#fff", fontWeight: "500" },
 });
 EOF
-  print_success "Customer index.js created"
 }
 
 # ------------------------------------------------
-# Restaurant app index.js
+# Restaurant index.js
 # ------------------------------------------------
 create_restaurant_index() {
   print_status "Creating Restaurant index.js..."
@@ -114,7 +111,6 @@ export default function IndexScreen() {
   const router = useRouter();
 
   useEffect(() => {
-    console.log("INDEX: Starting authentication check [RESTAURANT APP]");
     (async () => await checkAuthAndRedirect())();
   }, []);
 
@@ -130,8 +126,7 @@ export default function IndexScreen() {
       if (userType === USER_TYPES.MANAGER) router.replace("/dashboard");
       else if (userType === USER_TYPES.CHEF) router.replace("/chef-home");
       else router.replace("/login");
-    } catch (e) {
-      console.error(e);
+    } catch {
       router.replace("/login");
     } finally {
       setIsLoading(false);
@@ -150,7 +145,6 @@ const styles = StyleSheet.create({
   loadingText: { fontSize: 16, color: "#fff", fontWeight: "500" },
 });
 EOF
-  print_success "Restaurant index.js created"
 }
 
 # ------------------------------------------------
@@ -160,14 +154,14 @@ remove_legacy_react_gradle() {
   local GRADLE_FILE="android/app/build.gradle"
   if grep -q "react.gradle" "$GRADLE_FILE"; then
     sed -i '/react.gradle/d' "$GRADLE_FILE"
-    print_warning "Removed deprecated react.gradle reference"
+    print_status "Removed deprecated react.gradle reference"
   fi
 }
 
 # ------------------------------------------------
-# Configure cleartext & camera permissions
+# Cleartext + camera permissions
 # ------------------------------------------------
-configure_cleartext_policy() {
+configure_manifest() {
   print_status "Ensuring cleartext + camera permissions..."
   mkdir -p android/app/src/main/res/xml
   cat > android/app/src/main/res/xml/network_security_config.xml << 'EOF'
@@ -190,34 +184,32 @@ EOF
     <uses-permission android:name="android.permission.CAMERA" />\
     <uses-feature android:name="android.hardware.camera" android:required="false" />\
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />' "$MANIFEST"
-    print_success "Added camera permission + features"
   fi
-  print_success "Manifest updated for cleartext + camera access"
 }
 
 # ------------------------------------------------
 # Update app.json
 # ------------------------------------------------
 update_app_json() {
-  local APP_NAME=$1
-  local PACKAGE_NAME=$2
+  local NAME=$1
+  local PKG=$2
   print_status "Updating app.json..."
-  [ -f "app.json" ] && cp app.json app.json.backup
-  if command -v jq &> /dev/null; then
-    jq ".expo.name = \"$APP_NAME\" | .expo.android.package = \"$PACKAGE_NAME\"" app.json > app.json.tmp && mv app.json.tmp app.json
+  [ -f app.json ] && cp app.json app.json.backup
+  if command -v jq &>/dev/null; then
+    jq ".expo.name=\"$NAME\" | .expo.android.package=\"$PKG\"" app.json > app.json.tmp && mv app.json.tmp app.json
   else
-    sed -i.bak "s/\"name\": \".*\"/\"name\": \"$APP_NAME\"/" app.json
-    sed -i.bak "s/\"package\": \".*\"/\"package\": \"$PACKAGE_NAME\"/" app.json
+    sed -i.bak "s/\"name\": \".*\"/\"name\": \"$NAME\"/" app.json
+    sed -i.bak "s/\"package\": \".*\"/\"package\": \"$PKG\"/" app.json
   fi
-  print_success "Updated -> $APP_NAME ($PACKAGE_NAME)"
 }
 
 # ------------------------------------------------
-# Build function (clean, no old Gradle tasks)
+# Build function (skip JS bundling tasks)
 # ------------------------------------------------
 build_app() {
   local APP_TYPE=$1
   local OUTPUT_SUFFIX=$2
+
   print_header "Building $APP_TYPE"
   remove_legacy_react_gradle
   mkdir -p android/app/src/main/assets android/app/src/main/res
@@ -229,17 +221,18 @@ build_app() {
     --assets-dest android/app/src/main/res
 
   cd android
-  print_status "Running Gradle build..."
+  print_status "Running Gradle build (skipping JS bundling tasks)..."
   ./gradlew clean
-  ./gradlew assembleRelease
+  ./gradlew -x bundleReleaseJsAndAssets -x createBundleReleaseJsAndAssets assembleRelease
   cd ..
 
   mkdir -p builds
   cp android/app/build/outputs/apk/release/app-release.apk "builds/app-$OUTPUT_SUFFIX.apk" || print_error "$APP_TYPE APK build failed"
 
   cd android
-  ./gradlew bundleRelease
+  ./gradlew -x bundleReleaseJsAndAssets -x createBundleReleaseJsAndAssets bundleRelease
   cd ..
+
   cp android/app/build/outputs/bundle/release/app-release.aab "builds/app-$OUTPUT_SUFFIX.aab" || print_error "$APP_TYPE AAB build failed"
 }
 
@@ -247,35 +240,33 @@ build_app() {
 # Main
 # ------------------------------------------------
 main() {
-  print_header "Multi-App Build Script (v6)"
-  [ ! -d android ] && print_error "Android folder not found — run 'npx expo prebuild' first" && exit 1
+  print_header "Menutha Multi-App Build Script (v7)"
+  [ ! -d android ] && print_error "Android folder missing — run 'npx expo prebuild' first" && exit 1
 
   npm install
   backup_index
   set_remote_api_url
 
   # --- CUSTOMER APP ---
-  print_header "CUSTOMER APP BUILD"
+  print_header "CUSTOMER APP"
   create_customer_index
   update_app_json "Menutha Customer" "com.menutha.customer"
   npx expo prebuild --clean
-  remove_legacy_react_gradle
-  configure_cleartext_policy
+  configure_manifest
   build_app "CUSTOMER APP" "customer-release"
 
   # --- RESTAURANT APP ---
-  print_header "RESTAURANT APP BUILD"
+  print_header "RESTAURANT APP"
   create_restaurant_index
   update_app_json "Menutha Restaurant" "com.menutha.restaurant"
   npx expo prebuild --clean
-  remove_legacy_react_gradle
-  configure_cleartext_policy
+  configure_manifest
   build_app "RESTAURANT APP" "restaurant-release"
 
   restore_index
   restore_app_json
-  print_header "✅ Build complete: AWS Remote + Cleartext + Camera permissions OK"
+  print_header "✅ All builds completed successfully with AWS Remote, Cleartext + Camera Permissions"
 }
 
 main
-# End of script
+# ================================================================
