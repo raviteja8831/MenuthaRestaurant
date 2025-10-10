@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # ================================================================
-# Multi-App Build Script (AWS Remote Ready)
-# ✅ Always sets API_BASE_URL to remote AWS endpoint
-# ✅ Handles dynamic Kotlin + Manifest updates
-# ✅ Configures Android cleartext policy safely
-# ✅ Builds both Customer and Restaurant apps
+# Multi-App Build Script (AWS Remote Ready, Updated 2025)
+# ✅ Fixes Gradle "bundleReleaseJsAndAssets not found"
+# ✅ Manually bundles JS before Gradle build
+# ✅ Ensures react.gradle is re-linked after expo prebuild
+# ✅ Handles Customer & Restaurant apps separately
 # ================================================================
 
 set -e
@@ -25,7 +25,6 @@ set_remote_api_url() {
   local REMOTE_URL="http://13.127.228.119:8090"
   print_status "Setting API_BASE_URL to AWS remote endpoint..."
 
-  # If .env exists, update it; else create
   if [ -f ".env" ]; then
     if grep -q "API_BASE_URL=" .env; then
       sed -i.bak "s|^API_BASE_URL=.*|API_BASE_URL=${REMOTE_URL}|" .env
@@ -36,7 +35,6 @@ set_remote_api_url() {
     echo "API_BASE_URL=${REMOTE_URL}" > .env
   fi
 
-  # Also patch src/config/api.js if exists
   if [ -f "src/config/api.js" ]; then
     sed -i.bak "s|http[s]*://[^\"']*|${REMOTE_URL}|g" src/config/api.js
   fi
@@ -161,6 +159,17 @@ EOF
 }
 
 # ------------------------------------------------
+# Ensure react.gradle is present
+# ------------------------------------------------
+ensure_react_gradle_link() {
+  local GRADLE_FILE="android/app/build.gradle"
+  if ! grep -q "react.gradle" "$GRADLE_FILE"; then
+    echo "apply from: \"../../node_modules/react-native/react.gradle\"" >> "$GRADLE_FILE"
+    print_warning "Re-added missing react.gradle link to app/build.gradle"
+  fi
+}
+
+# ------------------------------------------------
 # Configure Android cleartext policy
 # ------------------------------------------------
 configure_cleartext_policy() {
@@ -172,7 +181,6 @@ configure_cleartext_policy() {
   <base-config cleartextTrafficPermitted="true" />
 </network-security-config>
 EOF
-
   local MANIFEST="android/app/src/main/AndroidManifest.xml"
   if ! grep -q "android:usesCleartextTraffic" "$MANIFEST"; then
     sed -i.bak '/<application/a\
@@ -186,61 +194,25 @@ EOF
 }
 
 # ------------------------------------------------
-# Update Kotlin MainActivity package + Manifest activity path
-# ------------------------------------------------
-update_kotlin_package() {
-  local APP_PACKAGE=$1
-  local APP_PATH="android/app/src/main/java"
-  local PACKAGE_DIR=$(echo "$APP_PACKAGE" | tr '.' '/')
-  local MAIN_ACTIVITY="$APP_PATH/$PACKAGE_DIR/MainActivity.kt"
-  local MANIFEST="android/app/src/main/AndroidManifest.xml"
-
-  print_status "Updating Kotlin + Manifest for $APP_PACKAGE..."
-
-  local OLD_PATH=$(find "$APP_PATH" -type f -name "MainActivity.kt" | head -n 1)
-  [ -z "$OLD_PATH" ] && print_error "MainActivity.kt not found" && return
-
-  mkdir -p "$(dirname "$MAIN_ACTIVITY")"
-  if [ "$OLD_PATH" != "$MAIN_ACTIVITY" ]; then
-    mv "$OLD_PATH" "$MAIN_ACTIVITY"
-  else
-    print_status "MainActivity.kt already in correct location ($MAIN_ACTIVITY)"
-  fi
-
-  sed -i "s/^package .*/package $APP_PACKAGE/" "$MAIN_ACTIVITY"
-  sed -i "s|import .*BuildConfig|import $APP_PACKAGE.BuildConfig|" "$MAIN_ACTIVITY"
-  # Also update MainApplication.kt if present
-  local MAIN_APP_SRC=$(find "$APP_PATH" -type f -name "MainApplication.kt" | head -n 1)
-  if [ -n "$MAIN_APP_SRC" ]; then
-    local MAIN_APPLICATION="$APP_PATH/$PACKAGE_DIR/MainApplication.kt"
-    mkdir -p "$(dirname "$MAIN_APPLICATION")"
-    if [ "$MAIN_APP_SRC" != "$MAIN_APPLICATION" ]; then
-      mv "$MAIN_APP_SRC" "$MAIN_APPLICATION"
-    fi
-    sed -i "s/^package .*/package $APP_PACKAGE/" "$MAIN_APPLICATION"
-    sed -i "s|import .*BuildConfig|import $APP_PACKAGE.BuildConfig|" "$MAIN_APPLICATION"
-  fi
-  sed -i "s|android:name=\"[^\"]*MainActivity\"|android:name=\"${APP_PACKAGE}.MainActivity\"|" "$MANIFEST"
-
-  grep -q "$APP_PACKAGE" "$MAIN_ACTIVITY" && print_success "Updated Kotlin + Manifest for $APP_PACKAGE" || print_error "Failed to update Kotlin package"
-}
-
-# ------------------------------------------------
 # Update app.json
 # ------------------------------------------------
 update_app_json() {
   local APP_TYPE=$1
   local APP_NAME=$2
   local PACKAGE_NAME=$3
+  local ICON_PATH=$4
   print_status "Updating app.json for $APP_TYPE..."
   [ -f "app.json" ] && cp app.json app.json.backup
   if command -v jq &> /dev/null; then
-    jq ".expo.name = \"$APP_NAME\" | .expo.android.package = \"$PACKAGE_NAME\"" app.json > app.json.tmp && mv app.json.tmp app.json
+    jq ".expo.name = \"$APP_NAME\" | .expo.android.package = \"$PACKAGE_NAME\" | .expo.icon = \"$ICON_PATH\" | .expo.android.adaptiveIcon.foregroundImage = \"$ICON_PATH\" | .expo.web.favicon = \"$ICON_PATH\"" app.json > app.json.tmp && mv app.json.tmp app.json
   else
     sed -i.bak "s/\"name\": \".*\"/\"name\": \"$APP_NAME\"/" app.json
     sed -i.bak "s/\"package\": \".*\"/\"package\": \"$PACKAGE_NAME\"/" app.json
+    sed -i.bak "s|\"icon\": \".*\"|\"icon\": \"$ICON_PATH\"|" app.json
+    sed -i.bak "s|\"foregroundImage\": \".*\"|\"foregroundImage\": \"$ICON_PATH\"|" app.json
+    sed -i.bak "s|\"favicon\": \".*\"|\"favicon\": \"$ICON_PATH\"|" app.json || true
   fi
-  print_success "Updated app.json -> $APP_NAME ($PACKAGE_NAME)"
+  print_success "Updated app.json -> $APP_NAME ($PACKAGE_NAME) with icon $ICON_PATH"
 }
 
 # ------------------------------------------------
@@ -250,6 +222,15 @@ build_app() {
   local APP_TYPE=$1
   local OUTPUT_SUFFIX=$2
   print_header "Building $APP_TYPE"
+  ensure_react_gradle_link
+  mkdir -p android/app/src/main/assets android/app/src/main/res
+
+  print_status "Bundling JS manually..."
+  npx react-native bundle --platform android --dev false \
+    --entry-file app/index.js \
+    --bundle-output android/app/src/main/assets/index.android.bundle \
+    --assets-dest android/app/src/main/res
+
   cd android && ./gradlew clean || print_warning "Gradle clean warning"; cd ..
   cd android && ./gradlew assembleRelease; cd ..
   mkdir -p builds
@@ -262,57 +243,29 @@ build_app() {
 # Main
 # ------------------------------------------------
 main() {
-  print_header "Multi-App Build Script (AWS Remote Enabled)"
+  print_header "Multi-App Build Script (AWS Remote Enabled - Updated)"
   [ ! -d android ] && print_error "Android folder not found — run 'npx expo prebuild' first" && exit 1
 
   npm install
   backup_index
   set_remote_api_url
 
-  # --- Customer App ---
+  # --- CUSTOMER APP ---
   print_header "BUILDING CUSTOMER APP"
   create_customer_index
-  update_app_json "Customer App" "Menutha Customer" "com.menutha.customer"
+  # Use menutha.png as the Customer app icon
+  update_app_json "Customer App" "Menutha Customer" "com.menutha.customer" "./src/assets/menutha.png"
   npx expo prebuild --clean
-  update_kotlin_package "com.menutha.customer"
-  # Ensure network security attributes are injected reliably (use Node helper)
-  if command -v node &> /dev/null; then
-    node scripts/applyNetworkSecurity.js android/app/src/main/AndroidManifest.xml || print_warning "Node helper failed to patch manifest"
-  else
-    print_warning "node not found; falling back to sed-based manifest edits"
-    configure_cleartext_policy
-  fi
-  # Ensure the xml resource exists (prebuild may remove it)
-  if [ ! -f "android/app/src/main/res/xml/network_security_config.xml" ]; then
-    print_warning "network_security_config.xml missing; creating via shell"
-    mkdir -p android/app/src/main/res/xml
-    cat > android/app/src/main/res/xml/network_security_config.xml << 'EOF'
-<?xml version="1.0" encoding="utf-8"?>
-<network-security-config>
-  <base-config cleartextTrafficPermitted="true" />
-</network-security-config>
-EOF
-    if [ -f "android/app/src/main/res/xml/network_security_config.xml" ]; then
-      print_success "Created network_security_config.xml"
-    else
-      print_error "Failed to create network_security_config.xml"
-      exit 1
-    fi
-  fi
+  configure_cleartext_policy
   build_app "CUSTOMER APP" "customer-release"
 
-  # --- Restaurant App ---
+  # --- RESTAURANT APP ---
   print_header "BUILDING RESTAURANT APP"
   create_restaurant_index
-  update_app_json "Restaurant App" "Menutha Restaurant" "com.menutha.restaurant"
+  # Use menuva.png as the Restaurant app icon
+  update_app_json "Restaurant App" "Menutha Restaurant" "com.menutha.restaurant" "./src/assets/menuva.png"
   npx expo prebuild --clean
-  update_kotlin_package "com.menutha.restaurant"
-  if command -v node &> /dev/null; then
-    node scripts/applyNetworkSecurity.js android/app/src/main/AndroidManifest.xml || print_warning "Node helper failed to patch manifest"
-  else
-    print_warning "node not found; falling back to sed-based manifest edits"
-    configure_cleartext_policy
-  fi
+  configure_cleartext_policy
   build_app "RESTAURANT APP" "restaurant-release"
 
   restore_index
