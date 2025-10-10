@@ -1,10 +1,11 @@
 #!/bin/bash
 # ================================================================
-# Multi-App Build Script (AWS Remote Ready, v7 - 2025)
-# ✅ Fix: skips obsolete Gradle JS bundle tasks
+# Multi-App Build Script (AWS Remote Ready, v8 - 2025)
+# ✅ Fix: automatically reinstalls node_modules each build
+# ✅ Skips obsolete Gradle JS bundling tasks
 # ✅ Adds cleartext + camera permissions
 # ✅ Handles AWS remote API config
-# ✅ Builds Customer + Restaurant apps cleanly
+# ✅ Builds Customer + Restaurant apps reliably on EC2/Linux
 # ================================================================
 
 set -e
@@ -204,6 +205,17 @@ update_app_json() {
 }
 
 # ------------------------------------------------
+# Node reinstall helper
+# ------------------------------------------------
+reinstall_node_modules() {
+  print_status "Cleaning and reinstalling dependencies..."
+  rm -rf node_modules android/app/build android/build
+  npm cache clean --force
+  npm install
+  print_success "Node modules reinstalled successfully"
+}
+
+# ------------------------------------------------
 # Build function (skip JS bundling tasks)
 # ------------------------------------------------
 build_app() {
@@ -240,10 +252,10 @@ build_app() {
 # Main
 # ------------------------------------------------
 main() {
-  print_header "Menutha Multi-App Build Script (v7)"
+  print_header "Menutha Multi-App Build Script (v8)"
   [ ! -d android ] && print_error "Android folder missing — run 'npx expo prebuild' first" && exit 1
 
-  npm install
+  reinstall_node_modules
   backup_index
   set_remote_api_url
 
@@ -257,6 +269,7 @@ main() {
 
   # --- RESTAURANT APP ---
   print_header "RESTAURANT APP"
+  reinstall_node_modules
   create_restaurant_index
   update_app_json "Menutha Restaurant" "com.menutha.restaurant"
   npx expo prebuild --clean
