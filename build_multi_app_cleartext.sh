@@ -161,14 +161,16 @@ EOF
 # ------------------------------------------------
 # Ensure react.gradle is present
 # ------------------------------------------------
+# ensure_react_gradle_link() {
+#   local GRADLE_FILE="android/app/build.gradle"
+#   if ! grep -q "react.gradle" "$GRADLE_FILE"; then
+#     echo "apply from: \"../../node_modules/react-native/react.gradle\"" >> "$GRADLE_FILE"
+#     print_warning "Re-added missing react.gradle link to app/build.gradle"
+#   fi
+# }
 ensure_react_gradle_link() {
-  local GRADLE_FILE="android/app/build.gradle"
-  if ! grep -q "react.gradle" "$GRADLE_FILE"; then
-    echo "apply from: \"../../node_modules/react-native/react.gradle\"" >> "$GRADLE_FILE"
-    print_warning "Re-added missing react.gradle link to app/build.gradle"
-  fi
+  print_status "Skipping react.gradle link — not needed for modern RN versions"
 }
-
 # ------------------------------------------------
 # Configure Android cleartext policy
 # ------------------------------------------------
