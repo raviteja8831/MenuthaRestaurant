@@ -1,11 +1,12 @@
 #!/bin/bash
 
 # ================================================================
-# Multi-App Build Script (AWS Remote Ready, v4 - 2025)
+# Multi-App Build Script (AWS Remote Ready, v5 - 2025)
+# ✅ Fixes Gradle JS bundling conflict
 # ✅ Removes deprecated react.gradle after prebuild
-# ✅ Bundles JS manually (modern RN compatible)
 # ✅ Ensures cleartext + camera permissions
-# ✅ Builds Customer + Restaurant apps for AWS
+# ✅ Bundles JS manually (modern RN compatible)
+# ✅ Builds Customer + Restaurant apps
 # ================================================================
 
 set -e
@@ -159,7 +160,7 @@ EOF
 }
 
 # ------------------------------------------------
-# Remove legacy react.gradle (fix modern RN)
+# Remove legacy react.gradle
 # ------------------------------------------------
 remove_legacy_react_gradle() {
   local GRADLE_FILE="android/app/build.gradle"
@@ -170,10 +171,10 @@ remove_legacy_react_gradle() {
 }
 
 # ------------------------------------------------
-# Configure Android cleartext policy
+# Configure cleartext + camera permissions
 # ------------------------------------------------
 configure_cleartext_policy() {
-  print_status "Configuring cleartext network policy..."
+  print_status "Configuring cleartext + camera permissions..."
   mkdir -p android/app/src/main/res/xml
   cat > android/app/src/main/res/xml/network_security_config.xml << 'EOF'
 <?xml version="1.0" encoding="utf-8"?>
@@ -182,6 +183,8 @@ configure_cleartext_policy() {
 </network-security-config>
 EOF
   local MANIFEST="android/app/src/main/AndroidManifest.xml"
+
+  # Cleartext
   if ! grep -q "android:usesCleartextTraffic" "$MANIFEST"; then
     sed -i.bak '/<application/a\
     android:usesCleartextTraffic="true"' "$MANIFEST"
@@ -190,26 +193,16 @@ EOF
     sed -i.bak '/<application/a\
     android:networkSecurityConfig="@xml/network_security_config"' "$MANIFEST"
   fi
-  print_success "Manifest ensured for cleartext access"
-}
 
-# ------------------------------------------------
-# Ensure Camera permissions (for scanner module)
-# ------------------------------------------------
-ensure_camera_permission() {
-  print_status "Ensuring CAMERA permission in manifest..."
-  local MANIFEST="android/app/src/main/AndroidManifest.xml"
-
-  # Insert camera permission if missing
+  # Camera permissions
   if ! grep -q "android.permission.CAMERA" "$MANIFEST"; then
     sed -i '/<application/i\
     <uses-permission android:name="android.permission.CAMERA" />\
     <uses-feature android:name="android.hardware.camera" android:required="false" />\
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />' "$MANIFEST"
-    print_success "Added CAMERA permission + features"
-  else
-    print_status "Camera permissions already exist"
+    print_success "Added camera permission + features"
   fi
+  print_success "Manifest ensured for cleartext + camera access"
 }
 
 # ------------------------------------------------
@@ -231,7 +224,7 @@ update_app_json() {
 }
 
 # ------------------------------------------------
-# Build function
+# Build function (skipping Gradle JS bundling)
 # ------------------------------------------------
 build_app() {
   local APP_TYPE=$1
@@ -246,11 +239,19 @@ build_app() {
     --bundle-output android/app/src/main/assets/index.android.bundle \
     --assets-dest android/app/src/main/res
 
-  cd android && ./gradlew clean || print_warning "Gradle clean warning"; cd ..
-  cd android && ./gradlew assembleRelease; cd ..
+  cd android
+  print_status "Running Gradle build (skipping internal JS bundling)..."
+  ./gradlew clean
+  ./gradlew -x createBundleReleaseJsAndAssets -x bundleReleaseJsAndAssets assembleRelease
+  cd ..
+
   mkdir -p builds
   cp android/app/build/outputs/apk/release/app-release.apk "builds/app-$OUTPUT_SUFFIX.apk" || print_error "$APP_TYPE APK build failed"
-  cd android && ./gradlew bundleRelease; cd ..
+
+  cd android
+  ./gradlew -x createBundleReleaseJsAndAssets -x bundleReleaseJsAndAssets bundleRelease
+  cd ..
+
   cp android/app/build/outputs/bundle/release/app-release.aab "builds/app-$OUTPUT_SUFFIX.aab" || print_error "$APP_TYPE AAB build failed"
 }
 
@@ -258,7 +259,7 @@ build_app() {
 # Main
 # ------------------------------------------------
 main() {
-  print_header "Multi-App Build Script (AWS Remote Enabled - v4)"
+  print_header "Multi-App Build Script (AWS Remote Enabled - v5)"
   [ ! -d android ] && print_error "Android folder not found — run 'npx expo prebuild' first" && exit 1
 
   npm install
@@ -272,7 +273,6 @@ main() {
   npx expo prebuild --clean
   remove_legacy_react_gradle
   configure_cleartext_policy
-  ensure_camera_permission
   build_app "CUSTOMER APP" "customer-release"
 
   # --- RESTAURANT APP ---
@@ -282,12 +282,11 @@ main() {
   npx expo prebuild --clean
   remove_legacy_react_gradle
   configure_cleartext_policy
-  ensure_camera_permission
   build_app "RESTAURANT APP" "restaurant-release"
 
   restore_index
   restore_app_json
-  print_header "✅ All builds completed successfully with AWS Remote URL and Camera Permissions"
+  print_header "✅ All builds completed successfully with AWS Remote URL, Cleartext + Camera Permissions"
 }
 
 main
