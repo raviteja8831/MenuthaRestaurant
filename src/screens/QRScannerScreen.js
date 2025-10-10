@@ -20,6 +20,7 @@ export default function QRScannerScreen() {
   const [hasPermission, setHasPermission] = useState(null);
   const [scanned, setScanned] = useState(false);
   const [scannedData, setScannedData] = useState(null);
+  // const [scannerAvailable, setScannerAvailable] = useState(null); // removed duplicate
 
   if (Platform.OS === 'web') {
     return (
