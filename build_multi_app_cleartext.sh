@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # ================================================================
-# Multi-App Build Script (AWS Remote Ready, Updated 2025)
-# ✅ Fixes Gradle "bundleReleaseJsAndAssets not found"
-# ✅ Manually bundles JS before Gradle build
-# ✅ Ensures react.gradle is re-linked after expo prebuild
-# ✅ Handles Customer & Restaurant apps separately
+# Multi-App Build Script (AWS Remote Ready, v4 - 2025)
+# ✅ Removes deprecated react.gradle after prebuild
+# ✅ Bundles JS manually (modern RN compatible)
+# ✅ Ensures cleartext + camera permissions
+# ✅ Builds Customer + Restaurant apps for AWS
 # ================================================================
 
 set -e
@@ -159,18 +159,16 @@ EOF
 }
 
 # ------------------------------------------------
-# Ensure react.gradle is present
+# Remove legacy react.gradle (fix modern RN)
 # ------------------------------------------------
-# ensure_react_gradle_link() {
-#   local GRADLE_FILE="android/app/build.gradle"
-#   if ! grep -q "react.gradle" "$GRADLE_FILE"; then
-#     echo "apply from: \"../../node_modules/react-native/react.gradle\"" >> "$GRADLE_FILE"
-#     print_warning "Re-added missing react.gradle link to app/build.gradle"
-#   fi
-# }
-ensure_react_gradle_link() {
-  print_status "Skipping react.gradle link — not needed for modern RN versions"
+remove_legacy_react_gradle() {
+  local GRADLE_FILE="android/app/build.gradle"
+  if grep -q "react.gradle" "$GRADLE_FILE"; then
+    sed -i '/react.gradle/d' "$GRADLE_FILE"
+    print_warning "Removed deprecated react.gradle reference from app/build.gradle"
+  fi
 }
+
 # ------------------------------------------------
 # Configure Android cleartext policy
 # ------------------------------------------------
@@ -196,25 +194,40 @@ EOF
 }
 
 # ------------------------------------------------
+# Ensure Camera permissions (for scanner module)
+# ------------------------------------------------
+ensure_camera_permission() {
+  print_status "Ensuring CAMERA permission in manifest..."
+  local MANIFEST="android/app/src/main/AndroidManifest.xml"
+
+  # Insert camera permission if missing
+  if ! grep -q "android.permission.CAMERA" "$MANIFEST"; then
+    sed -i '/<application/i\
+    <uses-permission android:name="android.permission.CAMERA" />\
+    <uses-feature android:name="android.hardware.camera" android:required="false" />\
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />' "$MANIFEST"
+    print_success "Added CAMERA permission + features"
+  else
+    print_status "Camera permissions already exist"
+  fi
+}
+
+# ------------------------------------------------
 # Update app.json
 # ------------------------------------------------
 update_app_json() {
   local APP_TYPE=$1
   local APP_NAME=$2
   local PACKAGE_NAME=$3
-  local ICON_PATH=$4
   print_status "Updating app.json for $APP_TYPE..."
   [ -f "app.json" ] && cp app.json app.json.backup
   if command -v jq &> /dev/null; then
-    jq ".expo.name = \"$APP_NAME\" | .expo.android.package = \"$PACKAGE_NAME\" | .expo.icon = \"$ICON_PATH\" | .expo.android.adaptiveIcon.foregroundImage = \"$ICON_PATH\" | .expo.web.favicon = \"$ICON_PATH\"" app.json > app.json.tmp && mv app.json.tmp app.json
+    jq ".expo.name = \"$APP_NAME\" | .expo.android.package = \"$PACKAGE_NAME\"" app.json > app.json.tmp && mv app.json.tmp app.json
   else
     sed -i.bak "s/\"name\": \".*\"/\"name\": \"$APP_NAME\"/" app.json
     sed -i.bak "s/\"package\": \".*\"/\"package\": \"$PACKAGE_NAME\"/" app.json
-    sed -i.bak "s|\"icon\": \".*\"|\"icon\": \"$ICON_PATH\"|" app.json
-    sed -i.bak "s|\"foregroundImage\": \".*\"|\"foregroundImage\": \"$ICON_PATH\"|" app.json
-    sed -i.bak "s|\"favicon\": \".*\"|\"favicon\": \"$ICON_PATH\"|" app.json || true
   fi
-  print_success "Updated app.json -> $APP_NAME ($PACKAGE_NAME) with icon $ICON_PATH"
+  print_success "Updated app.json -> $APP_NAME ($PACKAGE_NAME)"
 }
 
 # ------------------------------------------------
@@ -224,7 +237,7 @@ build_app() {
   local APP_TYPE=$1
   local OUTPUT_SUFFIX=$2
   print_header "Building $APP_TYPE"
-  ensure_react_gradle_link
+  remove_legacy_react_gradle
   mkdir -p android/app/src/main/assets android/app/src/main/res
 
   print_status "Bundling JS manually..."
@@ -245,7 +258,7 @@ build_app() {
 # Main
 # ------------------------------------------------
 main() {
-  print_header "Multi-App Build Script (AWS Remote Enabled - Updated)"
+  print_header "Multi-App Build Script (AWS Remote Enabled - v4)"
   [ ! -d android ] && print_error "Android folder not found — run 'npx expo prebuild' first" && exit 1
 
   npm install
@@ -255,24 +268,26 @@ main() {
   # --- CUSTOMER APP ---
   print_header "BUILDING CUSTOMER APP"
   create_customer_index
-  # Use menutha.png as the Customer app icon
-  update_app_json "Customer App" "Menutha Customer" "com.menutha.customer" "./src/assets/menutha.png"
+  update_app_json "Customer App" "Menutha Customer" "com.menutha.customer"
   npx expo prebuild --clean
+  remove_legacy_react_gradle
   configure_cleartext_policy
+  ensure_camera_permission
   build_app "CUSTOMER APP" "customer-release"
 
   # --- RESTAURANT APP ---
   print_header "BUILDING RESTAURANT APP"
   create_restaurant_index
-  # Use menuva.png as the Restaurant app icon
-  update_app_json "Restaurant App" "Menutha Restaurant" "com.menutha.restaurant" "./src/assets/menuva.png"
+  update_app_json "Restaurant App" "Menutha Restaurant" "com.menutha.restaurant"
   npx expo prebuild --clean
+  remove_legacy_react_gradle
   configure_cleartext_policy
+  ensure_camera_permission
   build_app "RESTAURANT APP" "restaurant-release"
 
   restore_index
   restore_app_json
-  print_header "✅ All builds completed successfully with AWS Remote URL"
+  print_header "✅ All builds completed successfully with AWS Remote URL and Camera Permissions"
 }
 
 main
