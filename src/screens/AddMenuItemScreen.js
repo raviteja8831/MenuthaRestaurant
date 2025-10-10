@@ -1,24 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable, TextInput, StyleSheet, Modal } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getMenusWithItems } from '../api/menuApi';
 
-const categories = [
-  'Hot & Cold Beverages',
-  'Soups',
-  'Breakfast',
-  'Starter',
-  'Indian Bread',
-  'Main Course',
-  'Salads',
-  'Ice Cream & Desert',
-];
 
-export default function AddMenuItemScreen({ visible, onClose, onSave, menuId }) {
-  const [menu, setMenu] = useState('');
+
+export default function AddMenuItemScreen({ visible, onClose, onSave }) {
+  const [selectedMenuId, setSelectedMenuId] = useState(null);
+  const [menus, setMenus] = useState([]);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [type, setType] = useState('');
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
+
+  useEffect(() => {
+    const loadMenus = async () => {
+      try {
+        const userProfile = await AsyncStorage.getItem('user_profile');
+        const parsed = JSON.parse(userProfile || '{}');
+        const restaurantId = parsed?.restaurant?.id;
+        if (!restaurantId) return;
+        const data = await getMenusWithItems(restaurantId);
+        // data should be an array of menus
+        setMenus(data || []);
+      } catch (err) {
+        // ignore for now; menu list will remain empty
+        console.error('Failed to load menus', err);
+      }
+    };
+
+    if (visible) loadMenus();
+  }, [visible]);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -31,15 +44,17 @@ export default function AddMenuItemScreen({ visible, onClose, onSave, menuId }) 
           {/* Category Dropdown */}
           <Text style={styles.label}>Menu</Text>
           <Pressable style={styles.dropdown} onPress={() => setShowCategoryDropdown(!showCategoryDropdown)}>
-            <Text style={styles.dropdownText}>{menu || 'Select menu'}</Text>
+            <Text style={styles.dropdownText}>{
+              menus.find(m => m.id === selectedMenuId)?.name || 'Select menu'
+            }</Text>
             <MaterialCommunityIcons name={showCategoryDropdown ? 'chevron-up' : 'chevron-down'} size={24} color="#222" />
           </Pressable>
           {showCategoryDropdown && (
             <View style={styles.dropdownMenu}>
               <Text style={styles.dropdownMenuTitle}>Menu</Text>
-              {categories.map((cat) => (
-                <Pressable key={cat} style={styles.dropdownMenuItem} onPress={() => { setMenu(cat); setShowCategoryDropdown(false); }}>
-                  <Text style={styles.dropdownMenuItemText}>• {cat}</Text>
+              {menus.map((m) => (
+                <Pressable key={m.id} style={styles.dropdownMenuItem} onPress={() => { setSelectedMenuId(m.id); setShowCategoryDropdown(false); }}>
+                  <Text style={styles.dropdownMenuItemText}>• {m.name}</Text>
                 </Pressable>
               ))}
             </View>
@@ -72,7 +87,12 @@ export default function AddMenuItemScreen({ visible, onClose, onSave, menuId }) 
             keyboardType="numeric"
             placeholderTextColor="#888"
           />
-          <Pressable style={styles.saveBtn} onPress={() => { onSave && onSave({ menu, type, name, price, menuId }); onClose && onClose(); }}>
+          <Pressable style={styles.saveBtn} onPress={() => {
+            if (!selectedMenuId) return alert('Please select a Menu');
+            const payload = { menuId: selectedMenuId, type, name, price };
+            onSave && onSave(payload);
+            onClose && onClose();
+          }}>
             <Text style={styles.saveBtnText}>Save</Text>
           </Pressable>
         </View>

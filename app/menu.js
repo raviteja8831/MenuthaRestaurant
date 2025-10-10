@@ -48,10 +48,8 @@ export default function MenuScreen() {
 
   const handleAddSave = async (item) => {
     try {
-      const userProfile = await AsyncStorage.getItem("user_profile");
-      const parsedProfile = JSON.parse(userProfile);
-      const restaurantId = parsedProfile?.restaurant?.id;
-      await addMenuItem({ ...item, restaurantId });
+      // `item` should include menuId, name, type, price
+      await addMenuItem(item);
       alert.success("Menu item added successfully!");
       setShowAddModal(false);
     } catch (error) {
