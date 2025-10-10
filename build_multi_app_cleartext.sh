@@ -1,167 +1,43 @@
 #!/bin/bash
 # ================================================================
-# Multi-App Build Script (AWS Remote Ready, v8 - 2025)
-# ✅ Fix: automatically reinstalls node_modules each build
-# ✅ Skips obsolete Gradle JS bundling tasks
+# Multi-App Build Script (AWS Remote Ready, v9 - 2025)
+# ✅ Fix: no obsolete Gradle task exclusions
+# ✅ Auto reinstalls node_modules
 # ✅ Adds cleartext + camera permissions
 # ✅ Handles AWS remote API config
-# ✅ Builds Customer + Restaurant apps reliably on EC2/Linux
+# ✅ Works with RN 0.74+ / Expo SDK 51+
 # ================================================================
 
 set -e
 
-# Colors
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; CYAN='\033[0;36m'; NC='\033[0m'
+# --- Utility ---
+RED='\033[0;31m'; GREEN='\033[0;32m'; BLUE='\033[0;34m'; CYAN='\033[0;36m'; NC='\033[0m'
 print_status() { echo -e "${BLUE}[INFO]${NC} $1"; }
 print_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
-print_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 print_header() { echo -e "\n${CYAN}==========================================\n$1\n==========================================${NC}\n"; }
 
-# ------------------------------------------------
-# Remote API setup (AWS)
-# ------------------------------------------------
+# --- Remote API ---
 set_remote_api_url() {
-  local REMOTE_URL="http://13.127.228.119:8090"
-  print_status "Setting API_BASE_URL to AWS remote endpoint..."
+  local URL="http://13.127.228.119:8090"
+  print_status "Setting API_BASE_URL to $URL..."
   if [ -f ".env" ]; then
     if grep -q "API_BASE_URL=" .env; then
-      sed -i.bak "s|^API_BASE_URL=.*|API_BASE_URL=${REMOTE_URL}|" .env
+      sed -i.bak "s|^API_BASE_URL=.*|API_BASE_URL=$URL|" .env
     else
-      echo "API_BASE_URL=${REMOTE_URL}" >> .env
+      echo "API_BASE_URL=$URL" >> .env
     fi
   else
-    echo "API_BASE_URL=${REMOTE_URL}" > .env
+    echo "API_BASE_URL=$URL" > .env
   fi
-  if [ -f "src/config/api.js" ]; then
-    sed -i.bak "s|http[s]*://[^\"']*|${REMOTE_URL}|g" src/config/api.js
-  fi
-  print_success "API_BASE_URL set to ${REMOTE_URL}"
+  print_success "API_BASE_URL updated."
 }
 
-# ------------------------------------------------
-# Backup & restore helpers
-# ------------------------------------------------
-backup_index() { [ -f "app/index.js" ] && cp app/index.js app/index.js.backup && print_success "Backed up index.js"; }
-restore_index() { [ -f "app/index.js.backup" ] && mv app/index.js.backup app/index.js && print_success "Restored index.js"; }
-restore_app_json() { [ -f "app.json.backup" ] && mv app.json.backup app.json && print_success "Restored app.json"; }
+# --- Helpers ---
+backup_index() { [ -f "app/index.js" ] && cp app/index.js app/index.js.backup; }
+restore_index() { [ -f "app/index.js.backup" ] && mv app/index.js.backup app/index.js; }
+restore_app_json() { [ -f "app.json.backup" ] && mv app.json.backup app.json; }
 
-# ------------------------------------------------
-# Customer index.js
-# ------------------------------------------------
-create_customer_index() {
-  print_status "Creating Customer index.js..."
-  cat > app/index.js << 'EOF'
-import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet } from "react-native";
-import { useRouter } from "expo-router";
-import { isAuthenticated, getUserType, USER_TYPES, initializeAuth } from "../src/services/authService";
-
-export default function IndexScreen() {
-  const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
-
-  useEffect(() => {
-    (async () => await checkAuthAndRedirect())();
-  }, []);
-
-  const checkAuthAndRedirect = async () => {
-    try {
-      const initResult = await initializeAuth();
-      const authenticated = await isAuthenticated();
-      if (!authenticated || !initResult) {
-        router.replace("/Customer-Login");
-        return;
-      }
-      const userType = await getUserType();
-      if (userType === USER_TYPES.CUSTOMER) router.replace("/customer-home");
-      else router.replace("/Customer-Login");
-    } catch {
-      router.replace("/Customer-Login");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <View style={styles.loadingContainer}>
-      <Text style={styles.loadingText}>{isLoading ? "Loading Customer App..." : "Redirecting..."}</Text>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#a6a6e7" },
-  loadingText: { fontSize: 16, color: "#fff", fontWeight: "500" },
-});
-EOF
-}
-
-# ------------------------------------------------
-# Restaurant index.js
-# ------------------------------------------------
-create_restaurant_index() {
-  print_status "Creating Restaurant index.js..."
-  cat > app/index.js << 'EOF'
-import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet } from "react-native";
-import { useRouter } from "expo-router";
-import { isAuthenticated, getUserType, USER_TYPES, initializeAuth } from "../src/services/authService";
-
-export default function IndexScreen() {
-  const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
-
-  useEffect(() => {
-    (async () => await checkAuthAndRedirect())();
-  }, []);
-
-  const checkAuthAndRedirect = async () => {
-    try {
-      const initResult = await initializeAuth();
-      const authenticated = await isAuthenticated();
-      if (!authenticated || !initResult) {
-        router.replace("/login");
-        return;
-      }
-      const userType = await getUserType();
-      if (userType === USER_TYPES.MANAGER) router.replace("/dashboard");
-      else if (userType === USER_TYPES.CHEF) router.replace("/chef-home");
-      else router.replace("/login");
-    } catch {
-      router.replace("/login");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <View style={styles.loadingContainer}>
-      <Text style={styles.loadingText}>{isLoading ? "Loading Restaurant App..." : "Redirecting..."}</Text>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#a6a6e7" },
-  loadingText: { fontSize: 16, color: "#fff", fontWeight: "500" },
-});
-EOF
-}
-
-# ------------------------------------------------
-# Remove legacy react.gradle
-# ------------------------------------------------
-remove_legacy_react_gradle() {
-  local GRADLE_FILE="android/app/build.gradle"
-  if grep -q "react.gradle" "$GRADLE_FILE"; then
-    sed -i '/react.gradle/d' "$GRADLE_FILE"
-    print_status "Removed deprecated react.gradle reference"
-  fi
-}
-
-# ------------------------------------------------
-# Cleartext + camera permissions
-# ------------------------------------------------
+# --- Cleartext + Camera Permissions ---
 configure_manifest() {
   print_status "Ensuring cleartext + camera permissions..."
   mkdir -p android/app/src/main/res/xml
@@ -171,95 +47,143 @@ configure_manifest() {
   <base-config cleartextTrafficPermitted="true" />
 </network-security-config>
 EOF
-  local MANIFEST="android/app/src/main/AndroidManifest.xml"
-  if ! grep -q "android:usesCleartextTraffic" "$MANIFEST"; then
-    sed -i.bak '/<application/a\
-    android:usesCleartextTraffic="true"' "$MANIFEST"
+
+  local MF="android/app/src/main/AndroidManifest.xml"
+  if ! grep -q "android:usesCleartextTraffic" "$MF"; then
+    sed -i '/<application/a\
+    android:usesCleartextTraffic="true"' "$MF"
   fi
-  if ! grep -q "android:networkSecurityConfig" "$MANIFEST"; then
-    sed -i.bak '/<application/a\
-    android:networkSecurityConfig="@xml/network_security_config"' "$MANIFEST"
+  if ! grep -q "android:networkSecurityConfig" "$MF"; then
+    sed -i '/<application/a\
+    android:networkSecurityConfig="@xml/network_security_config"' "$MF"
   fi
-  if ! grep -q "android.permission.CAMERA" "$MANIFEST"; then
+  if ! grep -q "android.permission.CAMERA" "$MF"; then
     sed -i '/<application/i\
     <uses-permission android:name="android.permission.CAMERA" />\
     <uses-feature android:name="android.hardware.camera" android:required="false" />\
-    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />' "$MANIFEST"
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />' "$MF"
   fi
 }
 
-# ------------------------------------------------
-# Update app.json
-# ------------------------------------------------
-update_app_json() {
-  local NAME=$1
-  local PKG=$2
-  print_status "Updating app.json..."
-  [ -f app.json ] && cp app.json app.json.backup
-  if command -v jq &>/dev/null; then
-    jq ".expo.name=\"$NAME\" | .expo.android.package=\"$PKG\"" app.json > app.json.tmp && mv app.json.tmp app.json
-  else
-    sed -i.bak "s/\"name\": \".*\"/\"name\": \"$NAME\"/" app.json
-    sed -i.bak "s/\"package\": \".*\"/\"package\": \"$PKG\"/" app.json
-  fi
-}
-
-# ------------------------------------------------
-# Node reinstall helper
-# ------------------------------------------------
+# --- npm reinstall ---
 reinstall_node_modules() {
-  print_status "Cleaning and reinstalling dependencies..."
+  print_status "Cleaning & reinstalling dependencies..."
   rm -rf node_modules android/app/build android/build
   npm cache clean --force
   npm install
-  print_success "Node modules reinstalled successfully"
+  print_success "Dependencies reinstalled."
 }
 
-# ------------------------------------------------
-# Build function (skip JS bundling tasks)
-# ------------------------------------------------
+# --- Build process ---
 build_app() {
   local APP_TYPE=$1
-  local OUTPUT_SUFFIX=$2
+  local OUTPUT=$2
 
   print_header "Building $APP_TYPE"
-  remove_legacy_react_gradle
-  mkdir -p android/app/src/main/assets android/app/src/main/res
 
-  print_status "Bundling JS manually..."
+  print_status "Manual JS bundle..."
   npx react-native bundle --platform android --dev false \
     --entry-file app/index.js \
     --bundle-output android/app/src/main/assets/index.android.bundle \
     --assets-dest android/app/src/main/res
 
   cd android
-  print_status "Running Gradle build (skipping JS bundling tasks)..."
-  ./gradlew clean
-  ./gradlew -x bundleReleaseJsAndAssets -x createBundleReleaseJsAndAssets assembleRelease
+  print_status "Running Gradle assembleRelease..."
+  ./gradlew clean assembleRelease
   cd ..
 
   mkdir -p builds
-  cp android/app/build/outputs/apk/release/app-release.apk "builds/app-$OUTPUT_SUFFIX.apk" || print_error "$APP_TYPE APK build failed"
+  cp android/app/build/outputs/apk/release/app-release.apk "builds/app-$OUTPUT.apk" || true
 
   cd android
-  ./gradlew -x bundleReleaseJsAndAssets -x createBundleReleaseJsAndAssets bundleRelease
+  print_status "Running Gradle bundleRelease..."
+  ./gradlew bundleRelease
   cd ..
+  cp android/app/build/outputs/bundle/release/app-release.aab "builds/app-$OUTPUT.aab" || true
 
-  cp android/app/build/outputs/bundle/release/app-release.aab "builds/app-$OUTPUT_SUFFIX.aab" || print_error "$APP_TYPE AAB build failed"
+  print_success "$APP_TYPE build complete."
 }
 
-# ------------------------------------------------
-# Main
-# ------------------------------------------------
+# --- app.json update ---
+update_app_json() {
+  local NAME=$1; local PKG=$2
+  [ -f app.json ] && cp app.json app.json.backup
+  if command -v jq &>/dev/null; then
+    jq ".expo.name=\"$NAME\" | .expo.android.package=\"$PKG\"" app.json > app.json.tmp && mv app.json.tmp app.json
+  else
+    sed -i "s/\"name\": \".*\"/\"name\": \"$NAME\"/" app.json
+    sed -i "s/\"package\": \".*\"/\"package\": \"$PKG\"/" app.json
+  fi
+}
+
+# --- Customer index.js ---
+create_customer_index() {
+  cat > app/index.js << 'EOF'
+import React, { useEffect, useState } from "react";
+import { View, Text, StyleSheet } from "react-native";
+import { useRouter } from "expo-router";
+import { isAuthenticated, getUserType, USER_TYPES, initializeAuth } from "../src/services/authService";
+
+export default function IndexScreen() {
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+  useEffect(() => { (async () => await checkAuthAndRedirect())(); }, []);
+  const checkAuthAndRedirect = async () => {
+    try {
+      await initializeAuth();
+      const authenticated = await isAuthenticated();
+      if (!authenticated) return router.replace("/Customer-Login");
+      const userType = await getUserType();
+      router.replace(userType === USER_TYPES.CUSTOMER ? "/customer-home" : "/Customer-Login");
+    } catch { router.replace("/Customer-Login"); }
+    finally { setIsLoading(false); }
+  };
+  return (<View style={s.container}><Text style={s.text}>{isLoading ? "Loading..." : "Redirecting..."}</Text></View>);
+}
+const s = StyleSheet.create({container:{flex:1,justifyContent:"center",alignItems:"center",backgroundColor:"#a6a6e7"},text:{color:"#fff",fontSize:16}});
+EOF
+}
+
+# --- Restaurant index.js ---
+create_restaurant_index() {
+  cat > app/index.js << 'EOF'
+import React, { useEffect, useState } from "react";
+import { View, Text, StyleSheet } from "react-native";
+import { useRouter } from "expo-router";
+import { isAuthenticated, getUserType, USER_TYPES, initializeAuth } from "../src/services/authService";
+
+export default function IndexScreen() {
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+  useEffect(() => { (async () => await checkAuthAndRedirect())(); }, []);
+  const checkAuthAndRedirect = async () => {
+    try {
+      await initializeAuth();
+      const authenticated = await isAuthenticated();
+      if (!authenticated) return router.replace("/login");
+      const userType = await getUserType();
+      if (userType === USER_TYPES.MANAGER) router.replace("/dashboard");
+      else if (userType === USER_TYPES.CHEF) router.replace("/chef-home");
+      else router.replace("/login");
+    } catch { router.replace("/login"); }
+    finally { setIsLoading(false); }
+  };
+  return (<View style={s.container}><Text style={s.text}>{isLoading ? "Loading..." : "Redirecting..."}</Text></View>);
+}
+const s = StyleSheet.create({container:{flex:1,justifyContent:"center",alignItems:"center",backgroundColor:"#a6a6e7"},text:{color:"#fff",fontSize:16}});
+EOF
+}
+
+# --- Main ---
 main() {
-  print_header "Menutha Multi-App Build Script (v8)"
-  [ ! -d android ] && print_error "Android folder missing — run 'npx expo prebuild' first" && exit 1
+  print_header "Menutha Multi-App Build Script (v9)"
+  [ ! -d android ] && print_status "Android folder missing — running expo prebuild..." && npx expo prebuild --clean
 
   reinstall_node_modules
-  backup_index
   set_remote_api_url
+  backup_index
 
-  # --- CUSTOMER APP ---
+  # CUSTOMER
   print_header "CUSTOMER APP"
   create_customer_index
   update_app_json "Menutha Customer" "com.menutha.customer"
@@ -267,7 +191,7 @@ main() {
   configure_manifest
   build_app "CUSTOMER APP" "customer-release"
 
-  # --- RESTAURANT APP ---
+  # RESTAURANT
   print_header "RESTAURANT APP"
   reinstall_node_modules
   create_restaurant_index
@@ -278,8 +202,7 @@ main() {
 
   restore_index
   restore_app_json
-  print_header "✅ All builds completed successfully with AWS Remote, Cleartext + Camera Permissions"
+  print_header "✅ All builds completed successfully with AWS Remote + Camera + Cleartext"
 }
 
 main
-# ================================================================
