@@ -1,12 +1,10 @@
 #!/bin/bash
-
 # ================================================================
-# Multi-App Build Script (AWS Remote Ready, v5 - 2025)
-# ✅ Fixes Gradle JS bundling conflict
-# ✅ Removes deprecated react.gradle after prebuild
-# ✅ Ensures cleartext + camera permissions
-# ✅ Bundles JS manually (modern RN compatible)
-# ✅ Builds Customer + Restaurant apps
+# Multi-App Build Script (AWS Remote Ready, v6 - 2025)
+# ✅ Fix: removes obsolete Gradle JS bundle tasks
+# ✅ Adds cleartext + camera permissions
+# ✅ Handles AWS remote API config
+# ✅ Builds Customer + Restaurant apps cleanly
 # ================================================================
 
 set -e
@@ -16,7 +14,6 @@ RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; CY
 print_status() { echo -e "${BLUE}[INFO]${NC} $1"; }
 print_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
 print_error() { echo -e "${RED}[ERROR]${NC} $1"; }
-print_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
 print_header() { echo -e "\n${CYAN}==========================================\n$1\n==========================================${NC}\n"; }
 
 # ------------------------------------------------
@@ -25,7 +22,6 @@ print_header() { echo -e "\n${CYAN}==========================================\n$
 set_remote_api_url() {
   local REMOTE_URL="http://13.127.228.119:8090"
   print_status "Setting API_BASE_URL to AWS remote endpoint..."
-
   if [ -f ".env" ]; then
     if grep -q "API_BASE_URL=" .env; then
       sed -i.bak "s|^API_BASE_URL=.*|API_BASE_URL=${REMOTE_URL}|" .env
@@ -35,23 +31,21 @@ set_remote_api_url() {
   else
     echo "API_BASE_URL=${REMOTE_URL}" > .env
   fi
-
   if [ -f "src/config/api.js" ]; then
     sed -i.bak "s|http[s]*://[^\"']*|${REMOTE_URL}|g" src/config/api.js
   fi
-
   print_success "API_BASE_URL set to ${REMOTE_URL}"
 }
 
 # ------------------------------------------------
-# Helper: Backup & Restore
+# Backup & restore helpers
 # ------------------------------------------------
 backup_index() { [ -f "app/index.js" ] && cp app/index.js app/index.js.backup && print_success "Backed up index.js"; }
 restore_index() { [ -f "app/index.js.backup" ] && mv app/index.js.backup app/index.js && print_success "Restored index.js"; }
 restore_app_json() { [ -f "app.json.backup" ] && mv app.json.backup app.json && print_success "Restored app.json"; }
 
 # ------------------------------------------------
-# Create Customer index.js
+# Customer app index.js
 # ------------------------------------------------
 create_customer_index() {
   print_status "Creating Customer index.js..."
@@ -105,7 +99,7 @@ EOF
 }
 
 # ------------------------------------------------
-# Create Restaurant index.js
+# Restaurant app index.js
 # ------------------------------------------------
 create_restaurant_index() {
   print_status "Creating Restaurant index.js..."
@@ -166,15 +160,15 @@ remove_legacy_react_gradle() {
   local GRADLE_FILE="android/app/build.gradle"
   if grep -q "react.gradle" "$GRADLE_FILE"; then
     sed -i '/react.gradle/d' "$GRADLE_FILE"
-    print_warning "Removed deprecated react.gradle reference from app/build.gradle"
+    print_warning "Removed deprecated react.gradle reference"
   fi
 }
 
 # ------------------------------------------------
-# Configure cleartext + camera permissions
+# Configure cleartext & camera permissions
 # ------------------------------------------------
 configure_cleartext_policy() {
-  print_status "Configuring cleartext + camera permissions..."
+  print_status "Ensuring cleartext + camera permissions..."
   mkdir -p android/app/src/main/res/xml
   cat > android/app/src/main/res/xml/network_security_config.xml << 'EOF'
 <?xml version="1.0" encoding="utf-8"?>
@@ -183,8 +177,6 @@ configure_cleartext_policy() {
 </network-security-config>
 EOF
   local MANIFEST="android/app/src/main/AndroidManifest.xml"
-
-  # Cleartext
   if ! grep -q "android:usesCleartextTraffic" "$MANIFEST"; then
     sed -i.bak '/<application/a\
     android:usesCleartextTraffic="true"' "$MANIFEST"
@@ -193,8 +185,6 @@ EOF
     sed -i.bak '/<application/a\
     android:networkSecurityConfig="@xml/network_security_config"' "$MANIFEST"
   fi
-
-  # Camera permissions
   if ! grep -q "android.permission.CAMERA" "$MANIFEST"; then
     sed -i '/<application/i\
     <uses-permission android:name="android.permission.CAMERA" />\
@@ -202,17 +192,16 @@ EOF
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />' "$MANIFEST"
     print_success "Added camera permission + features"
   fi
-  print_success "Manifest ensured for cleartext + camera access"
+  print_success "Manifest updated for cleartext + camera access"
 }
 
 # ------------------------------------------------
 # Update app.json
 # ------------------------------------------------
 update_app_json() {
-  local APP_TYPE=$1
-  local APP_NAME=$2
-  local PACKAGE_NAME=$3
-  print_status "Updating app.json for $APP_TYPE..."
+  local APP_NAME=$1
+  local PACKAGE_NAME=$2
+  print_status "Updating app.json..."
   [ -f "app.json" ] && cp app.json app.json.backup
   if command -v jq &> /dev/null; then
     jq ".expo.name = \"$APP_NAME\" | .expo.android.package = \"$PACKAGE_NAME\"" app.json > app.json.tmp && mv app.json.tmp app.json
@@ -220,11 +209,11 @@ update_app_json() {
     sed -i.bak "s/\"name\": \".*\"/\"name\": \"$APP_NAME\"/" app.json
     sed -i.bak "s/\"package\": \".*\"/\"package\": \"$PACKAGE_NAME\"/" app.json
   fi
-  print_success "Updated app.json -> $APP_NAME ($PACKAGE_NAME)"
+  print_success "Updated -> $APP_NAME ($PACKAGE_NAME)"
 }
 
 # ------------------------------------------------
-# Build function (skipping Gradle JS bundling)
+# Build function (clean, no old Gradle tasks)
 # ------------------------------------------------
 build_app() {
   local APP_TYPE=$1
@@ -240,18 +229,17 @@ build_app() {
     --assets-dest android/app/src/main/res
 
   cd android
-  print_status "Running Gradle build (skipping internal JS bundling)..."
+  print_status "Running Gradle build..."
   ./gradlew clean
-  ./gradlew -x createBundleReleaseJsAndAssets -x bundleReleaseJsAndAssets assembleRelease
+  ./gradlew assembleRelease
   cd ..
 
   mkdir -p builds
   cp android/app/build/outputs/apk/release/app-release.apk "builds/app-$OUTPUT_SUFFIX.apk" || print_error "$APP_TYPE APK build failed"
 
   cd android
-  ./gradlew -x createBundleReleaseJsAndAssets -x bundleReleaseJsAndAssets bundleRelease
+  ./gradlew bundleRelease
   cd ..
-
   cp android/app/build/outputs/bundle/release/app-release.aab "builds/app-$OUTPUT_SUFFIX.aab" || print_error "$APP_TYPE AAB build failed"
 }
 
@@ -259,7 +247,7 @@ build_app() {
 # Main
 # ------------------------------------------------
 main() {
-  print_header "Multi-App Build Script (AWS Remote Enabled - v5)"
+  print_header "Multi-App Build Script (v6)"
   [ ! -d android ] && print_error "Android folder not found — run 'npx expo prebuild' first" && exit 1
 
   npm install
@@ -267,18 +255,18 @@ main() {
   set_remote_api_url
 
   # --- CUSTOMER APP ---
-  print_header "BUILDING CUSTOMER APP"
+  print_header "CUSTOMER APP BUILD"
   create_customer_index
-  update_app_json "Customer App" "Menutha Customer" "com.menutha.customer"
+  update_app_json "Menutha Customer" "com.menutha.customer"
   npx expo prebuild --clean
   remove_legacy_react_gradle
   configure_cleartext_policy
   build_app "CUSTOMER APP" "customer-release"
 
   # --- RESTAURANT APP ---
-  print_header "BUILDING RESTAURANT APP"
+  print_header "RESTAURANT APP BUILD"
   create_restaurant_index
-  update_app_json "Restaurant App" "Menutha Restaurant" "com.menutha.restaurant"
+  update_app_json "Menutha Restaurant" "com.menutha.restaurant"
   npx expo prebuild --clean
   remove_legacy_react_gradle
   configure_cleartext_policy
@@ -286,7 +274,8 @@ main() {
 
   restore_index
   restore_app_json
-  print_header "✅ All builds completed successfully with AWS Remote URL, Cleartext + Camera Permissions"
+  print_header "✅ Build complete: AWS Remote + Cleartext + Camera permissions OK"
 }
 
 main
+# End of script
