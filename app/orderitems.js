@@ -179,9 +179,21 @@ export default function ItemsListScreen() {
   //   initializeProfile();
   // }, []);
   useEffect(() => {
+    // Defensive: only initialize if category param is present
+    if (!params || !params.category) {
+      console.warn('orderitems: missing params.category, redirecting to menu-list');
+      // don't attempt to fetch; navigate back to menu-list after a tick
+      setTimeout(() => {
+        try {
+          router.push({ pathname: '/menu-list' });
+        } catch (e) {
+          console.warn('router push failed', e);
+        }
+      }, 50);
+      return;
+    }
     getMenu();
     initializeData();
-    // getMenu();
   }, [params.category, params.orderID, userId]);
   const initializeData = async () => {
     try {
