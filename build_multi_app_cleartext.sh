@@ -184,15 +184,20 @@ build_app() {
 
 # --- app.json update ---
 update_app_json() {
-  local NAME=$1; local PKG=$2; local LOGO=$3
+  local NAME=$1; local PKG=$2; local LOGO=$3; local SPLASH_BG=$4
   [ -f app.json ] && cp app.json app.json.backup
   if command -v jq &>/dev/null; then
-    jq ".expo.name=\"$NAME\" | .expo.android.package=\"$PKG\" | .expo.ios.bundleIdentifier=\"$PKG\" | .expo.icon=\"$LOGO\" | .expo.android.adaptiveIcon.foregroundImage=\"$LOGO\" | .expo.plugins=[\"expo-router\"]" app.json > app.json.tmp && mv app.json.tmp app.json
+    jq ".expo.name=\"$NAME\" | .expo.android.package=\"$PKG\" | .expo.ios.bundleIdentifier=\"$PKG\" | .expo.icon=\"$LOGO\" | .expo.splash.image=\"$LOGO\" | .expo.splash.backgroundColor=\"$SPLASH_BG\" | .expo.android.adaptiveIcon.foregroundImage=\"$LOGO\" | .expo.plugins=[\"expo-router\"]" app.json > app.json.tmp && mv app.json.tmp app.json
   else
     sed -i "s/\"name\": \".*\"/\"name\": \"$NAME\"/" app.json
     sed -i "s/\"package\": \".*\"/\"package\": \"$PKG\"/" app.json
     sed -i "s|\"icon\": \".*\"|\"icon\": \"$LOGO\"|" app.json
     sed -i "s|\"foregroundImage\": \".*\"|\"foregroundImage\": \"$LOGO\"|" app.json
+    # Update splash screen
+    if grep -q "\"splash\":" app.json; then
+      sed -i "s|\"image\": \".*\"|\"image\": \"$LOGO\"|" app.json
+      sed -i "s|\"backgroundColor\": \".*\"|\"backgroundColor\": \"$SPLASH_BG\"|" app.json
+    fi
   fi
 }
 
@@ -202,6 +207,125 @@ copy_index_file() {
   print_status "Copying index.$APP_TYPE.js to app/index.js..."
   cp "app/index.$APP_TYPE.js" "app/index.js"
   print_success "Index file updated for $APP_TYPE app"
+}
+
+# --- Disable native Android splash screen (we use AnimatedSplashScreen in JS) ---
+disable_native_splash() {
+  local SPLASH_BG=$1
+  print_status "Configuring native Android splash screen (no icon, just background color)..."
+
+  # Remove splash screen drawable files
+  find android/app/src/main/res/drawable* -name "splashscreen*.png" -delete 2>/dev/null || true
+  find android/app/src/main/res/drawable* -name "splashscreen*.xml" -delete 2>/dev/null || true
+
+  # Update colors.xml with splash background
+  local COLORS_XML="android/app/src/main/res/values/colors.xml"
+  if [ -f "$COLORS_XML" ]; then
+    local COLOR_HEX=$(echo "$SPLASH_BG" | sed 's/#//')
+    if grep -q "splashscreen_background" "$COLORS_XML"; then
+      sed -i "s|<color name=\"splashscreen_background\">.*</color>|<color name=\"splashscreen_background\">#$COLOR_HEX</color>|" "$COLORS_XML"
+    else
+      sed -i "/<\/resources>/i \  <color name=\"splashscreen_background\">#$COLOR_HEX</color>" "$COLORS_XML"
+    fi
+    print_success "Splash background color set to $SPLASH_BG"
+  fi
+
+  # Update styles.xml to disable Android logo splash
+  local STYLES_XML="android/app/src/main/res/values/styles.xml"
+  if [ -f "$STYLES_XML" ]; then
+    # Remove old splash screen references
+    sed -i '/<item name="android:windowBackground">@drawable\/splashscreen/d' "$STYLES_XML" 2>/dev/null || true
+    sed -i '/<item name="windowSplashScreenAnimatedIcon">@drawable\/splashscreen_logo<\/item>/d' "$STYLES_XML" 2>/dev/null || true
+
+    # Ensure Theme.App.SplashScreen has correct attributes to hide Android logo
+    if grep -q "Theme.App.SplashScreen" "$STYLES_XML"; then
+      # Update existing splash screen style
+      if ! grep -q "windowSplashScreenAnimatedIcon" "$STYLES_XML"; then
+        # Add the null icon attribute to hide Android logo
+        sed -i '/<style name="Theme.App.SplashScreen"/,/<\/style>/ {
+          /<item name="postSplashScreenTheme">/i\    <item name="windowSplashScreenAnimatedIcon">@null</item>\n    <item name="android:windowSplashScreenIconBackgroundColor" tools:targetApi="31">@color/splashscreen_background</item>
+        }' "$STYLES_XML"
+      fi
+    else
+      # Create splash screen style if it doesn't exist
+      sed -i '/<\/resources>/i \  <style name="Theme.App.SplashScreen" parent="Theme.SplashScreen">\n    <item name="windowSplashScreenBackground">@color/splashscreen_background</item>\n    <item name="windowSplashScreenAnimatedIcon">@null</item>\n    <item name="android:windowSplashScreenIconBackgroundColor" tools:targetApi="31">@color/splashscreen_background</item>\n    <item name="postSplashScreenTheme">@style/AppTheme</item>\n  </style>' "$STYLES_XML"
+    fi
+    print_success "Native Android logo splash disabled"
+  fi
+
+  # Fix ic_launcher_background.xml to remove splashscreen_logo reference
+  local LAUNCHER_BG="android/app/src/main/res/drawable/ic_launcher_background.xml"
+  if [ -f "$LAUNCHER_BG" ] && grep -q "splashscreen_logo" "$LAUNCHER_BG"; then
+    print_status "Fixing ic_launcher_background.xml to remove splashscreen_logo reference..."
+    cat > "$LAUNCHER_BG" << 'EOF'
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+  <item android:drawable="@color/iconBackground"/>
+</layer-list>
+EOF
+  fi
+
+  print_success "Splash screen configured - no Android logo, using AnimatedSplashScreen component"
+}
+
+# --- Update app icons with correct logo ---
+update_app_icons() {
+  local LOGO=$1
+  local BG_COLOR=$2
+  print_status "Updating app icons with $LOGO..."
+
+  # Check if ImageMagick is available for icon generation
+  if command -v convert &>/dev/null; then
+    print_status "Using ImageMagick to generate icons..."
+
+    # Generate icons for all densities using ImageMagick
+    # mdpi: 48x48, hdpi: 72x72, xhdpi: 96x96, xxhdpi: 144x144, xxxhdpi: 192x192
+
+    # Round icons
+    convert "$LOGO" -resize 48x48 android/app/src/main/res/mipmap-mdpi/ic_launcher.png 2>/dev/null || true
+    convert "$LOGO" -resize 72x72 android/app/src/main/res/mipmap-hdpi/ic_launcher.png 2>/dev/null || true
+    convert "$LOGO" -resize 96x96 android/app/src/main/res/mipmap-xhdpi/ic_launcher.png 2>/dev/null || true
+    convert "$LOGO" -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png 2>/dev/null || true
+    convert "$LOGO" -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png 2>/dev/null || true
+
+    # Foreground images for adaptive icons (108x108 safe zone in 162x162)
+    convert "$LOGO" -resize 108x108 -background none -gravity center -extent 162x162 android/app/src/main/res/mipmap-mdpi/ic_launcher_foreground.png 2>/dev/null || true
+    convert "$LOGO" -resize 162x162 -background none -gravity center -extent 243x243 android/app/src/main/res/mipmap-hdpi/ic_launcher_foreground.png 2>/dev/null || true
+    convert "$LOGO" -resize 216x216 -background none -gravity center -extent 324x324 android/app/src/main/res/mipmap-xhdpi/ic_launcher_foreground.png 2>/dev/null || true
+    convert "$LOGO" -resize 324x324 -background none -gravity center -extent 486x486 android/app/src/main/res/mipmap-xxhdpi/ic_launcher_foreground.png 2>/dev/null || true
+    convert "$LOGO" -resize 432x432 -background none -gravity center -extent 648x648 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png 2>/dev/null || true
+
+    # Round icons
+    convert "$LOGO" -resize 48x48 android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png 2>/dev/null || true
+    convert "$LOGO" -resize 72x72 android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png 2>/dev/null || true
+    convert "$LOGO" -resize 96x96 android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png 2>/dev/null || true
+    convert "$LOGO" -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png 2>/dev/null || true
+    convert "$LOGO" -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png 2>/dev/null || true
+
+    # Remove old .webp files
+    find android/app/src/main/res/mipmap-* -name "*.webp" -delete 2>/dev/null || true
+
+    print_success "App icons generated with ImageMagick"
+  else
+    print_status "ImageMagick not found, copying logo directly to all mipmap folders..."
+    # Fallback: just copy the logo (not ideal but better than nothing)
+    for mipmap in android/app/src/main/res/mipmap-*dpi; do
+      if [ -d "$mipmap" ]; then
+        cp "$LOGO" "$mipmap/ic_launcher.png" 2>/dev/null || true
+        cp "$LOGO" "$mipmap/ic_launcher_foreground.png" 2>/dev/null || true
+        cp "$LOGO" "$mipmap/ic_launcher_round.png" 2>/dev/null || true
+      fi
+    done
+  fi
+
+  # Update iconBackground color in values/colors.xml
+  local COLORS_XML="android/app/src/main/res/values/colors.xml"
+  if [ -f "$COLORS_XML" ]; then
+    # Convert hex color for XML (remove # if present)
+    local COLOR_HEX=$(echo "$BG_COLOR" | sed 's/#//')
+    sed -i "s|<color name=\"iconBackground\">.*</color>|<color name=\"iconBackground\">#$COLOR_HEX</color>|" "$COLORS_XML" 2>/dev/null || true
+  fi
+
+  print_success "App icons updated successfully"
 }
 
 # --- Update Android build.gradle and Kotlin files for each app ---
@@ -262,8 +386,10 @@ main() {
       # CUSTOMER APP (Menutha) only
       print_header "CUSTOMER APP - MENUTHA"
       copy_index_file "customer"
-      update_app_json "Menutha" "com.menutha.customer" "./src/assets/menutha.png"
+      update_app_json "Menutha" "com.menutha.customer" "./src/assets/menutha.png" "#F5F3FF"
       update_android_config "com.menutha.customer" "Menutha"
+      update_app_icons "./src/assets/menutha.png" "#ffffff"
+      disable_native_splash "#F5F3FF"
       configure_manifest
       configure_maps_dependencies
       configure_proguard
@@ -276,8 +402,10 @@ main() {
       # RESTAURANT APP (Menuva) only
       print_header "RESTAURANT APP - MENUVA"
       copy_index_file "restaurant"
-      update_app_json "Menuva" "com.menutha.restaurant" "./src/assets/menuva.png"
+      update_app_json "Menuva" "com.menutha.restaurant" "./src/assets/menuva.png" "#FFF5F3"
       update_android_config "com.menutha.restaurant" "Menuva"
+      update_app_icons "./src/assets/menuva.png" "#ffffff"
+      disable_native_splash "#FFF5F3"
       configure_manifest
       configure_maps_dependencies
       configure_proguard
@@ -291,8 +419,10 @@ main() {
       # CUSTOMER APP (Menutha)
       print_header "CUSTOMER APP - MENUTHA"
       copy_index_file "customer"
-      update_app_json "Menutha" "com.menutha.customer" "./src/assets/menutha.png"
+      update_app_json "Menutha" "com.menutha.customer" "./src/assets/menutha.png" "#F5F3FF"
       update_android_config "com.menutha.customer" "Menutha"
+      update_app_icons "./src/assets/menutha.png" "#ffffff"
+      disable_native_splash "#F5F3FF"
       configure_manifest
       configure_maps_dependencies
       configure_proguard
@@ -302,8 +432,10 @@ main() {
       print_header "RESTAURANT APP - MENUVA"
       reinstall_node_modules
       copy_index_file "restaurant"
-      update_app_json "Menuva" "com.menutha.restaurant" "./src/assets/menuva.png"
+      update_app_json "Menuva" "com.menutha.restaurant" "./src/assets/menuva.png" "#FFF5F3"
       update_android_config "com.menutha.restaurant" "Menuva"
+      update_app_icons "./src/assets/menuva.png" "#ffffff"
+      disable_native_splash "#FFF5F3"
       configure_manifest
       configure_maps_dependencies
       configure_proguard

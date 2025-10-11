@@ -1,15 +1,24 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
 import { isAuthenticated, getUserType, USER_TYPES, initializeAuth } from "../src/services/authService";
+import AnimatedSplashScreen from "../src/components/AnimatedSplashScreen";
 import LoaderScreen from "../src/components/LoaderScreen";
 
 export default function IndexScreen() {
+  const [showSplash, setShowSplash] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    (async () => await checkAuthAndRedirect())();
-  }, []);
+    // Don't start auth check until splash screen is done
+    if (!showSplash) {
+      (async () => await checkAuthAndRedirect())();
+    }
+  }, [showSplash]);
+
+  const handleSplashComplete = () => {
+    setShowSplash(false);
+  };
 
   const checkAuthAndRedirect = async () => {
     try {
@@ -39,10 +48,16 @@ export default function IndexScreen() {
     }
   };
 
+  // Show animated splash screen first
+  if (showSplash) {
+    return <AnimatedSplashScreen onAnimationComplete={handleSplashComplete} />;
+  }
+
+  // Then show loader during auth check
   return (
     <LoaderScreen
       text={isLoading ? "Loading Menuva..." : "Redirecting..."}
-      backgroundColor="#a6a6e7"
+      backgroundColor="#FFF5F3"
     />
   );
 }

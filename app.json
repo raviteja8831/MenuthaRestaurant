@@ -5,6 +5,11 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./src/assets/menutha.png",
+    "splash": {
+      "image": "./src/assets/menutha.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F5F3FF"
+    },
     "scheme": "ft",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": false,

@@ -38,7 +38,9 @@
       "Bash(ls:*)",
       "Bash(NODE_ENV=production npx react-native bundle --platform android --dev false --entry-file app/index.js --bundle-output /tmp/test.bundle --assets-dest /tmp/test-assets)",
       "Bash(export NODE_ENV=production)",
-      "Bash(./build_multi_app_cleartext.sh:*)"
+      "Bash(./build_multi_app_cleartext.sh:*)",
+      "Bash(npx eslint:*)",
+      "Bash(sudo yum install:*)"
     ],
     "deny": [],
     "ask": []
