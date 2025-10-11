@@ -30,145 +30,146 @@ import {
 } from "@react-google-maps/api";
 */
 // Use react-native-maps for native platforms (Android / iOS)
-import MapView, { Marker as RNMarker, Circle as RNCircle } from 'react-native-maps';
+import MapView, { Marker as RNMarker, Circle as RNCircle, Callout as RNCallout } from 'react-native-maps';
 // Note: expo-maps will be loaded dynamically inside the component (useEffect)
 import { getAllRestaurants } from "../api/restaurantApi";
 // import { use } from "react";
 
 // Custom M Marker Component
-const CustomMarker = ({ restaurant, isSelected, onPress }) => (
-  <Pressable onPress={() => onPress(restaurant)} style={styles.markerContainer}>
-    <View style={[styles.markerWrapper, isSelected && styles.markerSelected]}>
-      <Text style={[styles.markerText, isSelected && styles.markerTextSelected]}>M</Text>
-    </View>
-  </Pressable>
-);
+    // Calculate region to fit user and all filtered restaurants
+    const fitRegion = calculateMapRegion(userLocation, filteredRestaurants);
 
-// Restaurant Tooltip Component
-const RestaurantTooltip = ({ restaurant, onClose }) => (
-  <View style={styles.tooltip}>
-    <Pressable style={styles.tooltipClose} onPress={onClose}>
-      <MaterialCommunityIcons name="close" size={16} color="#666" />
-    </Pressable>
-    <Text style={styles.tooltipTitle}>{restaurant.name}</Text>
-    <Text style={styles.tooltipAddress}>{restaurant.address}</Text>
-    <Text style={styles.tooltipType}>{restaurant.restaurantType}</Text>
-    {restaurant.rating && (
-      <View style={styles.tooltipRating}>
-        <MaterialCommunityIcons name="star" size={16} color="#FFD700" />
-        <Text style={styles.tooltipRatingText}>{restaurant.rating}</Text>
-      </View>
-    )}
-  </View>
-);
+    // Use react-native-maps statically imported for native platforms
+    const DynMapView = MapView;
+    const DynMarker = RNMarker;
+    const DynCircle = RNCircle;
 
-function CustomerHomeScreen() {
-  // Navigation modal state
-  const [showNavModal, setShowNavModal] = useState(false);
-  const [navOptions, setNavOptions] = useState([]);
+    if (DynMapView) {
+      mapContent = (
+        <View style={styles.mapContainer}>
+          <DynMapView
+            style={styles.map}
+            region={fitRegion}
+            showsUserLocation={true}
+            showsMyLocationButton={false}
+            onMapReady={() => console.log("🗺️ react-native-maps ready")}
+          >
+            {/* User marker / center marker */}
+            {DynMarker && userLocation && (
+              <DynMarker
+                coordinate={userLocation}
+                title={"You"}
+                pinColor="#6B4EFF"
+              >
+                <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+                  <View style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 24,
+                    backgroundColor: '#fff',
+                    borderWidth: 2,
+                    borderColor: '#6B4EFF',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.15,
+                    shadowRadius: 4,
+                    elevation: 4,
+                  }}>
+                    <View style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 18,
+                      backgroundColor: '#6B4EFF',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                      <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15 }}>You</Text>
+                    </View>
+                    <View style={{
+                      position: 'absolute',
+                      bottom: 6,
+                      left: 4,
+                      right: 4,
+                      height: 10,
+                      borderRadius: 5,
+                      backgroundColor: '#E0E7FF',
+                      opacity: 0.7,
+                    }} />
+                  </View>
+                </View>
+              </DynMarker>
+            )}
 
-  // Note: we use `react-native-maps` on native platforms (statically imported above)
+            {/* Circle */}
+            {DynCircle && userLocation && (
+              <DynCircle
+                center={userLocation}
+                radius={radiusMeters}
+                strokeColor="#3838FB"
+                fillColor="#3838FB22"
+                strokeWidth={2}
+              />
+            )}
 
-  // Tooltip state
-  const [selectedRestaurantTooltip, setSelectedRestaurantTooltip] = useState(null);
-  // Show all tooltips on load
-  const [showAllTooltips, setShowAllTooltips] = useState(true);
-
-  // Helper to open Google Maps directions
-  const openGoogleMapsDirections = (restaurant) => {
-    if (!restaurant || !userLocation) return;
-    const origin = `${userLocation.latitude},${userLocation.longitude}`;
-    const dest = `${restaurant.latitude},${restaurant.longitude}`;
-    let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${dest}`;
-    Linking.openURL(url).catch(() => {
-      Alert.alert("Error", "Unable to open Google Maps");
-    });
-  };
-
-
-  const router = useRouter();
-  const [userLocation, setUserLocation] = useState({
-    latitude: 17.4375,
-    longitude: 78.4456,
-  });
-  // Search bar animation and focus state
-  const [searchOpen, setSearchOpen] = useState(false);
-  const searchInputRef = useRef(null);
-  const [cityCenter, setCityCenter] = useState(null);
-  const [cityZoom, setCityZoom] = useState(13);
-  const [showFilter, setShowFilter] = useState(false);
-  // const [showSearch, setShowSearch] = useState(false);
-  const [selectedFilters, setSelectedFilters] = useState([]); // Multi-select
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [restaurants, setRestaurants] = useState([]);
-  const [mapRegion, setMapRegion] = useState({
-    latitude: 17.4375,
-    longitude: 78.4456,
-    latitudeDelta: 0.0922,
-    longitudeDelta: 0.0421,
-  });
-
-  // Function to calculate optimal map region
-  const calculateMapRegion = (userLoc, restaurantList) => {
-    // Validate user location
-    const hasValidUserLoc = userLoc &&
-      typeof userLoc.latitude === 'number' &&
-      typeof userLoc.longitude === 'number' &&
-      !isNaN(userLoc.latitude) &&
-      !isNaN(userLoc.longitude);
-
-    if (!hasValidUserLoc || !restaurantList.length) {
-      return {
-        latitude: hasValidUserLoc ? userLoc.latitude : 17.4375,
-        longitude: hasValidUserLoc ? userLoc.longitude : 78.4456,
-        latitudeDelta: 0.0922,
-        longitudeDelta: 0.0421,
-      };
+            {/* Restaurant markers */}
+            {filteredRestaurants
+              .filter(r => typeof r.latitude === "number" && typeof r.longitude === "number" && !isNaN(r.latitude) && !isNaN(r.longitude))
+              .map((r) => (
+                <DynMarker
+                  key={r.id}
+                  coordinate={{ latitude: r.latitude, longitude: r.longitude }}
+                  title={r.name}
+                  description={`${r.restaurantType || ''} ${r.rating ? `⭐ ${r.rating}` : ''}`}
+                  onPress={() => {
+                    setSelectedRestaurant(r);
+                    setSelectedRestaurantTooltip(r);
+                    setShowAllTooltips(false);
+                  }}
+                >
+                  <CustomMarker
+                    restaurant={r}
+                    isSelected={selectedRestaurant && selectedRestaurant.id === r.id}
+                    onPress={(restaurant) => {
+                      setSelectedRestaurant(restaurant);
+                      setSelectedRestaurantTooltip(restaurant);
+                      setShowAllTooltips(false);
+                    }}
+                  />
+                  {(showAllTooltips || (selectedRestaurantTooltip && selectedRestaurantTooltip.id === r.id)) && (
+                    <View style={{ position: 'absolute', top: -90, left: -60, width: 180 }}>
+                      <RestaurantTooltip
+                        restaurant={r}
+                        onClose={() => {
+                          setSelectedRestaurant(null);
+                          setSelectedRestaurantTooltip(null);
+                          setShowAllTooltips(false);
+                        }}
+                      />
+                    </View>
+                  )}
+                </DynMarker>
+              ))}
+          </DynMapView>
+        </View>
+      );
+    } else {
+      mapContent = (
+        <View style={styles.mapNotAvailable}>
+          <MaterialCommunityIcons name="map-outline" size={64} color="#ccc" />
+          <Text style={styles.mapText}>Map View Unavailable</Text>
+          <Text style={styles.mapSubText}>
+            {Platform.OS === 'web'
+              ? "Use web browser for map features"
+              : "Native map library not installed. Run `npx expo install expo-maps` (for Expo) or install `react-native-maps` and rebuild the app."}
+          </Text>
+          <Text style={styles.mapSubTextSmall}>
+            Showing {filteredRestaurants.length} restaurants nearby
+          </Text>
+        </View>
+      );
     }
-
-    // Filter restaurants with valid coordinates
-    const validRestaurants = restaurantList.filter(r =>
-      typeof r.latitude === "number" &&
-      typeof r.longitude === "number" &&
-      !isNaN(r.latitude) &&
-      !isNaN(r.longitude)
-    );
-
-    if (validRestaurants.length === 0) {
-      return {
-        latitude: userLoc.latitude,
-        longitude: userLoc.longitude,
-        latitudeDelta: 0.0922,
-        longitudeDelta: 0.0421,
-      };
-    }
-
-    // Get all coordinates including user location
-    const allLatitudes = [userLoc.latitude, ...validRestaurants.map(r => r.latitude)];
-    const allLongitudes = [userLoc.longitude, ...validRestaurants.map(r => r.longitude)];
-
-    const minLat = Math.min(...allLatitudes);
-    const maxLat = Math.max(...allLatitudes);
-    const minLng = Math.min(...allLongitudes);
-    const maxLng = Math.max(...allLongitudes);
-
-    const latDelta = (maxLat - minLat) * 1.5; // Add 50% padding
-    const lngDelta = (maxLng - minLng) * 1.5; // Add 50% padding
-
-    return {
-      latitude: (minLat + maxLat) / 2,
-      longitude: (minLng + maxLng) / 2,
-      latitudeDelta: Math.max(latDelta, 0.01), // Minimum zoom level
-      longitudeDelta: Math.max(lngDelta, 0.01), // Minimum zoom level
-    };
-  };
-
-  // Check map library availability once on mount
-
-
-  // No dynamic loading: react-native-maps is imported statically above for native platforms.
 
 
   // Only for web: load Google Maps API
@@ -899,7 +900,7 @@ function CustomerHomeScreen() {
       </View>
     </View>
   );
-}
+
 const styles = StyleSheet.create({
   restaurantListContainer: {
     position: "absolute",
