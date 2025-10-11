@@ -9,19 +9,8 @@ export default function IndexScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
-  useEffect(() => {
-    // Don't start auth check until splash screen is done
-    if (!showSplash) {
-      (async () => await checkAuthAndRedirect())();
-    }
-  }, [showSplash]);
 
-  const handleSplashComplete = () => {
-    console.log('[DEBUG] Splash complete, hiding splash and starting auth check');
-    setShowSplash(false);
-  };
-
-  const checkAuthAndRedirect = async () => {
+  const checkAuthAndRedirect = useCallback(async () => {
     try {
       console.log('[DEBUG] Initializing auth...');
       await initializeAuth();
@@ -54,16 +43,16 @@ export default function IndexScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [router, setIsLoading]);
+  }, [router]);
 
   useEffect(() => {
-    // Don't start auth check until splash screen is done
     if (!showSplash) {
       checkAuthAndRedirect();
     }
   }, [showSplash, checkAuthAndRedirect]);
 
   const handleSplashComplete = () => {
+    console.log('[DEBUG] Splash complete, hiding splash and starting auth check');
     setShowSplash(false);
   };
 
