@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -119,6 +119,13 @@ const defaultCategoryImage = require("../src/assets/images/menu.png");
 export default function ItemsListScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const isMounted = useRef(true);
+  useEffect(() => {
+    // track mount state so async callbacks don't call setState after unmount
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
   /*  const { category, categoryName, restaurantId, userId, orderID, ishotel } =
     params; */
   // console.log("ghgsd", useLocalSearchParams());
@@ -205,25 +212,29 @@ export default function ItemsListScreen() {
         orderItemId: orderItems[item.id]?.id || null,
       }));
       console.log("combinedItems", combinedItems);
-      setItems(combinedItems);
-      setSelectedItems(combinedItems.filter((item) => item.selected));
+      if (isMounted.current) {
+        setItems(combinedItems);
+        setSelectedItems(combinedItems.filter((item) => item.selected));
+      }
     } catch (error) {
       AlertService.error(error);
     } finally {
-      setLoading(false);
+      if (isMounted.current) setLoading(false);
     }
   };
   const getMenu = async () => {
     try {
-      setLoading(true);
+      if (isMounted.current) setLoading(true);
       const menu = await getSpecificMenu(params.category);
-      setMenuData(menu);
-      console.log("menu", menu);
+      if (isMounted.current) {
+        setMenuData(menu);
+        console.log("menu", menu);
+      }
     } catch (error) {
       alert("Error fetching menu");
       AlertService.error(error);
     } finally {
-      setLoading(false);
+      if (isMounted.current) setLoading(false);
     }
   };
 
@@ -240,7 +251,9 @@ export default function ItemsListScreen() {
     // console.log("items", order);
     try {
       const response = await createOrder(order);
-      initializeData();
+      if (isMounted.current) {
+        await initializeData();
+      }
       console.log("Order created successfully:", response);
     } catch (error) {
       // console.error("Error creating order:", error);
@@ -267,8 +280,10 @@ export default function ItemsListScreen() {
     // console.log("items", order);
     try {
       const response = await deleteOrderItems(order);
-      initializeData();
-      setRemoveList([]);
+      if (isMounted.current) {
+        await initializeData();
+        setRemoveList([]);
+      }
       console.log("Order created successfully:", response);
     } catch (error) {
       // console.error("Error creating order:", error);
@@ -343,17 +358,13 @@ export default function ItemsListScreen() {
       items
     );
     setItems((prevSections) =>
-      prevSections.map((section) => ({
-        ...section,
-        ...(section.id === selectedItem && { comments: comment }),
-        /*  items: items.map((item) =>
-          item.id === selectedItem ? { ...item, comments: comment } : item
-        ), */
-      }))
+      prevSections.map((section) =>
+        section.id === selectedItem ? { ...section, comments: comment } : section
+      )
     );
     setSelectedItems((prev) =>
-      prev.map(
-        (item) => item.id === selectedItem && { ...item, comments: comment }
+      prev.map((item) =>
+        item.id === selectedItem ? { ...item, comments: comment } : item
       )
     );
     setIsModalOpen(false);
