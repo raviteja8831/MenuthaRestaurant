@@ -179,41 +179,17 @@ export default function ItemsListScreen() {
   const initializeData = async () => {
     try {
       setLoading(true);
-
-      console.log('🔄 Initializing order items screen');
-      console.log('📋 Params:', {
-        category: params.category,
-        categoryName: params.categoryName,
-        restaurantId: params.restaurantId,
-        tableId: params.tableId,
-        orderID: params.orderID,
-        ishotel: params.ishotel,
-        userId: userId
-      });
-
       // First fetch the menu items
-      console.log('📡 Fetching menu items for category:', params.category);
       const menuItems = await getitemsbasedonmenu(params.category);
-      console.log('✅ Fetched menu items:', menuItems.length);
 
-      // Then fetch the order items only if orderId exists and is valid
+      // Then fetch the order items
       var orderResponse = [];
-      if (params.orderID && params.orderID !== 'null' && params.orderID !== 'undefined') {
-        try {
-          console.log('📡 Fetching existing order items for orderID:', params.orderID);
-          const ord_res = await getOrderItemList(params.orderID, userId);
-          if (ord_res && ord_res.orderItems) {
-            orderResponse = ord_res.orderItems;
-            console.log('✅ Found existing order items:', orderResponse.length);
-          }
-        } catch (orderError) {
-          console.log('⚠️ No existing order found, starting fresh');
-          // If order fetch fails, continue with empty order items
+      if (params.orderID) {
+        const ord_res = await getOrderItemList(params.orderID, userId);
+        if (ord_res.orderItems) {
+          orderResponse = ord_res.orderItems;
         }
-      } else {
-        console.log('ℹ️ No orderID provided, starting new order');
       }
-
       // Create a map of order items
       const orderItems = orderResponse.reduce((acc, orderItem) => {
         acc[orderItem.menuItemId] = orderItem;
@@ -223,7 +199,7 @@ export default function ItemsListScreen() {
       // Combine menu items with order data
       const combinedItems = menuItems.map((item) => ({
         ...item,
-        selected: !!orderItems[item.id],
+        selected: orderItems[item.id],
         quantity: orderItems[item.id]?.quantity || 0,
         comments: orderItems[item.id]?.comments || "",
         orderItemId: orderItems[item.id]?.id || null,
@@ -232,8 +208,7 @@ export default function ItemsListScreen() {
       setItems(combinedItems);
       setSelectedItems(combinedItems.filter((item) => item.selected));
     } catch (error) {
-      console.error('Error initializing data:', error);
-      AlertService.error('Failed to load menu items');
+      AlertService.error(error);
     } finally {
       setLoading(false);
     }
@@ -377,8 +352,8 @@ export default function ItemsListScreen() {
       }))
     );
     setSelectedItems((prev) =>
-      prev.map((item) =>
-        item.id === selectedItem ? { ...item, comments: comment } : item
+      prev.map(
+        (item) => item.id === selectedItem && { ...item, comments: comment }
       )
     );
     setIsModalOpen(false);
