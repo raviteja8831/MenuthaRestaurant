@@ -20,6 +20,7 @@ import { MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 // import SearchModal from "../Modals/SearchModal";
 import * as Location from "expo-location";
+/* Web Google Maps disabled for now. Keep code commented for future use.
 import {
   GoogleMap,
   Marker,
@@ -27,6 +28,9 @@ import {
   Circle,
   useJsApiLoader,
 } from "@react-google-maps/api";
+*/
+// Use react-native-maps for native platforms (Android / iOS)
+import MapView, { Marker as RNMarker, Circle as RNCircle } from 'react-native-maps';
 // Note: expo-maps will be loaded dynamically inside the component (useEffect)
 import { getAllRestaurants } from "../api/restaurantApi";
 // import { use } from "react";
@@ -63,11 +67,7 @@ function CustomerHomeScreen() {
   const [showNavModal, setShowNavModal] = useState(false);
   const [navOptions, setNavOptions] = useState([]);
 
-  // Map library availability state
-  const [mapLibraryChecked, setMapLibraryChecked] = useState(false);
-  const [availableMapLibrary, setAvailableMapLibrary] = useState(null);
-  // expo-maps components loaded at runtime (MapView, Marker, Circle)
-  const [mapComponents, setMapComponents] = useState({ MapView: null, Marker: null, Circle: null });
+  // Note: we use `react-native-maps` on native platforms (statically imported above)
 
   // Tooltip state
   const [selectedRestaurantTooltip, setSelectedRestaurantTooltip] = useState(null);
@@ -168,62 +168,19 @@ function CustomerHomeScreen() {
   // Check map library availability once on mount
 
 
-  // Load expo-maps dynamically for native platforms to avoid bundler issues on web
-  useEffect(() => {
-    let mounted = true;
-    if (Platform.OS !== 'web') {
-      (async () => {
-        try {
-          let loaded = { MapView: null, Marker: null, Circle: null, lib: null };
-
-
-          // If expo-maps wasn't loaded (or not running on Android), try react-native-maps
-          if (!loaded.MapView) {
-            try {
-              const RNMapsModule = await import('react-native-maps');
-              const RNMaps = RNMapsModule.default || RNMapsModule;
-              if (RNMaps && (RNMaps.MapView || RNMaps.default)) {
-                loaded.MapView = RNMaps.MapView || RNMaps.default || RNMaps;
-                loaded.Marker = RNMaps.Marker || null;
-                loaded.Circle = RNMaps.Circle || null;
-                loaded.lib = 'react-native-maps';
-                console.log('✅ react-native-maps loaded dynamically');
-              }
-            } catch (e) {
-              console.log('⚠️ react-native-maps dynamic import failed:', e?.message || e);
-            }
-          }
-
-          if (!mounted) return;
-
-          if (loaded.MapView) {
-            setMapComponents({ MapView: loaded.MapView, Marker: loaded.Marker, Circle: loaded.Circle });
-            setAvailableMapLibrary({ type: loaded.lib, MapView: loaded.MapView, Marker: loaded.Marker });
-          } else {
-            console.log('❌ No native map library available after dynamic import attempts');
-            setMapComponents({ MapView: null, Marker: null, Circle: null });
-            setAvailableMapLibrary(null);
-          }
-        } catch (err) {
-          console.log('⚠️ Dynamic map import failed (unexpected):', err?.message || err);
-          if (!mounted) return;
-          setMapComponents({ MapView: null, Marker: null, Circle: null });
-          setAvailableMapLibrary(null);
-        }
-      })();
-    }
-    return () => { mounted = false; };
-  }, []);
+  // No dynamic loading: react-native-maps is imported statically above for native platforms.
 
 
   // Only for web: load Google Maps API
-  const { isLoaded } =
-    Platform.OS === "web"
-      ? // eslint-disable-next-line react-hooks/rules-of-hooks
-        useJsApiLoader({
-          googleMapsApiKey: "AIzaSyCJT87ZYDqm6bVLxRsg4Zde87HyefUfASQ",
-        })
-      : { isLoaded: true };
+  // Web maps disabled for now. Keep loader commented out for future use.
+  // const { isLoaded } =
+  //   Platform.OS === "web"
+  //     ? // eslint-disable-next-line react-hooks/rules-of-hooks
+  //       useJsApiLoader({
+  //         googleMapsApiKey: "YOUR_GOOGLE_MAPS_API_KEY",
+  //       })
+  //     : { isLoaded: true };
+  const isLoaded = false; // web disabled
   // Navigation button handler (must be after filteredRestaurants is defined)
   const handleNavigationPress = () => {
     if (!filteredRestaurants.length) {
@@ -667,8 +624,11 @@ function CustomerHomeScreen() {
       longitudeDelta: 0.0421,
     };
 
-    // If expo-maps is available, use it directly; otherwise show a friendly fallback
-    const { MapView: DynMapView, Marker: DynMarker, Circle: DynCircle } = mapComponents || {};
+    // Use react-native-maps statically imported for native platforms
+    const DynMapView = MapView;
+    const DynMarker = RNMarker;
+    const DynCircle = RNCircle;
+
     if (DynMapView) {
       mapContent = (
         <View style={styles.mapContainer}>
@@ -677,7 +637,7 @@ function CustomerHomeScreen() {
             initialRegion={currentRegion}
             showsUserLocation={true}
             showsMyLocationButton={false}
-            onMapReady={() => console.log("🗺️ expo-maps ready")}
+            onMapReady={() => console.log("🗺️ react-native-maps ready")}
           >
             {/* User marker / center marker */}
             {DynMarker && (
@@ -729,7 +689,7 @@ function CustomerHomeScreen() {
               </DynMarker>
             )}
 
-            {/* Circle if expo supports it */}
+            {/* Circle */}
             {DynCircle && (
               <DynCircle
                 center={centerForCircle}
@@ -744,7 +704,6 @@ function CustomerHomeScreen() {
             {filteredRestaurants
               .filter(r => typeof r.latitude === "number" && typeof r.longitude === "number" && !isNaN(r.latitude) && !isNaN(r.longitude))
               .map((r) => (
-                DynMarker ? (
                   <DynMarker
                     key={r.id}
                     coordinate={{ latitude: r.latitude, longitude: r.longitude }}
@@ -776,11 +735,6 @@ function CustomerHomeScreen() {
                       </View>
                     )}
                   </DynMarker>
-                ) : (
-                  <View key={`nomap-${r.id}`} style={{ padding: 8 }}>
-                    <Text>{r.name} (map marker unavailable)</Text>
-                  </View>
-                )
               ))}
           </DynMapView>
         </View>
