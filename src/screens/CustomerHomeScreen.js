@@ -27,7 +27,7 @@ import {
   Circle,
   useJsApiLoader,
 } from "@react-google-maps/api";
-// Note: expo-maps will be loaded dynamically inside the component (useEffect)
+import MapView, { Marker as RNMarker, Circle as RNCircle, PROVIDER_GOOGLE } from "react-native-maps";
 import { getAllRestaurants } from "../api/restaurantApi";
 // import { use } from "react";
 
@@ -63,11 +63,7 @@ function CustomerHomeScreen() {
   const [showNavModal, setShowNavModal] = useState(false);
   const [navOptions, setNavOptions] = useState([]);
 
-  // Map library availability state
-  const [mapLibraryChecked, setMapLibraryChecked] = useState(false);
-  const [availableMapLibrary, setAvailableMapLibrary] = useState(null);
-  // expo-maps components loaded at runtime (MapView, Marker, Circle)
-  const [mapComponents, setMapComponents] = useState({ MapView: null, Marker: null, Circle: null });
+  // Map library availability - using react-native-maps directly
 
   // Tooltip state
   const [selectedRestaurantTooltip, setSelectedRestaurantTooltip] = useState(null);
@@ -165,89 +161,7 @@ function CustomerHomeScreen() {
     };
   };
 
-  // Check map library availability once on mount
-  useEffect(() => {
-    if (Platform.OS !== 'web' && !mapLibraryChecked) {
-      const checkMapLibraries = () => {
-        let mapLibrary = null;
-        try {
-          const expoMaps = require('expo-maps');
-          if (expoMaps && (expoMaps.MapView || expoMaps.default)) {
-            mapLibrary = { type: 'expo-maps', MapView: expoMaps.MapView || expoMaps.default, Marker: expoMaps.Marker };
-            console.log('✅ expo-maps available (require)');
-          }
-        } catch (e) {
-          // ignore
-        }
-
-        if (!mapLibrary) {
-          try {
-            const rnMaps = require('react-native-maps');
-            const rn = rnMaps.default || rnMaps;
-            if (rn && (rn.MapView || rn.default)) {
-              mapLibrary = { type: 'react-native-maps', MapView: rn.MapView || rn.default, Marker: rn.Marker };
-              console.log('✅ react-native-maps available (require)');
-            }
-          } catch (e) {
-            // ignore
-          }
-        }
-
-        if (!mapLibrary) console.log('❌ No native map library available (require)');
-        setAvailableMapLibrary(mapLibrary);
-        setMapLibraryChecked(true);
-      };
-
-      checkMapLibraries();
-    }
-  }, [mapLibraryChecked]);
-
-  // Load expo-maps dynamically for native platforms to avoid bundler issues on web
-  useEffect(() => {
-    let mounted = true;
-    if (Platform.OS !== 'web') {
-      (async () => {
-        try {
-          let loaded = { MapView: null, Marker: null, Circle: null, lib: null };
-
-
-          // If expo-maps wasn't loaded (or not running on Android), try react-native-maps
-          if (!loaded.MapView) {
-            try {
-              const RNMapsModule = await import('react-native-maps');
-              const RNMaps = RNMapsModule.default || RNMapsModule;
-              if (RNMaps && (RNMaps.MapView || RNMaps.default)) {
-                loaded.MapView = RNMaps.MapView || RNMaps.default || RNMaps;
-                loaded.Marker = RNMaps.Marker || null;
-                loaded.Circle = RNMaps.Circle || null;
-                loaded.lib = 'react-native-maps';
-                console.log('✅ react-native-maps loaded dynamically');
-              }
-            } catch (e) {
-              console.log('⚠️ react-native-maps dynamic import failed:', e?.message || e);
-            }
-          }
-
-          if (!mounted) return;
-
-          if (loaded.MapView) {
-            setMapComponents({ MapView: loaded.MapView, Marker: loaded.Marker, Circle: loaded.Circle });
-            setAvailableMapLibrary({ type: loaded.lib, MapView: loaded.MapView, Marker: loaded.Marker });
-          } else {
-            console.log('❌ No native map library available after dynamic import attempts');
-            setMapComponents({ MapView: null, Marker: null, Circle: null });
-            setAvailableMapLibrary(null);
-          }
-        } catch (err) {
-          console.log('⚠️ Dynamic map import failed (unexpected):', err?.message || err);
-          if (!mounted) return;
-          setMapComponents({ MapView: null, Marker: null, Circle: null });
-          setAvailableMapLibrary(null);
-        }
-      })();
-    }
-    return () => { mounted = false; };
-  }, []);
+  // Using react-native-maps directly - no dynamic loading needed
 
 
   // Only for web: load Google Maps API
@@ -321,42 +235,96 @@ function CustomerHomeScreen() {
       }
       try {
         let data = await getAllRestaurants();
+        console.log('🍽️ Fetched restaurants from API:', data.length);
+        if (data.length > 0) {
+          console.log('🍽️ Sample restaurant data:', {
+            name: data[0].name,
+            lat: data[0].lat,
+            lng: data[0].lng,
+            latitude: data[0].latitude,
+            longitude: data[0].longitude,
+            address: data[0].address
+          });
+        }
         // For restaurants missing lat/lng, fetch from address
         const geocodeAddress = async (address) => {
-          if (!address) return null;
+          if (!address) {
+            console.log('⚠️ No address provided for geocoding');
+            return null;
+          }
           try {
             const apiKey = "AIzaSyCJT87ZYDqm6bVLxRsg4Zde87HyefUfASQ";
             const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`;
+            console.log('🌍 Geocoding address:', address);
             const resp = await fetch(url);
             const json = await resp.json();
+            console.log('🌍 Geocoding response status:', json.status);
             if (json.status === "OK" && json.results.length > 0) {
               const loc = json.results[0].geometry.location;
+              console.log('✅ Geocoded successfully:', { address, lat: loc.lat, lng: loc.lng });
               return { latitude: loc.lat, longitude: loc.lng };
+            } else if (json.status === "OVER_QUERY_LIMIT") {
+              console.error('❌ Google Maps API quota exceeded');
+            } else if (json.status === "ZERO_RESULTS") {
+              console.warn('⚠️ No results found for address:', address);
+            } else {
+              console.warn('⚠️ Geocoding failed:', json.status, 'for address:', address);
             }
-          } catch (err) {}
+          } catch (err) {
+            console.error('❌ Geocoding error:', err.message);
+          }
           return null;
         };
         // Map and update missing lat/lng
         const updated = await Promise.all(
           data.map(async (r) => {
-            if (
+            // Check if restaurant has valid coordinates (either as latitude/longitude OR lat/lng)
+            let hasValidCoords = false;
+            let restaurantData = { ...r };
+
+            // First, check if lat/lng exists and convert to latitude/longitude
+            if (typeof r.lat === "number" && typeof r.lng === "number" && r.lat !== 0 && r.lng !== 0) {
+              restaurantData.latitude = r.lat;
+              restaurantData.longitude = r.lng;
+              hasValidCoords = true;
+            }
+            // Check if latitude/longitude already exists
+            else if (
               typeof r.latitude === "number" &&
               typeof r.longitude === "number" &&
               !isNaN(r.latitude) &&
-              !isNaN(r.longitude)
+              !isNaN(r.longitude) &&
+              r.latitude !== 0 &&
+              r.longitude !== 0
             ) {
-              return r;
+              hasValidCoords = true;
             }
-            const coords = await geocodeAddress(r.address);
-            if (coords) {
-              return { ...r, latitude: coords.latitude, longitude: coords.longitude };
+
+            // If no valid coords, try geocoding the address
+            if (!hasValidCoords) {
+              const coords = await geocodeAddress(r.address);
+              if (coords) {
+                restaurantData.latitude = coords.latitude;
+                restaurantData.longitude = coords.longitude;
+              }
             }
-            return r;
+
+            return restaurantData;
           })
         );
+        console.log('🍽️ Updated restaurants after geocoding:', updated.length);
+        const withCoords = updated.filter(r => r.latitude && r.longitude && r.latitude !== 0 && r.longitude !== 0);
+        console.log('🍽️ Restaurants with valid coordinates after processing:', withCoords.length);
+        if (withCoords.length > 0) {
+          console.log('🍽️ Sample updated restaurant:', {
+            name: withCoords[0].name,
+            latitude: withCoords[0].latitude,
+            longitude: withCoords[0].longitude
+          });
+        }
         setRestaurants(updated);
-        
-        
+
+
       } catch (_e) {
         setRestaurants([]);
       }
@@ -467,11 +435,26 @@ function CustomerHomeScreen() {
     }
   }, [cityCenter, userLocation]);
 
-  // Debug: log restaurants and filteredRestaurants after data load
+  // Debug: log map-related data after restaurants are loaded
   useEffect(() => {
     if (!loading) {
-      console.log('restaurants:', restaurants);
-      console.log('filteredRestaurants:', filteredRestaurants);
+      const validRestaurants = restaurants.filter(r =>
+        typeof r.latitude === "number" &&
+        typeof r.longitude === "number" &&
+        !isNaN(r.latitude) &&
+        !isNaN(r.longitude)
+      );
+      console.log('🗺️ Total restaurants loaded:', restaurants.length);
+      console.log('🗺️ Restaurants with valid coordinates:', validRestaurants.length);
+      console.log('🗺️ Filtered restaurants (after search/filter):', filteredRestaurants.length);
+
+      if (validRestaurants.length > 0) {
+        console.log('🗺️ Sample restaurant coordinates:', {
+          name: validRestaurants[0].name,
+          lat: validRestaurants[0].latitude,
+          lng: validRestaurants[0].longitude
+        });
+      }
     }
   }, [loading, restaurants, filteredRestaurants]);
   // Handlers
@@ -575,6 +558,12 @@ function CustomerHomeScreen() {
     if (!isLoaded) {
       mapContent = <Text>Loading map...</Text>;
     } else {
+      const currentRegion = mapRegion || {
+        latitude: userLocation?.latitude || 17.4375,
+        longitude: userLocation?.longitude || 78.4456,
+        latitudeDelta: 0.0922,
+        longitudeDelta: 0.0421,
+      };
       const zoomLevel = Math.max(10, 15 - Math.log2(currentRegion.latitudeDelta * 100));
 
       mapContent = (
@@ -693,7 +682,7 @@ function CustomerHomeScreen() {
       );
     }
   } else {
-  // Use expo-maps directly on native platforms (Android/iOS); web uses @react-google-maps/api
+  // Use react-native-maps on native platforms (Android/iOS); web uses @react-google-maps/api
     const currentRegion = mapRegion || {
       latitude: userLocation?.latitude || 17.4375,
       longitude: userLocation?.longitude || 78.4456,
@@ -701,140 +690,136 @@ function CustomerHomeScreen() {
       longitudeDelta: 0.0421,
     };
 
-    // If expo-maps is available, use it directly; otherwise show a friendly fallback
-    const { MapView: DynMapView, Marker: DynMarker, Circle: DynCircle } = mapComponents || {};
-    if (DynMapView) {
-      mapContent = (
-        <View style={styles.mapContainer}>
-          <DynMapView
-            style={styles.map}
-            initialRegion={currentRegion}
-            showsUserLocation={true}
-            showsMyLocationButton={false}
-            onMapReady={() => console.log("🗺️ expo-maps ready")}
+    console.log('🗺️ MAP DEBUG - Platform:', Platform.OS);
+    console.log('🗺️ MAP DEBUG - Map region:', JSON.stringify(currentRegion));
+    console.log('🗺️ MAP DEBUG - User location:', JSON.stringify(userLocation));
+    console.log('🗺️ MAP DEBUG - Total restaurants:', restaurants.length);
+    console.log('🗺️ MAP DEBUG - Filtered restaurants:', filteredRestaurants.length);
+    const validRestaurantsForMap = filteredRestaurants.filter(r =>
+      typeof r.latitude === "number" &&
+      typeof r.longitude === "number" &&
+      !isNaN(r.latitude) &&
+      !isNaN(r.longitude)
+    );
+    console.log('🗺️ MAP DEBUG - Valid restaurants with coordinates:', validRestaurantsForMap.length);
+    console.log('🗺️ MAP DEBUG - PROVIDER_GOOGLE:', PROVIDER_GOOGLE);
+    if (validRestaurantsForMap.length > 0) {
+      console.log('🗺️ MAP DEBUG - First restaurant sample:', {
+        name: validRestaurantsForMap[0].name,
+        lat: validRestaurantsForMap[0].latitude,
+        lng: validRestaurantsForMap[0].longitude
+      });
+    }
+
+    mapContent = (
+      <MapView
+        provider={PROVIDER_GOOGLE}
+        style={styles.map}
+        initialRegion={currentRegion}
+        showsUserLocation={true}
+        showsMyLocationButton={false}
+        loadingEnabled={true}
+        loadingIndicatorColor="#6B4EFF"
+        loadingBackgroundColor="#ffffff"
+        onMapReady={() => console.log("🗺️ react-native-maps ready")}
+        onError={(error) => console.error("🗺️ Map error:", error)}
+        onMapLoaded={() => console.log("🗺️ Map loaded successfully")}
+      >
+          {/* User marker / center marker */}
+          <RNMarker
+            coordinate={centerForCircle}
+            title={cityCenter ? "City" : "You"}
+            pinColor={cityCenter ? "#6B4EFF" : "#6B4EFF"}
           >
-            {/* User marker / center marker */}
-            {DynMarker && (
-              <DynMarker
-                coordinate={centerForCircle}
-                title={cityCenter ? "City" : "You"}
-                pinColor={cityCenter ? "#6B4EFF" : "#6B4EFF"}
-              >
-                {!cityCenter && (
-                  <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-                    <View style={{
-                      width: 48,
-                      height: 48,
-                      borderRadius: 24,
-                      backgroundColor: '#fff',
-                      borderWidth: 2,
-                      borderColor: '#6B4EFF',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      shadowColor: '#000',
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.15,
-                      shadowRadius: 4,
-                      elevation: 4,
-                    }}>
-                      <View style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: 18,
-                        backgroundColor: '#6B4EFF',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}>
-                        <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15 }}>You</Text>
-                      </View>
-                      <View style={{
-                        position: 'absolute',
-                        bottom: 6,
-                        left: 4,
-                        right: 4,
-                        height: 10,
-                        borderRadius: 5,
-                        backgroundColor: '#E0E7FF',
-                        opacity: 0.7,
-                      }} />
-                    </View>
+            {!cityCenter && (
+              <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+                <View style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 24,
+                  backgroundColor: '#fff',
+                  borderWidth: 2,
+                  borderColor: '#6B4EFF',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 4,
+                  elevation: 4,
+                }}>
+                  <View style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 18,
+                    backgroundColor: '#6B4EFF',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}>
+                    <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15 }}>You</Text>
                   </View>
-                )}
-              </DynMarker>
+                  <View style={{
+                    position: 'absolute',
+                    bottom: 6,
+                    left: 4,
+                    right: 4,
+                    height: 10,
+                    borderRadius: 5,
+                    backgroundColor: '#E0E7FF',
+                    opacity: 0.7,
+                  }} />
+                </View>
+              </View>
             )}
+          </RNMarker>
 
-            {/* Circle if expo supports it */}
-            {DynCircle && (
-              <DynCircle
-                center={centerForCircle}
-                radius={radiusMeters}
-                strokeColor="#3838FB"
-                fillColor="#3838FB22"
-                strokeWidth={2}
-              />
-            )}
+          {/* Circle */}
+          <RNCircle
+            center={centerForCircle}
+            radius={radiusMeters}
+            strokeColor="#3838FB"
+            fillColor="#3838FB22"
+            strokeWidth={2}
+          />
 
-            {/* Restaurant markers */}
-            {filteredRestaurants
-              .filter(r => typeof r.latitude === "number" && typeof r.longitude === "number" && !isNaN(r.latitude) && !isNaN(r.longitude))
-              .map((r) => (
-                DynMarker ? (
-                  <DynMarker
-                    key={r.id}
-                    coordinate={{ latitude: r.latitude, longitude: r.longitude }}
-                    title={r.name}
-                    description={`${r.restaurantType || ''} ${r.rating ? `⭐ ${r.rating}` : ''}`}
-                    onPress={() => {
-                      router.push({ pathname: "/HotelDetails", params: { id: r.id, name: r.name, address: r.address, starRating: r.rating || 0 } });
-                    }}
-                  >
-                    <CustomMarker
+          {/* Restaurant markers */}
+          {filteredRestaurants
+            .filter(r => typeof r.latitude === "number" && typeof r.longitude === "number" && !isNaN(r.latitude) && !isNaN(r.longitude))
+            .map((r) => (
+              <RNMarker
+                key={r.id}
+                coordinate={{ latitude: r.latitude, longitude: r.longitude }}
+                title={r.name}
+                description={`${r.restaurantType || ''} ${r.rating ? `⭐ ${r.rating}` : ''}`}
+                onPress={() => {
+                  router.push({ pathname: "/HotelDetails", params: { id: r.id, name: r.name, address: r.address, starRating: r.rating || 0 } });
+                }}
+              >
+                <CustomMarker
+                  restaurant={r}
+                  isSelected={selectedRestaurant && selectedRestaurant.id === r.id}
+                  onPress={(restaurant) => {
+                    setSelectedRestaurant(restaurant);
+                    setSelectedRestaurantTooltip(restaurant);
+                    setShowAllTooltips(false);
+                  }}
+                />
+                {(showAllTooltips || (selectedRestaurantTooltip && selectedRestaurantTooltip.id === r.id)) && (
+                  <View style={{ position: 'absolute', top: -90, left: -60, width: 180 }}>
+                    <RestaurantTooltip
                       restaurant={r}
-                      isSelected={selectedRestaurant && selectedRestaurant.id === r.id}
-                      onPress={(restaurant) => {
-                        setSelectedRestaurant(restaurant);
-                        setSelectedRestaurantTooltip(restaurant);
+                      onClose={() => {
+                        setSelectedRestaurant(null);
+                        setSelectedRestaurantTooltip(null);
                         setShowAllTooltips(false);
                       }}
                     />
-                    {(showAllTooltips || (selectedRestaurantTooltip && selectedRestaurantTooltip.id === r.id)) && (
-                      <View style={{ position: 'absolute', top: -90, left: -60, width: 180 }}>
-                        <RestaurantTooltip
-                          restaurant={r}
-                          onClose={() => {
-                            setSelectedRestaurant(null);
-                            setSelectedRestaurantTooltip(null);
-                            setShowAllTooltips(false);
-                          }}
-                        />
-                      </View>
-                    )}
-                  </DynMarker>
-                ) : (
-                  <View key={`nomap-${r.id}`} style={{ padding: 8 }}>
-                    <Text>{r.name} (map marker unavailable)</Text>
                   </View>
-                )
-              ))}
-          </DynMapView>
-        </View>
-      );
-    } else {
-      mapContent = (
-        <View style={styles.mapNotAvailable}>
-          <MaterialCommunityIcons name="map-outline" size={64} color="#ccc" />
-          <Text style={styles.mapText}>Map View Unavailable</Text>
-          <Text style={styles.mapSubText}>
-            {Platform.OS === 'web'
-              ? "Use web browser for map features"
-              : "Native map library not installed. Run `npx expo install expo-maps` (for Expo) or install `react-native-maps` and rebuild the app."}
-          </Text>
-          <Text style={styles.mapSubTextSmall}>
-            Showing {filteredRestaurants.length} restaurants nearby
-          </Text>
-        </View>
-      );
-    }
+                )}
+              </RNMarker>
+            ))}
+      </MapView>
+    );
   }
 
   if (loading) {
@@ -1017,14 +1002,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   mapWebContainer: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    width: "100vw",
-    height: "100vh",
-    zIndex: 0,
+    flex: 1,
+    width: "100%",
+    height: "100%",
   },
   fullScreenWeb: {
     position: "fixed",
@@ -1057,10 +1037,9 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   map: {
-    ...StyleSheet.absoluteFillObject,
+    flex: 1,
     width: '100%',
     height: '100%',
-    minHeight: 300,
   },
 
   topControls: {
@@ -1364,10 +1343,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 10,
-  },
-  mapContainer: {
-    flex: 1,
-    position: 'relative',
   },
 });
 

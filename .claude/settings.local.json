@@ -32,7 +32,13 @@
       "Read(//c/Users/ravit/Siddhu'sWorld/Menutha/src/screens/**)",
       "Bash(./gradlew:*)",
       "Read(//v/naveen2/restaurent3/restaurant/server/app/routes/**)",
-      "Bash(keytool:*)"
+      "Bash(keytool:*)",
+      "Bash(bash:*)",
+      "Bash(tee:*)",
+      "Bash(ls:*)",
+      "Bash(NODE_ENV=production npx react-native bundle --platform android --dev false --entry-file app/index.js --bundle-output /tmp/test.bundle --assets-dest /tmp/test-assets)",
+      "Bash(export NODE_ENV=production)",
+      "Bash(./build_multi_app_cleartext.sh:*)"
     ],
     "deny": [],
     "ask": []

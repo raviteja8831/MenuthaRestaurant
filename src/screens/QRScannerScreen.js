@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { CameraView as Camera, Camera as CameraModule } from 'expo-camera';
 import {
   View,
   Text,
@@ -8,8 +7,10 @@ import {
   Dimensions,
   SafeAreaView,
   Platform,
-  Image
+  Image,
+  Linking
 } from 'react-native';
+import { Camera, useCameraDevice, useCodeScanner } from 'react-native-vision-camera';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -20,31 +21,47 @@ export default function QRScannerScreen() {
   const [hasPermission, setHasPermission] = useState(null);
   const [scanned, setScanned] = useState(false);
   const [scannedData, setScannedData] = useState(null);
-  // const [scannerAvailable, setScannerAvailable] = useState(null); // removed duplicate
+  const device = useCameraDevice('back');
 
+  useEffect(() => {
+    // Skip permission request on web
+    if (Platform.OS === 'web') {
+      return;
+    }
+
+    (async () => {
+      try {
+        const status = await Camera.requestCameraPermission();
+        setHasPermission(status === 'granted');
+      } catch (error) {
+        console.error('Error requesting camera permission:', error);
+        setHasPermission(false);
+      }
+    })();
+  }, []);
+
+  const codeScanner = useCodeScanner({
+    codeTypes: ['qr'],
+    onCodeScanned: (codes) => {
+      if (scanned || codes.length === 0) return;
+
+      const code = codes[0];
+      handleQRCodeScanned(code.value);
+    },
+  });
+
+  // Early return for web platform - after all hooks
   if (Platform.OS === 'web') {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>
-            QR scanning is only supported on mobile devices (Android/iOS). Please use the Expo Go app or a native build to scan QR codes.
+            QR scanning is only supported on mobile devices (Android/iOS). Please use a native build to scan QR codes.
           </Text>
         </View>
       </SafeAreaView>
     );
   }
-  const [scannerAvailable, setScannerAvailable] = useState(null);
-
-
-  useEffect(() => {
-    (async () => {
-      const { status } = await CameraModule.requestCameraPermissionsAsync();
-      setHasPermission(status === 'granted');
-      // Check if modern barcode scanner is available
-      setScannerAvailable(Camera.isModernBarcodeScannerAvailable);
-    })();
-  }, []);
-
 
   const handleQRCodeScanned = (data) => {
     setScanned(true);
@@ -70,18 +87,17 @@ export default function QRScannerScreen() {
         // Navigate to menu with restaurant and table details, including ref URL
         const refUrl = `/menu-list?restaurantId=${qrData.restaurantId}&tableId=${qrData.tableId}&tableName=${encodeURIComponent(qrData.tableName || '')}&ishotel=false`;
 
-        setTimeout(() => {
-          router.push({
-            pathname: '/menu-list',
-            params: {
-              restaurantId: qrData.restaurantId,
-              tableId: qrData.tableId,
-              tableName: qrData.tableName,
-              ishotel: 'false',
-              refUrl: refUrl
-            }
-          });
-        }, 1500); // Small delay to show scan confirmation
+        // Redirect immediately without showing details
+        router.push({
+          pathname: '/menu-list',
+          params: {
+            restaurantId: qrData.restaurantId,
+            tableId: qrData.tableId,
+            tableName: qrData.tableName,
+            ishotel: 'false',
+            refUrl: refUrl
+          }
+        });
       } else {
         console.log('Invalid QR code format:', qrData);
       }
@@ -91,44 +107,11 @@ export default function QRScannerScreen() {
     }
   };
 
-
-  // Handler for QR code scanned event
-  const handleBarCodeScanned = ({ type, data }) => {
-    if (!scanned && type === 'org.iso.QRCode') {
-      handleQRCodeScanned(data);
-    }
-  };
-
   const handleBackPress = () => {
     router.push('/customer-home');
   };
 
-
-
   // Render loading or error states after hooks
-
-  // Launch modal scanner if available and not already scanned
-  useEffect(() => {
-    const handleOpenScanner = async () => {
-      if (scannerAvailable && !scanned) {
-        try {
-          await Camera.launchScanner({ barcodeTypes: ['qr'] });
-          // Listen for scan event
-          Camera.onModernBarcodeScanned((event) => {
-            if (event && event.data) {
-              handleQRCodeScanned(event.data);
-            }
-          });
-        } catch (_e) {
-          // fallback or error
-        }
-      }
-    };
-    if (scannerAvailable) {
-      handleOpenScanner();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scannerAvailable]);
   if (hasPermission === null) {
     return (
       <SafeAreaView style={styles.container}>
@@ -144,9 +127,25 @@ export default function QRScannerScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>No access to camera</Text>
+          <Text style={styles.errorSubText}>
+            Please enable camera permissions in your device settings to scan QR codes.
+          </Text>
+          <Pressable style={styles.settingsButton} onPress={() => Linking.openSettings()}>
+            <Text style={styles.settingsButtonText}>Open Settings</Text>
+          </Pressable>
           <Pressable style={styles.backButton} onPress={handleBackPress}>
             <Text style={styles.backButtonText}>Go Back</Text>
           </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!device) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading camera...</Text>
         </View>
       </SafeAreaView>
     );
@@ -165,34 +164,12 @@ export default function QRScannerScreen() {
       <View style={styles.mainContent}>
         {/* Scanner Frame with Camera */}
         <View style={styles.scannerFrame}>
-          {hasPermission === null ? (
-            <View style={styles.permissionContainer}>
-              <Text style={styles.permissionText}>Requesting camera permission...</Text>
-            </View>
-          ) : hasPermission === false ? (
-            <View style={styles.permissionContainer}>
-              <Text style={styles.permissionText}>No access to camera</Text>
-            </View>
-          ) : (
-            <>
-              <Camera
-                style={StyleSheet.absoluteFillObject}
-                onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
-                barCodeScannerSettings={{ barCodeTypes: ['qr'] }}
-                ratio="1:1"
-                facing="back"
-                onMountError={console.warn}
-              />
-              {/* Fallback message if scanning is not supported */}
-              {typeof Camera === 'undefined' && (
-                <View style={styles.fallbackContainer}>
-                  <Text style={styles.fallbackText}>
-                    QR scanning is not supported on this device.
-                  </Text>
-                </View>
-              )}
-            </>
-          )}
+          <Camera
+            style={StyleSheet.absoluteFillObject}
+            device={device}
+            isActive={!scanned}
+            codeScanner={codeScanner}
+          />
           <View style={styles.scannerOverlay}>
             {/* Corner indicators */}
             <View style={[styles.corner, styles.topLeft]} />
@@ -217,39 +194,7 @@ export default function QRScannerScreen() {
         </View>
       </View>
 
-      {/* Show scanned QR code info */}
-      {scanned && scannedData && (
-        <View style={styles.scannedContainer}>
-          <MaterialCommunityIcons name="check-circle" size={48} color="#4CAF50" />
-          <Text style={styles.scannedTitle}>QR Code Scanned Successfully!</Text>
-          <Text style={styles.scannedDescription}>
-            {(() => {
-              try {
-                let qrData;
-                if (scannedData.startsWith('menutha://order?data=')) {
-                  const encodedData = scannedData.split('data=')[1];
-                  qrData = JSON.parse(decodeURIComponent(encodedData));
-                } else {
-                  qrData = JSON.parse(scannedData);
-                }
-
-                if (qrData && qrData.type === 'table_order') {
-                  return `Table: ${qrData.tableName}\nRedirecting to menu...`;
-                }
-                return 'Processing...';
-              } catch {
-                return 'Processing...';
-              }
-            })()}
-          </Text>
-          <Pressable
-            onPress={() => setScanned(false)}
-            style={styles.scanAgainButton}
-          >
-            <Text style={styles.scanAgainText}>Scan Another</Text>
-          </Pressable>
-        </View>
-      )}
+      {/* QR code scanned - redirecting immediately, no UI needed */}
     </SafeAreaView>
   );
 }
@@ -293,35 +238,6 @@ const styles = StyleSheet.create({
     position: 'relative',
     overflow: 'hidden',
   },
-  permissionContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  permissionText: {
-    color: '#666',
-    fontSize: 16,
-    textAlign: 'center',
-  },
-  fallbackContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 3,
-  },
-  fallbackText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 18,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    padding: 16,
-    borderRadius: 8,
-    textAlign: 'center',
-  },
   scannerOverlay: {
     position: 'absolute',
     top: 0,
@@ -360,18 +276,6 @@ const styles = StyleSheet.create({
     right: 20,
     borderLeftWidth: 0,
     borderTopWidth: 0,
-  },
-  demoScanButton: {
-    backgroundColor: '#4A90E2',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-    marginTop: 20,
-  },
-  demoScanText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: 'bold',
   },
   instructionText: {
     fontSize: 16,
@@ -437,16 +341,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
   },
-  bottomIndicator: {
-    alignItems: 'center',
-    paddingBottom: 20,
-  },
-  homeIndicator: {
-    width: 40,
-    height: 4,
-    backgroundColor: '#C0C0C0',
-    borderRadius: 2,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -460,15 +354,35 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 40,
   },
   errorText: {
-    fontSize: 16,
+    fontSize: 18,
     color: '#FF6B6B',
+    marginBottom: 10,
+    fontWeight: 'bold',
+  },
+  errorSubText: {
+    fontSize: 14,
+    color: '#666',
     marginBottom: 20,
+    textAlign: 'center',
+  },
+  settingsButton: {
+    backgroundColor: '#4A90E2',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  settingsButtonText: {
+    fontSize: 16,
+    color: '#fff',
+    fontWeight: 'bold',
   },
   backButtonText: {
     fontSize: 16,
     color: '#4A90E2',
     fontWeight: 'bold',
   },
-})
+});

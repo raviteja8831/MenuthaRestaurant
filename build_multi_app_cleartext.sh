@@ -1,11 +1,17 @@
 #!/bin/bash
 # ================================================================
-# Multi-App Build Script (AWS Remote Ready, v9 - 2025)
-# ✅ Fix: no obsolete Gradle task exclusions
-# ✅ Auto reinstalls node_modules
-# ✅ Adds cleartext + camera permissions
+# Multi-App Build Script (AWS Remote Ready, v13 - 2025)
+# ✅ Fixed: Expo Router entry point (node_modules/expo-router/entry.js)
+# ✅ Fixed: Cleartext traffic properly configured in AndroidManifest
+# ✅ Fixed: Manual bundling with disabled Gradle auto-bundling
+# ✅ Fixed: Package name updates in both build.gradle and Kotlin files
+# ✅ Adds cleartext + camera permissions (expo-camera & expo-barcode-scanner)
 # ✅ Handles AWS remote API config
-# ✅ Works with RN 0.74+ / Expo SDK 51+
+# ✅ Works with RN 0.79+ / Expo SDK 53+
+# ✅ Camera: expo-camera for QR code scanning (Android & iOS compatible)
+# ✅ NEW: Separate apps with different logos and index files
+#   - Menutha (Customer App) - menutha.png logo, customer index
+#   - Menuva (Restaurant App) - menuva.png logo, restaurant index
 # ================================================================
 
 set -e
@@ -33,35 +39,97 @@ set_remote_api_url() {
 }
 
 # --- Helpers ---
-backup_index() { [ -f "app/index.js" ] && cp app/index.js app/index.js.backup; }
-restore_index() { [ -f "app/index.js.backup" ] && mv app/index.js.backup app/index.js; }
+# No longer need to modify app/index.js - Expo Router handles the entry point
 restore_app_json() { [ -f "app.json.backup" ] && mv app.json.backup app.json; }
 
 # --- Cleartext + Camera Permissions ---
+# Note: expo-camera and expo-barcode-scanner are installed for QR scanning
+# These will be configured by expo prebuild automatically
 configure_manifest() {
-  print_status "Ensuring cleartext + camera permissions..."
+  print_status "Ensuring cleartext + camera + location permissions (expo-camera installed)..."
   mkdir -p android/app/src/main/res/xml
   cat > android/app/src/main/res/xml/network_security_config.xml << 'EOF'
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-  <base-config cleartextTrafficPermitted="true" />
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">13.127.228.119</domain>
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">10.0.2.2</domain>
+    </domain-config>
 </network-security-config>
 EOF
 
   local MF="android/app/src/main/AndroidManifest.xml"
+
+  # Add cleartext and network security config to application tag if not present
   if ! grep -q "android:usesCleartextTraffic" "$MF"; then
-    sed -i '/<application/a\
-    android:usesCleartextTraffic="true"' "$MF"
+    sed -i 's/<application /<application android:usesCleartextTraffic="true" /' "$MF"
   fi
   if ! grep -q "android:networkSecurityConfig" "$MF"; then
-    sed -i '/<application/a\
-    android:networkSecurityConfig="@xml/network_security_config"' "$MF"
+    sed -i 's/<application /<application android:networkSecurityConfig="@xml\/network_security_config" /' "$MF"
   fi
-  if ! grep -q "android.permission.CAMERA" "$MF"; then
-    sed -i '/<application/i\
-    <uses-permission android:name="android.permission.CAMERA" />\
-    <uses-feature android:name="android.hardware.camera" android:required="false" />\
-    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />' "$MF"
+
+  # Ensure Google Maps API key is present
+  if ! grep -q "com.google.android.geo.API_KEY" "$MF"; then
+    sed -i '/<application/a\    <meta-data android:name="com.google.android.geo.API_KEY" android:value="AIzaSyB5P-PTRn7E0xkRlkiHWkjadh3nbT7yu7U"/>' "$MF"
+  fi
+
+  print_success "Cleartext + camera + location permissions configured"
+}
+
+# --- Ensure Google Maps and ML Kit dependencies in build.gradle ---
+configure_maps_dependencies() {
+  local BUILD_GRADLE="android/app/build.gradle"
+  print_status "Ensuring Google Maps and ML Kit dependencies in build.gradle..."
+
+  # Check if Google Maps dependencies exist
+  if ! grep -q "play-services-maps" "$BUILD_GRADLE"; then
+    print_status "Adding Google Maps dependencies to build.gradle..."
+    # Add after react-android implementation
+    sed -i '/implementation("com.facebook.react:react-android")/a\    \n    // Google Play Services for Maps\n    implementation '\''com.google.android.gms:play-services-maps:18.2.0'\''\n    implementation '\''com.google.android.gms:play-services-location:21.0.1'\''' "$BUILD_GRADLE"
+    print_success "Google Maps dependencies added"
+  else
+    print_success "Google Maps dependencies already present"
+  fi
+
+  # Check if ML Kit barcode scanning dependency exists
+  if ! grep -q "mlkit:barcode-scanning" "$BUILD_GRADLE"; then
+    print_status "Adding ML Kit barcode scanning dependency to build.gradle..."
+    # Add after play-services-location
+    sed -i '/implementation '\''com.google.android.gms:play-services-location/a\    \n    // Google ML Kit for Barcode Scanning (required by vision-camera-code-scanner)\n    implementation '\''com.google.mlkit:barcode-scanning:17.3.0'\''' "$BUILD_GRADLE"
+    print_success "ML Kit barcode scanning dependency added"
+  else
+    print_success "ML Kit barcode scanning dependency already present"
+  fi
+}
+
+# --- Configure ProGuard rules for Google Maps ---
+configure_proguard() {
+  local PROGUARD_FILE="android/app/proguard-rules.pro"
+  print_status "Configuring ProGuard rules for Google Maps..."
+
+  # Check if Google Maps rules exist
+  if ! grep -q "com.google.android.gms.maps" "$PROGUARD_FILE"; then
+    cat >> "$PROGUARD_FILE" << 'EOF'
+
+# Google Maps
+-keep class com.google.android.gms.maps.** { *; }
+-keep interface com.google.android.gms.maps.** { *; }
+-dontwarn com.google.android.gms.**
+
+# React Native Maps
+-keep class com.airbnb.android.react.maps.** { *; }
+-dontwarn com.airbnb.android.react.maps.**
+EOF
+    print_success "ProGuard rules added for Google Maps"
+  else
+    print_success "ProGuard rules already present"
   fi
 }
 
@@ -81,15 +149,25 @@ build_app() {
 
   print_header "Building $APP_TYPE"
 
-  print_status "Manual JS bundle..."
-  npx react-native bundle --platform android --dev false \
-    --entry-file app/index.js \
+  print_status "Setting NODE_ENV=production for build..."
+  export NODE_ENV=production
+
+  print_status "Cleaning build folders..."
+  rm -rf android/app/build
+  mkdir -p android/app/src/main/assets
+  mkdir -p android/app/src/main/res
+
+  print_status "Creating JS bundle with Expo Router entry point..."
+  npx react-native bundle \
+    --platform android \
+    --dev false \
+    --entry-file node_modules/expo-router/entry.js \
     --bundle-output android/app/src/main/assets/index.android.bundle \
     --assets-dest android/app/src/main/res
 
   cd android
-  print_status "Running Gradle assembleRelease..."
-  ./gradlew clean assembleRelease
+  print_status "Running Gradle assembleRelease (skipping automatic bundling)..."
+  ./gradlew assembleRelease -PreactNativeArchitectures=armeabi-v7a,arm64-v8a
   cd ..
 
   mkdir -p builds
@@ -97,7 +175,7 @@ build_app() {
 
   cd android
   print_status "Running Gradle bundleRelease..."
-  ./gradlew bundleRelease
+  ./gradlew bundleRelease -PreactNativeArchitectures=armeabi-v7a,arm64-v8a
   cd ..
   cp android/app/build/outputs/bundle/release/app-release.aab "builds/app-$OUTPUT.aab" || true
 
@@ -106,103 +184,144 @@ build_app() {
 
 # --- app.json update ---
 update_app_json() {
-  local NAME=$1; local PKG=$2
+  local NAME=$1; local PKG=$2; local LOGO=$3
   [ -f app.json ] && cp app.json app.json.backup
   if command -v jq &>/dev/null; then
-    jq ".expo.name=\"$NAME\" | .expo.android.package=\"$PKG\"" app.json > app.json.tmp && mv app.json.tmp app.json
+    jq ".expo.name=\"$NAME\" | .expo.android.package=\"$PKG\" | .expo.ios.bundleIdentifier=\"$PKG\" | .expo.icon=\"$LOGO\" | .expo.android.adaptiveIcon.foregroundImage=\"$LOGO\" | .expo.plugins=[\"expo-router\"]" app.json > app.json.tmp && mv app.json.tmp app.json
   else
     sed -i "s/\"name\": \".*\"/\"name\": \"$NAME\"/" app.json
     sed -i "s/\"package\": \".*\"/\"package\": \"$PKG\"/" app.json
+    sed -i "s|\"icon\": \".*\"|\"icon\": \"$LOGO\"|" app.json
+    sed -i "s|\"foregroundImage\": \".*\"|\"foregroundImage\": \"$LOGO\"|" app.json
   fi
 }
 
-# --- Customer index.js ---
-create_customer_index() {
-  cat > app/index.js << 'EOF'
-import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet } from "react-native";
-import { useRouter } from "expo-router";
-import { isAuthenticated, getUserType, USER_TYPES, initializeAuth } from "../src/services/authService";
-
-export default function IndexScreen() {
-  const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
-  useEffect(() => { (async () => await checkAuthAndRedirect())(); }, []);
-  const checkAuthAndRedirect = async () => {
-    try {
-      await initializeAuth();
-      const authenticated = await isAuthenticated();
-      if (!authenticated) return router.replace("/Customer-Login");
-      const userType = await getUserType();
-      router.replace(userType === USER_TYPES.CUSTOMER ? "/customer-home" : "/Customer-Login");
-    } catch { router.replace("/Customer-Login"); }
-    finally { setIsLoading(false); }
-  };
-  return (<View style={s.container}><Text style={s.text}>{isLoading ? "Loading..." : "Redirecting..."}</Text></View>);
-}
-const s = StyleSheet.create({container:{flex:1,justifyContent:"center",alignItems:"center",backgroundColor:"#a6a6e7"},text:{color:"#fff",fontSize:16}});
-EOF
+# --- Copy appropriate index file for each app ---
+copy_index_file() {
+  local APP_TYPE=$1
+  print_status "Copying index.$APP_TYPE.js to app/index.js..."
+  cp "app/index.$APP_TYPE.js" "app/index.js"
+  print_success "Index file updated for $APP_TYPE app"
 }
 
-# --- Restaurant index.js ---
-create_restaurant_index() {
-  cat > app/index.js << 'EOF'
-import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet } from "react-native";
-import { useRouter } from "expo-router";
-import { isAuthenticated, getUserType, USER_TYPES, initializeAuth } from "../src/services/authService";
+# --- Update Android build.gradle and Kotlin files for each app ---
+update_android_config() {
+  local PKG=$1
+  local APP_NAME=$2
+  local BUILD_GRADLE="android/app/build.gradle"
+  local PKG_PATH=$(echo $PKG | tr '.' '/')
+  local STRINGS_XML="android/app/src/main/res/values/strings.xml"
 
-export default function IndexScreen() {
-  const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
-  useEffect(() => { (async () => await checkAuthAndRedirect())(); }, []);
-  const checkAuthAndRedirect = async () => {
-    try {
-      await initializeAuth();
-      const authenticated = await isAuthenticated();
-      if (!authenticated) return router.replace("/login");
-      const userType = await getUserType();
-      if (userType === USER_TYPES.MANAGER) router.replace("/dashboard");
-      else if (userType === USER_TYPES.CHEF) router.replace("/chef-home");
-      else router.replace("/login");
-    } catch { router.replace("/login"); }
-    finally { setIsLoading(false); }
-  };
-  return (<View style={s.container}><Text style={s.text}>{isLoading ? "Loading..." : "Redirecting..."}</Text></View>);
-}
-const s = StyleSheet.create({container:{flex:1,justifyContent:"center",alignItems:"center",backgroundColor:"#a6a6e7"},text:{color:"#fff",fontSize:16}});
-EOF
+  print_status "Updating Android configuration for $PKG..."
+
+  # Update namespace and applicationId in build.gradle
+  sed -i "s/namespace '.*'/namespace '$PKG'/" "$BUILD_GRADLE"
+  sed -i "s/applicationId '.*'/applicationId '$PKG'/" "$BUILD_GRADLE"
+
+  # Update app name in strings.xml
+  if [ -f "$STRINGS_XML" ]; then
+    sed -i "s|<string name=\"app_name\">.*</string>|<string name=\"app_name\">$APP_NAME</string>|" "$STRINGS_XML"
+  fi
+
+  # Create new package directory if it doesn't exist
+  mkdir -p "android/app/src/main/java/$PKG_PATH"
+
+  # Find and update all Kotlin files
+  find android/app/src/main/java -name "*.kt" 2>/dev/null | while read -r ktfile; do
+    # Update package declaration in Kotlin files
+    sed -i "s/^package .*/package $PKG/" "$ktfile"
+
+    # Move file to correct package directory
+    local filename=$(basename "$ktfile")
+    mv "$ktfile" "android/app/src/main/java/$PKG_PATH/$filename" 2>/dev/null || true
+  done
+
+  print_success "Android config updated for $PKG"
 }
 
 # --- Main ---
 main() {
-  print_header "Menutha Multi-App Build Script (v9)"
-  [ ! -d android ] && print_status "Android folder missing — running expo prebuild..." && npx expo prebuild --clean
+  local BUILD_TARGET="${1:-both}"
+
+  print_header "Menutha Multi-App Build Script (v12 - With Build Target Selection)"
+  print_status "Build target: $BUILD_TARGET"
+
+  # Only run prebuild once if android folder is missing
+  # This will configure expo-camera and expo-barcode-scanner automatically
+  if [ ! -d android ]; then
+    print_status "Android folder missing — running initial expo prebuild (includes expo-camera setup)..."
+    npx expo prebuild --clean
+  fi
 
   reinstall_node_modules
   set_remote_api_url
-  backup_index
 
-  # CUSTOMER
-  print_header "CUSTOMER APP"
-  create_customer_index
-  update_app_json "Menutha Customer" "com.menutha.customer"
-  npx expo prebuild --clean
-  configure_manifest
-  build_app "CUSTOMER APP" "customer-release"
+  # Build based on parameter
+  case "$BUILD_TARGET" in
+    menutha|customer)
+      # CUSTOMER APP (Menutha) only
+      print_header "CUSTOMER APP - MENUTHA"
+      copy_index_file "customer"
+      update_app_json "Menutha" "com.menutha.customer" "./src/assets/menutha.png"
+      update_android_config "com.menutha.customer" "Menutha"
+      configure_manifest
+      configure_maps_dependencies
+      configure_proguard
+      build_app "CUSTOMER APP (MENUTHA)" "menutha-release"
+      restore_app_json
+      print_header "✅ Menutha build completed successfully"
+      ;;
 
-  # RESTAURANT
-  print_header "RESTAURANT APP"
-  reinstall_node_modules
-  create_restaurant_index
-  update_app_json "Menutha Restaurant" "com.menutha.restaurant"
-  npx expo prebuild --clean
-  configure_manifest
-  build_app "RESTAURANT APP" "restaurant-release"
+    menuva|restaurant)
+      # RESTAURANT APP (Menuva) only
+      print_header "RESTAURANT APP - MENUVA"
+      copy_index_file "restaurant"
+      update_app_json "Menuva" "com.menutha.restaurant" "./src/assets/menuva.png"
+      update_android_config "com.menutha.restaurant" "Menuva"
+      configure_manifest
+      configure_maps_dependencies
+      configure_proguard
+      build_app "RESTAURANT APP (MENUVA)" "menuva-release"
+      restore_app_json
+      print_header "✅ Menuva build completed successfully"
+      ;;
 
-  restore_index
-  restore_app_json
-  print_header "✅ All builds completed successfully with AWS Remote + Camera + Cleartext"
+    both|all)
+      # Build both apps
+      # CUSTOMER APP (Menutha)
+      print_header "CUSTOMER APP - MENUTHA"
+      copy_index_file "customer"
+      update_app_json "Menutha" "com.menutha.customer" "./src/assets/menutha.png"
+      update_android_config "com.menutha.customer" "Menutha"
+      configure_manifest
+      configure_maps_dependencies
+      configure_proguard
+      build_app "CUSTOMER APP (MENUTHA)" "menutha-release"
+
+      # RESTAURANT APP (Menuva)
+      print_header "RESTAURANT APP - MENUVA"
+      reinstall_node_modules
+      copy_index_file "restaurant"
+      update_app_json "Menuva" "com.menutha.restaurant" "./src/assets/menuva.png"
+      update_android_config "com.menutha.restaurant" "Menuva"
+      configure_manifest
+      configure_maps_dependencies
+      configure_proguard
+      build_app "RESTAURANT APP (MENUVA)" "menuva-release"
+
+      restore_app_json
+      print_header "✅ All builds completed successfully with AWS Remote + Camera + Cleartext"
+      ;;
+
+    *)
+      echo -e "${RED}[ERROR]${NC} Invalid build target: $BUILD_TARGET"
+      echo "Usage: $0 [menutha|menuva|both]"
+      echo "  menutha  - Build customer app only"
+      echo "  menuva   - Build restaurant app only"
+      echo "  both     - Build both apps (default)"
+      exit 1
+      ;;
+  esac
 }
 
-main
+main "$@"

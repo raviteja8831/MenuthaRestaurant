@@ -7,9 +7,12 @@ import { LoaderProvider } from '../src/components/LoaderContext';
 import Loader from '../src/components/Loader';
 import { AlertProvider } from '../src/contexts/AlertContext';
 
+// Prevent the splash screen from auto-hiding before asset loading is complete.
+SplashScreen.preventAutoHideAsync();
+
 export default function RootLayout() {
   useEffect(() => {
-    console.log('ROOT LAYOUT: mounted, attempting to hide splash (debug)');
+    console.log('ROOT LAYOUT: mounted, hiding splash immediately');
 
     // Install a global error handler so release JS errors are visible in native logs
     try {
@@ -28,21 +31,10 @@ export default function RootLayout() {
       console.warn('Failed to install global error handlers', e);
     }
 
-    // Try to hide the splash screen safely. Some modules call preventAutoHideAsync()
-    // — if hideAsync fails immediately we retry a couple of times with delays.
-    const tryHide = async (attempt = 1) => {
-      try {
-        await SplashScreen.hideAsync();
-        console.log('Splash hidden successfully');
-      } catch (e) {
-        console.warn(`hideAsync attempt ${attempt} failed`, e);
-        if (attempt < 3) {
-          setTimeout(() => tryHide(attempt + 1), 500 * attempt);
-        }
-      }
-    };
-
-    tryHide();
+    // Hide the splash screen immediately to show our custom loader
+    SplashScreen.hideAsync().catch(e => {
+      console.warn('Failed to hide splash screen', e);
+    });
   }, []);
 
   return (

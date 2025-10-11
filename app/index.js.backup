@@ -1,0 +1,24 @@
+import React, { useEffect, useState } from "react";
+import { View, Text, StyleSheet } from "react-native";
+import { useRouter } from "expo-router";
+import { isAuthenticated, getUserType, USER_TYPES, initializeAuth } from "../src/services/authService";
+
+export default function IndexScreen() {
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+  useEffect(() => { (async () => await checkAuthAndRedirect())(); }, []);
+  const checkAuthAndRedirect = async () => {
+    try {
+      await initializeAuth();
+      const authenticated = await isAuthenticated();
+      if (!authenticated) return router.replace("/login");
+      const userType = await getUserType();
+      if (userType === USER_TYPES.MANAGER) router.replace("/dashboard");
+      else if (userType === USER_TYPES.CHEF) router.replace("/chef-home");
+      else router.replace("/login");
+    } catch { router.replace("/login"); }
+    finally { setIsLoading(false); }
+  };
+  return (<View style={s.container}><Text style={s.text}>{isLoading ? "Loading..." : "Redirecting..."}</Text></View>);
+}
+const s = StyleSheet.create({container:{flex:1,justifyContent:"center",alignItems:"center",backgroundColor:"#a6a6e7"},text:{color:"#fff",fontSize:16}});

@@ -4,7 +4,7 @@
     "slug": "ft",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./src/assets/images/logo.png",
+    "icon": "./src/assets/menutha.png",
     "scheme": "ft",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": false,
@@ -12,11 +12,15 @@
       "supportsTablet": true,
       "config": {
         "googleMapsApiKey": "AIzaSyB5P-PTRn7E0xkRlkiHWkjadh3nbT7yu7U"
+      },
+      "bundleIdentifier": "com.menutha.customer",
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app needs access to the camera to scan QR codes for table orders."
       }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./src/assets/images/logo.png",
+        "foregroundImage": "./src/assets/menutha.png",
         "backgroundColor": "#ffffff"
       },
       "config": {
@@ -25,15 +29,23 @@
         }
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.menutha.org",
-      "usesCleartextTraffic": true
+      "package": "com.menutha.customer",
+      "usesCleartextTraffic": true,
+      "permissions": [
+        "CAMERA",
+        "INTERNET",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
     },
     "web": {
       "bundler": "metro",
       "output": "static",
       "favicon": "./src/assets/favicon.png"
     },
-    "plugins": ["expo-router", "expo-maps"],
+    "plugins": [
+      "expo-router"
+    ],
     "experiments": {
       "typedRoutes": true
     },
