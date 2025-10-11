@@ -148,24 +148,6 @@ export default function ItemsListScreen() {
   // ✅ MUST call all hooks before any conditional returns
   const { userId, error } = useUserData();
 
-  // Show loading state while userId is being fetched
-  if (!userId && !error) {
-    return (
-      <View style={[orderitemsstyle.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <Text>Loading...</Text>
-      </View>
-    );
-  }
-
-  // Show error state if user data failed to load
-  if (error) {
-    return (
-      <View style={[orderitemsstyle.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <Text>Error loading user data. Please try again.</Text>
-      </View>
-    );
-  }
-
   var itemfirstcalling = false;
   // useEffect(() => {
   //   const initializeProfile = async () => {
@@ -519,6 +501,30 @@ export default function ItemsListScreen() {
     }
     router.push(obj);
   };
+
+  // Show loading state while userId is being fetched
+  if (!userId && !error) {
+    return (
+      <LinearGradient
+        colors={['#C4B5FD', '#A78BFA']}
+        style={[orderitemsstyle.container, { justifyContent: 'center', alignItems: 'center' }]}
+      >
+        <Text style={{ fontSize: 18, color: '#333' }}>Loading...</Text>
+      </LinearGradient>
+    );
+  }
+
+  // Show error state if user data failed to load
+  if (error) {
+    return (
+      <LinearGradient
+        colors={['#C4B5FD', '#A78BFA']}
+        style={[orderitemsstyle.container, { justifyContent: 'center', alignItems: 'center' }]}
+      >
+        <Text style={{ fontSize: 18, color: '#333' }}>Error loading user data. Please try again.</Text>
+      </LinearGradient>
+    );
+  }
 
   // Show loading indicator
   if (loading && items.length === 0) {

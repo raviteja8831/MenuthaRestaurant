@@ -411,17 +411,22 @@ const CustomerHomeScreen = () => {
     const minLng = Math.min(...allLongitudes);
     const maxLng = Math.max(...allLongitudes);
 
-    const latDelta = (maxLat - minLat) * 1.8; // Add padding
-    const lngDelta = (maxLng - minLng) * 1.8;
+    // Calculate center point (midpoint between min and max)
+    const centerLat = (minLat + maxLat) / 2;
+    const centerLng = (minLng + maxLng) / 2;
+
+    // Calculate deltas with proper padding to show all markers
+    const latDelta = Math.max((maxLat - minLat) * 2.0, 0.05);
+    const lngDelta = Math.max((maxLng - minLng) * 2.0, 0.05);
 
     const region = {
-      latitude: userLocation.latitude, // Center on user, not midpoint
-      longitude: userLocation.longitude,
-      latitudeDelta: Math.max(latDelta, 0.05),
-      longitudeDelta: Math.max(lngDelta, 0.05),
+      latitude: centerLat, // Center on midpoint to show all markers
+      longitude: centerLng,
+      latitudeDelta: latDelta,
+      longitudeDelta: lngDelta,
     };
     setMapRegion(region);
-    console.log('🗺️ Updated map region centered on user with restaurants:', region);
+    console.log('🗺️ Updated map region centered on midpoint with all markers visible:', region);
   }, [userLocation, filteredRestaurants]);
 
   // Debug: log restaurants and filteredRestaurants after data load
@@ -529,6 +534,14 @@ const CustomerHomeScreen = () => {
     }
   }
 
+  // Define currentRegion first for web
+  const currentRegion = mapRegion || {
+    latitude: userLocation?.latitude || 17.4375,
+    longitude: userLocation?.longitude || 78.4456,
+    latitudeDelta: 0.0922,
+    longitudeDelta: 0.0421,
+  };
+
   if (Platform.OS === "web") {
     if (!isLoaded) {
       mapContent = <Text>Loading map...</Text>;
@@ -561,30 +574,32 @@ const CustomerHomeScreen = () => {
           }}
         >
           {/* User marker */}
-          <Marker
-            position={{
-              lat: userLocation.latitude,
-              lng: userLocation.longitude,
-            }}
-            label={"You"}
-            icon={{
-              url: `data:image/svg+xml,${encodeURIComponent(`
-                <svg width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="24" cy="24" r="22" fill="#fff" stroke="#6B4EFF" stroke-width="2"/>
-                  <circle cx="24" cy="20" r="10" fill="#6B4EFF"/>
-                  <ellipse cx="24" cy="36" rx="12" ry="5" fill="#E0E7FF"/>
-                  <text x="24" y="25" text-anchor="middle" fill="#fff" font-family="Arial, sans-serif" font-size="13" font-weight="bold">You</text>
-                </svg>
-              `)}`,
-              scaledSize: new window.google.maps.Size(48, 48),
-              anchor: new window.google.maps.Point(24, 24),
-            }}
-          />
+          {userLocation && (
+            <Marker
+              position={{
+                lat: userLocation.latitude,
+                lng: userLocation.longitude,
+              }}
+              label={"You"}
+              icon={{
+                url: `data:image/svg+xml,${encodeURIComponent(`
+                  <svg width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="24" cy="24" r="22" fill="#fff" stroke="#6B4EFF" stroke-width="2"/>
+                    <circle cx="24" cy="20" r="10" fill="#6B4EFF"/>
+                    <ellipse cx="24" cy="36" rx="12" ry="5" fill="#E0E7FF"/>
+                    <text x="24" y="25" text-anchor="middle" fill="#fff" font-family="Arial, sans-serif" font-size="13" font-weight="bold">You</text>
+                  </svg>
+                `)}`,
+                scaledSize: new window.google.maps.Size(48, 48),
+                anchor: new window.google.maps.Point(24, 24),
+              }}
+            />
+          )}
           {/* Dynamic perimeter/circle */}
           <Circle
             center={{
-              lat: (centerForCircle && centerForCircle.latitude) || userLocation.latitude,
-              lng: (centerForCircle && centerForCircle.longitude) || userLocation.longitude,
+              lat: centerForCircle.latitude,
+              lng: centerForCircle.longitude,
             }}
             radius={radiusMeters}
             options={{
@@ -652,13 +667,7 @@ const CustomerHomeScreen = () => {
     }
   } else {
   // Use expo-maps directly on native platforms (Android/iOS); web uses @react-google-maps/api
-    const currentRegion = mapRegion || {
-      latitude: userLocation?.latitude || 17.4375,
-      longitude: userLocation?.longitude || 78.4456,
-      latitudeDelta: 0.0922,
-      longitudeDelta: 0.0421,
-    };
-
+    // currentRegion is already defined above
     // Use react-native-maps statically imported for native platforms
     const DynMapView = MapView;
     const DynMarker = RNMarker;

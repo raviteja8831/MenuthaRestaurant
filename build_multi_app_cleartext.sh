@@ -152,8 +152,14 @@ build_app() {
   print_status "Setting NODE_ENV=production for build..."
   export NODE_ENV=production
 
-  print_status "Cleaning build folders..."
+  print_status "Cleaning build folders and bundled resources..."
   rm -rf android/app/build
+  rm -rf android/app/src/main/assets/*
+  # Clean only drawable-* and raw folders to prevent duplicate bundled resources
+  # Keep mipmap-* folders as they contain app icons
+  # Keep ic_launcher* files in drawable folders as they may be referenced
+  find android/app/src/main/res/drawable-* -type f ! -name 'ic_launcher*' -delete 2>/dev/null || true
+  find android/app/src/main/res/raw -type f -delete 2>/dev/null || true
   mkdir -p android/app/src/main/assets
   mkdir -p android/app/src/main/res
 
