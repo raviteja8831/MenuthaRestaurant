@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useRouter } from "expo-router";
 import { isAuthenticated, getUserType, USER_TYPES, initializeAuth } from "../src/services/authService";
 import AnimatedSplashScreen from "../src/components/AnimatedSplashScreen";
@@ -9,18 +9,7 @@ export default function IndexScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
-  useEffect(() => {
-    // Don't start auth check until splash screen is done
-    if (!showSplash) {
-      (async () => await checkAuthAndRedirect())();
-    }
-  }, [showSplash]);
-
-  const handleSplashComplete = () => {
-    setShowSplash(false);
-  };
-
-  const checkAuthAndRedirect = async () => {
+  const checkAuthAndRedirect = useCallback(async () => {
     try {
       await initializeAuth();
       const authenticated = await isAuthenticated();
@@ -44,6 +33,17 @@ export default function IndexScreen() {
     } finally {
       setIsLoading(false);
     }
+  }, [router, setIsLoading]);
+
+  useEffect(() => {
+    // Don't start auth check until splash screen is done
+    if (!showSplash) {
+      checkAuthAndRedirect();
+    }
+  }, [showSplash, checkAuthAndRedirect]);
+
+  const handleSplashComplete = () => {
+    setShowSplash(false);
   };
 
   // Show animated splash screen first
