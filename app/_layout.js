@@ -1,5 +1,6 @@
 
 import { Stack } from 'expo-router';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import * as SplashScreen from 'expo-splash-screen';
@@ -38,23 +39,25 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <AlertProvider>
-      <LoaderProvider>
-        <StatusBar style="auto" />
-        <Loader />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-          }}
-        >
-          <Stack.Screen name="index" />
-          <Stack.Screen name="Customer-Login" />
-          <Stack.Screen name="chef-login" />
-          <Stack.Screen name="customer-home" />
-          <Stack.Screen name="chef-home" />
-          <Stack.Screen name="dashboard" />
-        </Stack>
-      </LoaderProvider>
-    </AlertProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AlertProvider>
+        <LoaderProvider>
+          <StatusBar style="auto" />
+          <Loader />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+            }}
+          >
+            <Stack.Screen name="index" />
+            <Stack.Screen name="Customer-Login" />
+            <Stack.Screen name="chef-login" />
+            <Stack.Screen name="customer-home" />
+            <Stack.Screen name="chef-home" />
+            <Stack.Screen name="dashboard" />
+          </Stack>
+        </LoaderProvider>
+      </AlertProvider>
+    </GestureHandlerRootView>
   );
 }
