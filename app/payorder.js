@@ -18,6 +18,7 @@ import {
   deleteOrder,
   // updateOrderStatus, (unused)
 } from "../src/api/orderApi";
+import { updateOrderStatus } from "../src/api/orderApi";
 // import { addReview } from "./api/reviewsApi"; (unused)
 import CommentModal from "../src/Modals/CommentModal";
 import { useUserData } from "../src/services/getUserData";
@@ -152,8 +153,43 @@ export default function OrderSummaryScreen() {
     });
     if (response && response.url) {
       setUpiUrl(response.url);
+      // Opened UPI app; ask user to confirm once payment completes
+      AlertService.info("UPI Payment initiated. After completing payment in your UPI app, press 'Complete Payment (Test)'.");
+    } else if (response && response.status === 'failed') {
+      AlertService.error('Failed to initiate UPI payment. Please install a UPI app.');
+    } else if (response && response.status === 'error') {
+      AlertService.error('Error initiating UPI payment. Please try again.');
     }
     console.log("UPI Payment Result:", response);
+  };
+
+  // Simulate or handle payment completion: call server to mark order completed
+  const handlePaymentComplete = async () => {
+    if (!params.orderID) {
+      AlertService.error("No order ID available to complete payment.");
+      return;
+    }
+    try {
+      setLoading(true);
+      // Build updatedItems payload expected by server: { id: orderProductId, quantity }
+      const updatedItems = orderItems.map((it) => ({ id: it.id, quantity: it.quantity }));
+      const removedItems = []; // you can collect items with quantity 0 if needed
+      const payload = {
+        totalAmount: totalAmount,
+        updatedItems,
+        removedItems,
+      };
+      const res = await updateOrderStatus(params.orderID, payload);
+      console.log("Order update response:", res);
+      AlertService.success("Payment recorded and order completed.");
+      // After successful payment, navigate back to menu list
+      router.push({ pathname: "/menu-list", params: { restaurantId: params.restaurantId || "", ishotel: params.ishotel } });
+    } catch (err) {
+      console.error("Failed to complete payment:", err);
+      AlertService.error("Failed to complete payment. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // const handleQuantityChange = async (itemId, change) => {}; (unused)
@@ -273,6 +309,18 @@ export default function OrderSummaryScreen() {
             <ActivityIndicator color="#fff" />
           ) : (
             <Text style={styles.payText}>Submit & Pay</Text>
+          )}
+        </Pressable>
+
+        <Pressable
+          style={[styles.payButton, { marginTop: 12, backgroundColor: '#28a745' }]}
+          onPress={handlePaymentComplete}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.payText}>Complete Payment (Test)</Text>
           )}
         </Pressable>
 

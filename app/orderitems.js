@@ -206,7 +206,7 @@ export default function ItemsListScreen() {
       // Combine menu items with order data
       const combinedItems = menuItems.map((item) => ({
         ...item,
-        selected: orderItems[item.id],
+        selected: !!orderItems[item.id], // normalize to boolean
         quantity: orderItems[item.id]?.quantity || 0,
         comments: orderItems[item.id]?.comments || "",
         orderItemId: orderItems[item.id]?.id || null,
@@ -221,6 +221,15 @@ export default function ItemsListScreen() {
     } finally {
       if (isMounted.current) setLoading(false);
     }
+  };
+
+  // Helper to add item to remove_list without duplicates
+  const addToRemoveList = (item) => {
+    const id = item.orderItemId || item.id;
+    setRemoveList((prev) => {
+      if (prev.some((r) => (r.orderItemId || r.id) === id)) return prev;
+      return [...prev, { orderItemId: item.orderItemId || item.id }];
+    });
   };
   const getMenu = async () => {
     try {
@@ -239,14 +248,32 @@ export default function ItemsListScreen() {
   };
 
   const createOrder_data = async () => {
+    // basic validation
+    if (!userId) {
+      AlertService.error("Please login to place an order");
+      router.push({ pathname: "/customer-login" });
+      return;
+    }
+    if (!params.restaurantId) {
+      AlertService.error("Restaurant not specified");
+      return;
+    }
+    // Sanitize order items to only include fields server expects
+    const sanitizedOrderItems = (selectedItems || []).map((it) => ({
+      id: it.id, // menu item id for new items
+      quantity: it.quantity,
+      comments: it.comments || "",
+      orderItemId: it.orderItemId || null, // present when updating existing order products
+    }));
+
     const order = {
       userId: userId,
       restaurantId: params.restaurantId,
       total: totalCost,
       tableId: params.tableId,
-      orderItems: selectedItems || [],
+      orderItems: sanitizedOrderItems,
       orderID: params.orderID || null,
-      removedItems: remove_list,
+      removedItems: remove_list.map((r) => ({ orderItemId: r.orderItemId || r.id })),
     };
     // console.log("items", order);
     try {
@@ -271,10 +298,11 @@ export default function ItemsListScreen() {
     // }
   };
   const deleteOrder_items = async () => {
+    // Only send minimal removed item identifiers
     const order = {
       userId: userId,
       restaurantId: params.restaurantId,
-      removedItems: remove_list,
+      removedItems: remove_list.map((r) => ({ orderItemId: r.orderItemId || r.id })),
       orderID: params.orderID || null,
     };
     // console.log("items", order);
@@ -296,12 +324,12 @@ export default function ItemsListScreen() {
       const updatedItems = prevData.map((item) => {
         if (item.id === itemId) {
           if (item.selected) {
-            // If item is being unselected, add it to remove_list
-            setRemoveList((prev) => [...prev, item]);
+            // If item is being unselected, add it to remove_list (deduped)
+            addToRemoveList(item);
           } else {
             // If item is being selected, remove it from remove_list if it exists
             setRemoveList((prev) =>
-              prev.filter((removedItem) => removedItem.id !== item.id)
+              prev.filter((removedItem) => (removedItem.orderItemId || removedItem.id) !== (item.orderItemId || item.id))
             );
           }
 
@@ -379,10 +407,10 @@ export default function ItemsListScreen() {
 
           // Handle remove_list updates
           if (newQuantity === 0 && item.orderItemId) {
-            setRemoveList((prev) => [...prev, item]);
+            addToRemoveList(item);
           } else if (newQuantity > 0) {
             setRemoveList((prev) =>
-              prev.filter((removedItem) => removedItem.id !== item.id)
+              prev.filter((removedItem) => (removedItem.orderItemId || removedItem.id) !== (item.orderItemId || item.id))
             );
           }
 

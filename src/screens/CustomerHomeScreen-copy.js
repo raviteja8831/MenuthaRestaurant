@@ -22,9 +22,12 @@ import { useRouter } from "expo-router";
 import * as Location from "expo-location";
 import { useMemo } from "react";
 import Constants from 'expo-constants';
+// Web/react-native-web support disabled for now. Keep dynamic loader commented.
+/*
 // NOTE: we dynamically load the web Google Maps components at runtime
 // so they are not bundled into native builds. For native platforms
 // we load `expo-maps` on Android and `react-native-maps` on iOS below.
+*/
 import { getAllRestaurants } from "../api/restaurantApi";
 // import { use } from "react";
 
@@ -64,10 +67,8 @@ function CustomerHomeScreen() {
   const [restaurants, setRestaurants] = useState([]);
 
 
-  // Web: dynamic loader for react-native-maps to avoid bundling @react-google-maps
-  // on web we prefer `react-native-maps` (works with react-native-web) and also
-  // when running inside Expo Go (Constants.appOwnership === 'expo') we cannot
-  // rely on native `expo-maps` so we load `react-native-maps` instead.
+  // Web support disabled: dynamic web loader commented out
+  /*
   const [webLoaded, setWebLoaded] = React.useState(Platform.OS !== "web");
   const [WebComponents, setWebComponents] = React.useState(null);
   useEffect(() => {
@@ -88,6 +89,7 @@ function CustomerHomeScreen() {
       })();
     }
   }, []);
+  */
   // Navigation button handler (must be after filteredRestaurants is defined)
   const handleNavigationPress = () => {
     if (!filteredRestaurants.length) {

@@ -1,13 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { View, StyleSheet, ActivityIndicator, Pressable, Text, Platform } from "react-native";
 import * as Location from "expo-location";
-
-// let MapView, Marker;
-// if (Platform.OS !== 'web') {
-//   const Maps = require('react-native-maps');
-//   MapView = Maps.default;
-//   Marker = Maps.Marker;
-// }
+import MapView, { Marker } from 'react-native-maps';
 
 // Mock restaurant data
 const mockRestaurants = [
@@ -65,34 +59,29 @@ export default function MapScreen({ navigation }) {
   return (
     <View style={styles.container}>
       {Platform.OS !== 'web' ? (
-        // Only render MapView on native platforms
-        // <MapView
-        //   style={styles.map}
-        //   initialRegion={{
-        //     latitude: location.coords.latitude,
-        //     longitude: location.coords.longitude,
-        //     latitudeDelta: 0.01,
-        //     longitudeDelta: 0.01,
-        //   }}
-        //   showsUserLocation={true}
-        // >
-        //   {mockRestaurants.map((restaurant) => (
-        //     <Marker
-        //       key={restaurant.id}
-        //       coordinate={{
-        //         latitude: restaurant.latitude,
-        //         longitude: restaurant.longitude,
-        //       }}
-        //       title={restaurant.name}
-        //       onPress={() => navigation.navigate('RestaurantDetailScreen', { id: restaurant.id })}
-        //     />
-        //   ))}
-        // </MapView>
-              <View style={[styles.map, { justifyContent: 'center', alignItems: 'center' }]}> 
-          <Text>Map is not supported on web. Please use mobile app.</Text>
-        </View>
+        <MapView
+          style={styles.map}
+          initialRegion={{
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+            latitudeDelta: 0.01,
+            longitudeDelta: 0.01,
+          }}
+          showsUserLocation={true}
+        >
+          {mockRestaurants.map((restaurant) => (
+            <Marker
+              key={restaurant.id}
+              coordinate={{
+                latitude: restaurant.latitude,
+                longitude: restaurant.longitude,
+              }}
+              title={restaurant.name}
+              onPress={() => navigation.navigate('RestaurantDetailScreen', { id: restaurant.id })}
+            />
+          ))}
+        </MapView>
       ) : (
-        // Fallback for web
         <View style={[styles.map, { justifyContent: 'center', alignItems: 'center' }]}> 
           <Text>Map is not supported on web. Please use mobile app.</Text>
         </View>
