@@ -143,16 +143,29 @@ export default function ItemsListScreen() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [comment, setComment] = useState("");
   const [items, setItems] = useState([]);
-  const { userId, error } = useUserData();
   const [menuData, setMenuData] = useState({});
 
+  // ✅ MUST call all hooks before any conditional returns
+  const { userId, error } = useUserData();
+
+  // Show loading state while userId is being fetched
+  if (!userId && !error) {
+    return (
+      <View style={[orderitemsstyle.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <Text>Loading...</Text>
+      </View>
+    );
+  }
+
+  // Show error state if user data failed to load
   if (error) {
     return (
-      <View style={[styles.container, styles.centerContent]}>
+      <View style={[orderitemsstyle.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <Text>Error loading user data. Please try again.</Text>
       </View>
     );
   }
+
   var itemfirstcalling = false;
   // useEffect(() => {
   //   const initializeProfile = async () => {
@@ -179,7 +192,12 @@ export default function ItemsListScreen() {
   //   initializeProfile();
   // }, []);
   useEffect(() => {
-    // Defensive: only initialize if category param is present
+    // Defensive: only initialize if we have userId and required params
+    if (!userId) {
+      console.log('orderitems: waiting for userId...');
+      return;
+    }
+
     if (!params || !params.category) {
       console.warn('orderitems: missing params.category, redirecting to menu-list');
       // don't attempt to fetch; navigate back to menu-list after a tick
@@ -192,26 +210,42 @@ export default function ItemsListScreen() {
       }, 50);
       return;
     }
+
+    console.log('orderitems: initializing with params:', params);
     getMenu();
     initializeData();
   }, [params.category, params.orderID, userId]);
   const initializeData = async () => {
     try {
       setLoading(true);
+      console.log('📋 Fetching menu items for category:', params.category);
+
       // First fetch the menu items
       const menuItems = await getitemsbasedonmenu(params.category);
+      console.log('✅ Menu items fetched:', menuItems?.length || 0);
+
+      if (!menuItems || !Array.isArray(menuItems)) {
+        console.error('❌ Invalid menu items response');
+        AlertService.error('Failed to load menu items');
+        return;
+      }
 
       // Then fetch the order items
       var orderResponse = [];
-      if (params.orderID) {
+      if (params.orderID && userId) {
+        console.log('📋 Fetching order items for orderID:', params.orderID);
         const ord_res = await getOrderItemList(params.orderID, userId);
-        if (ord_res.orderItems) {
+        if (ord_res?.orderItems) {
           orderResponse = ord_res.orderItems;
+          console.log('✅ Order items fetched:', orderResponse.length);
         }
       }
+
       // Create a map of order items
       const orderItems = orderResponse.reduce((acc, orderItem) => {
-        acc[orderItem.menuItemId] = orderItem;
+        if (orderItem?.menuItemId) {
+          acc[orderItem.menuItemId] = orderItem;
+        }
         return acc;
       }, {});
 
@@ -223,13 +257,16 @@ export default function ItemsListScreen() {
         comments: orderItems[item.id]?.comments || "",
         orderItemId: orderItems[item.id]?.id || null,
       }));
-      console.log("combinedItems", combinedItems);
+
+      console.log('✅ Combined items ready:', combinedItems.length);
+
       if (isMounted.current) {
         setItems(combinedItems);
         setSelectedItems(combinedItems.filter((item) => item.selected));
       }
     } catch (error) {
-      AlertService.error(error);
+      console.error('❌ Error in initializeData:', error);
+      AlertService.error('Failed to load menu data: ' + (error?.message || 'Unknown error'));
     } finally {
       if (isMounted.current) setLoading(false);
     }
@@ -482,6 +519,18 @@ export default function ItemsListScreen() {
     }
     router.push(obj);
   };
+
+  // Show loading indicator
+  if (loading && items.length === 0) {
+    return (
+      <LinearGradient
+        colors={['#C4B5FD', '#A78BFA']}
+        style={[orderitemsstyle.container, { justifyContent: 'center', alignItems: 'center' }]}
+      >
+        <Text style={{ fontSize: 18, color: '#333' }}>Loading menu...</Text>
+      </LinearGradient>
+    );
+  }
 
   return (
     <LinearGradient
