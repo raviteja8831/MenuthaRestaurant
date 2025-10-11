@@ -2,6 +2,7 @@
 import { Stack } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
+import 'react-native-gesture-handler';
 import React, { useEffect } from 'react';
 import * as SplashScreen from 'expo-splash-screen';
 import { LoaderProvider } from '../src/components/LoaderContext';
@@ -47,6 +48,7 @@ export default function RootLayout() {
           <Stack
             screenOptions={{
               headerShown: false,
+              gestureEnabled: false,
             }}
           >
             <Stack.Screen name="index" />

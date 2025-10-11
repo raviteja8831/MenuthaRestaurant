@@ -1,3 +1,4 @@
+// import { Platform } from 'react-native';
  
 import FilterModal from "../Modals/FilterModal";
 import React, { useState, useEffect, useRef } from "react";
@@ -144,6 +145,10 @@ const openGoogleMapsDirections = (restaurant) => {
 
 // Main Component
 const CustomerHomeScreen = () => {
+  // Bypass all logic and render nothing on web
+  if (Platform.OS === 'web') {
+    return null;
+  }
   // State declarations
   const router = useRouter();
   const searchInputRef = useRef(null);

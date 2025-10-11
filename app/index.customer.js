@@ -17,29 +17,36 @@ export default function IndexScreen() {
   }, [showSplash]);
 
   const handleSplashComplete = () => {
+    console.log('[DEBUG] Splash complete, hiding splash and starting auth check');
     setShowSplash(false);
   };
 
   const checkAuthAndRedirect = async () => {
     try {
+      console.log('[DEBUG] Initializing auth...');
       await initializeAuth();
       const authenticated = await isAuthenticated();
+      console.log('[DEBUG] Authenticated:', authenticated);
 
       if (!authenticated) {
+        console.log('[DEBUG] Not authenticated, redirecting to /Customer-Login');
         return router.replace("/Customer-Login");
       }
 
       const userType = await getUserType();
+      console.log('[DEBUG] User type:', userType);
 
       // Customer app - only handle customer login
       if (userType === USER_TYPES.CUSTOMER) {
+        console.log('[DEBUG] Redirecting to /customer-home');
         router.replace("/customer-home");
       } else {
         // If logged in as restaurant user, log them out and show customer login
+        console.log('[DEBUG] Not customer, redirecting to /Customer-Login');
         router.replace("/Customer-Login");
       }
     } catch (error) {
-      console.error("Auth check error:", error);
+      console.error("[DEBUG] Auth check error:", error);
       router.replace("/Customer-Login");
     } finally {
       setIsLoading(false);

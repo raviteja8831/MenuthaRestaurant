@@ -40,7 +40,8 @@
       "Bash(export NODE_ENV=production)",
       "Bash(./build_multi_app_cleartext.sh:*)",
       "Bash(npx eslint:*)",
-      "Bash(sudo yum install:*)"
+      "Bash(sudo yum install:*)",
+      "Bash(pkill:*)"
     ],
     "deny": [],
     "ask": []
