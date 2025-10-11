@@ -110,25 +110,16 @@ export default function MenuListScreen() {
   }, [isbuffet]);
   const ishotel = params.ishotel || "false";
   const handleCategoryPress = (category) => {
-    console.log('Category pressed:', category.name, 'Order ID:', orderSummary.orderId);
-
-    // Only include orderID if it exists and is valid
-    const navParams = {
-      category: category.id,
-      categoryName: category.name,
-      restaurantId: params.restaurantId || params.hotelId,
-      tableId: params.tableId || 1,
-      ishotel: ishotel,
-    };
-
-    // Add orderID only if it's a valid value
-    if (orderSummary?.orderId && orderSummary.orderId !== 'null' && orderSummary.orderId !== 'undefined') {
-      navParams.orderID = orderSummary.orderId;
-    }
-
     router.push({
       pathname: "/orderitems",
-      params: navParams,
+      params: {
+        category: category.id,
+        categoryName: category.name,
+        restaurantId: params.restaurantId || params.hotelId,
+        tableId: params.tableId || 1,
+        orderID: orderSummary.orderId || null,
+        ishotel: ishotel,
+      },
     });
   };
   useEffect(() => {
@@ -247,22 +238,14 @@ export default function MenuListScreen() {
                   style={menuliststyles.menuCard}
                   onPress={() => handleCategoryPress(category)}
                 >
-                  {categoryImages[category.icon] ? (
-                    <Image
-                      source={categoryImages[category.icon]}
-                      style={menuliststyles.categoryImage}
-                      resizeMode="contain"
-                    />
-                  ) : (
-                    <Image
-                      source={require("../assets/images/menu.png")}
-                      style={menuliststyles.categoryImage}
-                      resizeMode="contain"
-                    />
-                  )}
+                  <Image
+                    source={categoryImages[category.icon]}
+                    style={menuliststyles.categoryImage}
+                    resizeMode="contain"
+                  />
                   <Text style={menuliststyles.name}>{category.name}</Text>
                   <Text style={menuliststyles.itemCount}>
-                    ({category.menuItems?.length || 0} items)
+                    ({category.menuItems.length} items)
                   </Text>
                 </Pressable>
               ))}
