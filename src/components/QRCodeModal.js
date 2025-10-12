@@ -11,27 +11,37 @@ export default function QRCodeModal({ visible, onClose, onSave, loading, restaur
   const alert = useAlert();
   const [name, setName] = useState('');
   const [showQR, setShowQR] = useState(false);
+  const [savedTableData, setSavedTableData] = useState(null);
   const qrRef = useRef();
 
-  // Extract tableId from name (assume name is tableId or similar)
-  const tableId = name.trim();
-  // Generate QR code value with complete restaurant and table details
-  const qrCodeData = {
+  // Generate QR code value with complete restaurant and table details using saved table data
+  const qrCodeData = savedTableData ? {
     restaurantId: restaurantId,
-    tableId: tableId,
-    tableName: name,
+    tableId: savedTableData.id, // Use the actual tableId from the saved response
+    tableName: savedTableData.name,
     type: 'table_order',
     timestamp: Date.now()
-  };
+  } : null;
 
   // Create deep link URL for the app
-  const qrValue = restaurantId && tableId ? `menutha://order?data=${encodeURIComponent(JSON.stringify(qrCodeData))}` : '';
+  const qrValue = qrCodeData ? `menutha://order?data=${encodeURIComponent(JSON.stringify(qrCodeData))}` : '';
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name) return;
-    onSave({ name });
-    setShowQR(true);
-    // Do not close modal or clear name
+
+    try {
+      // Call onSave and wait for the response which should contain the tableId
+      const savedData = await onSave({ name });
+      console.log('Table saved with data:', savedData);
+
+      // Store the saved table data (which includes the generated tableId)
+      setSavedTableData(savedData);
+      setShowQR(true);
+      // Do not close modal or clear name
+    } catch (error) {
+      console.error('Error saving table:', error);
+      alert.error('Failed to save table');
+    }
   };
 
   const handleDownload = async () => {
@@ -85,6 +95,7 @@ export default function QRCodeModal({ visible, onClose, onSave, loading, restaur
   const handleClose = () => {
     setName('');
     setShowQR(false);
+    setSavedTableData(null);
     onClose && onClose();
   };
 
@@ -108,14 +119,22 @@ export default function QRCodeModal({ visible, onClose, onSave, loading, restaur
               {showQR && qrValue ? (
                 <View style={styles.qrImgBox}>
                   <QRCode
-                  value={qrValue}
-                  size={120}
-                  getRef={qrRef}
-                />
-              </View>
-            ) : null}
-          </View>
-                      )}
+                    value={qrValue}
+                    size={120}
+                    getRef={qrRef}
+                  />
+                  {/* Debug info */}
+                  <Text style={{ fontSize: 10, color: '#666', marginTop: 8, textAlign: 'center' }}>
+                    Table ID: {savedTableData?.id}
+                  </Text>
+                </View>
+              ) : (
+                <Text style={{ color: '#666', textAlign: 'center' }}>
+                  Generating QR code...
+                </Text>
+              )}
+            </View>
+          )}
           <View style={styles.inputRow}>
             <Text style={styles.inputLabel}>Name:</Text>
             <TextInput

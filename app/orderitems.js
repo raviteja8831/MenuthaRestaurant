@@ -230,19 +230,65 @@ export default function ItemsListScreen() {
       }, {});
 
       // Combine menu items with order data
-      const combinedItems = menuItems.map((item) => ({
-        ...item,
-        selected: !!orderItems[item.id], // normalize to boolean
-        quantity: orderItems[item.id]?.quantity || 0,
-        comments: orderItems[item.id]?.comments || "",
-        orderItemId: orderItems[item.id]?.id || null,
-      }));
+      const combinedItems = menuItems.map((item, index) => {
+        try {
+          // Defensive check for each menu item
+          if (!item || typeof item !== 'object') {
+            console.warn(`⚠️ Invalid menu item at index ${index}:`, item);
+            return null;
+          }
+
+          if (!item.id) {
+            console.warn(`⚠️ Menu item missing ID at index ${index}:`, item);
+            return null;
+          }
+
+          const combinedItem = {
+            ...item,
+            selected: !!orderItems[item.id], // normalize to boolean
+            quantity: orderItems[item.id]?.quantity || 0,
+            comments: orderItems[item.id]?.comments || "",
+            orderItemId: orderItems[item.id]?.id || null,
+          };
+
+          return combinedItem;
+        } catch (itemError) {
+          console.error(`❌ Error processing menu item at index ${index}:`, itemError, item);
+          return null;
+        }
+      }).filter(Boolean); // Remove null items
 
       console.log('✅ Combined items ready:', combinedItems.length);
+      console.log('🔍 Sample combined item:', combinedItems[0]);
+
+      // Add defensive checks before setting state
+      if (!Array.isArray(combinedItems)) {
+        console.error('❌ combinedItems is not an array:', typeof combinedItems);
+        return;
+      }
 
       if (isMounted.current) {
-        setItems(combinedItems);
-        setSelectedItems(combinedItems.filter((item) => item.selected));
+        try {
+          console.log('🔄 Setting items state...');
+          setItems(combinedItems);
+
+          console.log('🔄 Filtering selected items...');
+          const selectedItems = combinedItems.filter((item) => {
+            // Defensive check for each item
+            if (!item || typeof item !== 'object') {
+              console.warn('⚠️ Invalid item found:', item);
+              return false;
+            }
+            return !!item.selected;
+          });
+
+          console.log('🔄 Setting selected items state...', selectedItems.length);
+          setSelectedItems(selectedItems);
+          console.log('✅ State updated successfully');
+        } catch (stateError) {
+          console.error('❌ Error updating state:', stateError);
+          AlertService.error('Error updating menu data');
+        }
       }
     } catch (error) {
       console.error('❌ Error in initializeData:', error);
@@ -537,6 +583,19 @@ export default function ItemsListScreen() {
     );
   }
 
+  // Safety check: If items is not an array, show error
+  if (!Array.isArray(items)) {
+    console.error('❌ Items is not an array in render:', typeof items, items);
+    return (
+      <LinearGradient
+        colors={['#C4B5FD', '#A78BFA']}
+        style={[orderitemsstyle.container, { justifyContent: 'center', alignItems: 'center' }]}
+      >
+        <Text style={{ fontSize: 18, color: '#333' }}>Error loading menu items. Please try again.</Text>
+      </LinearGradient>
+    );
+  }
+
   return (
     <LinearGradient
       colors={['#C4B5FD', '#A78BFA']}
@@ -573,17 +632,23 @@ export default function ItemsListScreen() {
       >
         {/* Group items by type */}
         {(() => {
-          // Group items by itemType
-          const groupedItems = items.reduce((acc, item) => {
-            const type = item.itemType || 'Other';
-            if (!acc[type]) {
-              acc[type] = [];
-            }
-            acc[type].push(item);
-            return acc;
-          }, {});
+          try {
+            // Group items by itemType with safety checks
+            const groupedItems = items.reduce((acc, item) => {
+              if (!item || typeof item !== 'object') {
+                console.warn('⚠️ Invalid item in render:', item);
+                return acc;
+              }
 
-          return Object.entries(groupedItems).map(([type, typeItems]) => (
+              const type = item.itemType || 'Other';
+              if (!acc[type]) {
+                acc[type] = [];
+              }
+              acc[type].push(item);
+              return acc;
+            }, {});
+
+            return Object.entries(groupedItems).map(([type, typeItems]) => (
             <View key={type}>
               <Text style={orderitemsstyle.sectionHeader}>{type}</Text>
               {typeItems.map((item) => (

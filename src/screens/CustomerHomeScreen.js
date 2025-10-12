@@ -284,13 +284,20 @@ const CustomerHomeScreen = () => {
         // Animate map to show user + restaurants after a short delay
         setTimeout(() => {
           if (mapRef.current && allRestaurants.length > 0) {
-            const allCoords = [
-              userLoc,
-              ...allRestaurants.map(r => ({ latitude: r.latitude, longitude: r.longitude }))
+            // Create list of marker identifiers for restaurants
+            const restaurantMarkerIds = allRestaurants.map(r => `restaurant-${r.id}`);
+
+            // Include user location and test markers in fitting
+            const allMarkerIds = [
+              'user-location',
+              'test-marker-1',
+              'test-marker-2',
+              'test-marker-3',
+              ...restaurantMarkerIds
             ];
 
-            console.log('🗺️ Fitting map to coordinates:', allCoords.length);
-            mapRef.current.fitToCoordinates(allCoords, {
+            console.log('🗺️ Fitting map to supplied markers:', allMarkerIds.length);
+            mapRef.current.fitToSuppliedMarkers(allMarkerIds, {
               edgePadding: { top: 150, right: 50, bottom: 300, left: 50 },
               animated: true,
             });
@@ -317,20 +324,30 @@ const CustomerHomeScreen = () => {
     initializeApp();
   }, []);
 
-  // Simple map centering on user location only
+  // Fit map to all visible markers when filters change
   useEffect(() => {
-    if (mapRef.current && userLocation) {
+    if (mapRef.current && userLocation && filteredRestaurants.length > 0) {
       setTimeout(() => {
-        console.log('🗺️ Centering map on user location');
-        mapRef.current.animateToRegion({
-          latitude: userLocation.latitude,
-          longitude: userLocation.longitude,
-          latitudeDelta: 0.05, // Wider view to see nearby markers
-          longitudeDelta: 0.05,
-        }, 1000);
-      }, 2000);
+        // Create list of marker identifiers for filtered restaurants
+        const restaurantMarkerIds = filteredRestaurants.map(r => `restaurant-${r.id}`);
+
+        // Include user location and test markers in fitting
+        const allMarkerIds = [
+          'user-location',
+          'test-marker-1',
+          'test-marker-2',
+          'test-marker-3',
+          ...restaurantMarkerIds
+        ];
+
+        console.log('🗺️ Refitting map to filtered markers:', allMarkerIds.length);
+        mapRef.current.fitToSuppliedMarkers(allMarkerIds, {
+          edgePadding: { top: 150, right: 50, bottom: 300, left: 50 },
+          animated: true,
+        });
+      }, 500);
     }
-  }, [userLocation]);
+  }, [filteredRestaurants, userLocation]);
 
   // Navigation functions
   const openGoogleMapsDirections = (restaurant) => {
@@ -515,6 +532,7 @@ const CustomerHomeScreen = () => {
         {/* Test: User Location Marker */}
         {userLocation && (
           <Marker
+            identifier="user-location"
             coordinate={userLocation}
             title="Your Location"
             description="This is where you are"
@@ -524,31 +542,35 @@ const CustomerHomeScreen = () => {
 
         {/* Test: Hardcoded markers to verify markers work */}
         <Marker
+          identifier="test-marker-1"
           coordinate={{ latitude: 17.4375, longitude: 78.4456 }}
           title="Test Marker 1"
           description="Hyderabad center"
           pinColor="green"
         />
         <Marker
+          identifier="test-marker-2"
           coordinate={{ latitude: 17.4475, longitude: 78.4556 }}
           title="Test Marker 2"
           description="Test location"
           pinColor="purple"
         />
         <Marker
+          identifier="test-marker-3"
           coordinate={{ latitude: 17.4275, longitude: 78.4356 }}
           title="Test Marker 3"
           description="Another test"
           pinColor="orange"
         />
 
-        {/* Restaurant Markers - Simplified default markers */}
+        {/* Restaurant Markers - Simplified default markers with identifiers for fitToSuppliedMarkers */}
         {filteredRestaurants.map((restaurant, index) => {
           console.log(`🏪 Rendering marker ${index + 1}:`, restaurant.name, restaurant.latitude, restaurant.longitude);
 
           return (
             <Marker
               key={`restaurant-${restaurant.id}-${index}`}
+              identifier={`restaurant-${restaurant.id}`}
               coordinate={{
                 latitude: parseFloat(restaurant.latitude),
                 longitude: parseFloat(restaurant.longitude),

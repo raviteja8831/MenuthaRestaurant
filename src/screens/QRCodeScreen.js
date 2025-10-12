@@ -70,13 +70,17 @@ export default function QRCodeScreen() {
   const handleAddQRCode = async ({ name }) => {
     setSaving(true);
     try {
-      await createQRCode({ name, restaurantId });
+      const savedData = await createQRCode({ name, restaurantId });
+      console.log('QR Code created:', savedData);
       // setShowModal(false);
       loadQRCodes();
+      return savedData; // Return the saved data to QRCodeModal
     } catch (err) {
       alert.error(err.message || "Failed to add QR code");
+      throw err; // Re-throw to let QRCodeModal handle the error
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const handleQRCodePress = (qrcode) => {
