@@ -117,6 +117,8 @@ const defaultIcon = "food-outline";
 // Default fallback image
 const defaultCategoryImage = require("../src/assets/images/menu.png");
 export default function ItemsListScreen() {
+  console.log('🔄 ItemsListScreen rendering...');
+
   // ✅ ALL HOOKS MUST BE CALLED FIRST - NO EXCEPTIONS
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -193,12 +195,18 @@ export default function ItemsListScreen() {
     console.log('orderitems: initializing with params:', params);
     getMenu();
     initializeData();
-  }, [params?.category, params?.orderID, userId, getMenu, initializeData]);
+  }, [params?.category, params?.orderID, userId]); // Removed getMenu and initializeData from dependencies
 
   const initializeData = useCallback(async () => {
     try {
       setLoading(true);
-      console.log('📋 Fetching menu items for category:', params.category);
+      console.log('📋 Fetching menu items for category:', params?.category);
+
+      // Add null checks for params
+      if (!params?.category) {
+        console.error('❌ No category provided');
+        return;
+      }
 
       // First fetch the menu items
       const menuItems = await getitemsbasedonmenu(params.category);
@@ -214,10 +222,15 @@ export default function ItemsListScreen() {
       var orderResponse = [];
       if (params.orderID && userId) {
         console.log('📋 Fetching order items for orderID:', params.orderID);
-        const ord_res = await getOrderItemList(params.orderID, userId);
-        if (ord_res?.orderItems) {
-          orderResponse = ord_res.orderItems;
-          console.log('✅ Order items fetched:', orderResponse.length);
+        try {
+          const ord_res = await getOrderItemList(params.orderID, userId);
+          if (ord_res?.orderItems) {
+            orderResponse = ord_res.orderItems;
+            console.log('✅ Order items fetched:', orderResponse.length);
+          }
+        } catch (orderError) {
+          console.error('❌ Error fetching order items:', orderError);
+          // Continue with empty order items rather than crashing
         }
       }
 
@@ -296,7 +309,7 @@ export default function ItemsListScreen() {
     } finally {
       if (isMounted.current) setLoading(false);
     }
-  }, [params.category, params.orderID, userId]);
+  }, [params?.category, params?.orderID, userId]);
 
   // Helper to add item to remove_list without duplicates
   const addToRemoveList = (item) => {
@@ -310,18 +323,27 @@ export default function ItemsListScreen() {
   const getMenu = useCallback(async () => {
     try {
       if (isMounted.current) setLoading(true);
+
+      // Add null check for params.category
+      if (!params?.category) {
+        console.error('❌ No category provided for getMenu');
+        return;
+      }
+
       const menu = await getSpecificMenu(params.category);
-      if (isMounted.current) {
+      if (isMounted.current && menu) {
         setMenuData(menu);
         console.log("menu", menu);
       }
     } catch (error) {
-      alert("Error fetching menu");
-      AlertService.error(error);
+      console.error("❌ Error fetching menu:", error);
+      if (isMounted.current) {
+        AlertService.error("Error fetching menu: " + (error?.message || 'Unknown error'));
+      }
     } finally {
       if (isMounted.current) setLoading(false);
     }
-  }, [params.category]);
+  }, [params?.category]);
 
   const createOrder_data = async () => {
     // basic validation
