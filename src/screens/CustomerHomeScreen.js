@@ -132,6 +132,22 @@ const CustomerHomeScreen = () => {
         return false;
       }
 
+      // ✅ CRITICAL: Filter out restaurants that are too far from user (likely bad data)
+      if (userLocation) {
+        const distance = getDistanceFromLatLonInKm(
+          userLocation.latitude,
+          userLocation.longitude,
+          r.latitude,
+          r.longitude
+        );
+
+        // Filter out restaurants more than 200km away (likely bad coordinates)
+        if (distance > 200) {
+          console.log('🌍 Excluding distant restaurant:', r.name, 'Distance:', distance.toFixed(2), 'km');
+          return false;
+        }
+      }
+
       // Search filter
       if (searchQuery && searchQuery.trim() !== "") {
         const q = searchQuery.trim().toLowerCase();
@@ -301,26 +317,20 @@ const CustomerHomeScreen = () => {
     initializeApp();
   }, []);
 
-  // Update map when filtered restaurants change
+  // Simple map centering on user location only
   useEffect(() => {
-    if (mapRef.current && userLocation && filteredRestaurants.length > 0) {
+    if (mapRef.current && userLocation) {
       setTimeout(() => {
-        const allCoords = [
-          userLocation,
-          ...filteredRestaurants.map(r => ({
-            latitude: parseFloat(r.latitude),
-            longitude: parseFloat(r.longitude)
-          }))
-        ];
-
-        console.log('🗺️ Updating map bounds for', allCoords.length, 'coordinates');
-        mapRef.current.fitToCoordinates(allCoords, {
-          edgePadding: { top: 150, right: 50, bottom: 300, left: 50 },
-          animated: true,
-        });
-      }, 1000);
+        console.log('🗺️ Centering map on user location');
+        mapRef.current.animateToRegion({
+          latitude: userLocation.latitude,
+          longitude: userLocation.longitude,
+          latitudeDelta: 0.05, // Wider view to see nearby markers
+          longitudeDelta: 0.05,
+        }, 1000);
+      }, 2000);
     }
-  }, [filteredRestaurants, userLocation]);
+  }, [userLocation]);
 
   // Navigation functions
   const openGoogleMapsDirections = (restaurant) => {
@@ -471,16 +481,11 @@ const CustomerHomeScreen = () => {
       <MapView
         ref={mapRef}
         style={styles.map}
-        region={userLocation ? {
-          latitude: userLocation.latitude,
-          longitude: userLocation.longitude,
-          latitudeDelta: 0.02,
-          longitudeDelta: 0.02,
-        } : {
-          latitude: 17.4375,
-          longitude: 78.4456,
-          latitudeDelta: 0.1,
-          longitudeDelta: 0.1,
+        initialRegion={{
+          latitude: userLocation?.latitude || 17.4375,
+          longitude: userLocation?.longitude || 78.4456,
+          latitudeDelta: 0.05,
+          longitudeDelta: 0.05,
         }}
         showsUserLocation={true}
         showsMyLocationButton={false}
@@ -517,41 +522,39 @@ const CustomerHomeScreen = () => {
           />
         )}
 
-        {/* Restaurant Markers - Using default markers for better reliability */}
+        {/* Test: Hardcoded markers to verify markers work */}
+        <Marker
+          coordinate={{ latitude: 17.4375, longitude: 78.4456 }}
+          title="Test Marker 1"
+          description="Hyderabad center"
+          pinColor="green"
+        />
+        <Marker
+          coordinate={{ latitude: 17.4475, longitude: 78.4556 }}
+          title="Test Marker 2"
+          description="Test location"
+          pinColor="purple"
+        />
+        <Marker
+          coordinate={{ latitude: 17.4275, longitude: 78.4356 }}
+          title="Test Marker 3"
+          description="Another test"
+          pinColor="orange"
+        />
+
+        {/* Restaurant Markers - Simplified default markers */}
         {filteredRestaurants.map((restaurant, index) => {
           console.log(`🏪 Rendering marker ${index + 1}:`, restaurant.name, restaurant.latitude, restaurant.longitude);
-
-          const lat = parseFloat(restaurant.latitude);
-          const lng = parseFloat(restaurant.longitude);
-
-          // Validate coordinates
-          if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
-            console.log(`❌ Invalid coordinates for ${restaurant.name}:`, lat, lng);
-            return null;
-          }
 
           return (
             <Marker
               key={`restaurant-${restaurant.id}-${index}`}
               coordinate={{
-                latitude: lat,
-                longitude: lng,
+                latitude: parseFloat(restaurant.latitude),
+                longitude: parseFloat(restaurant.longitude),
               }}
-              title={restaurant.name}
-              description={`${restaurant.restaurantType || ''} ${restaurant.rating ? `⭐ ${restaurant.rating}` : ''}`}
-              pinColor="red"
-              onPress={() => {
-                console.log('🏪 Restaurant marker pressed:', restaurant.name);
-                router.push({
-                  pathname: "/HotelDetails",
-                  params: {
-                    id: restaurant.id,
-                    name: restaurant.name,
-                    address: restaurant.address,
-                    starRating: restaurant.rating || 0,
-                  },
-                });
-              }}
+              title={restaurant.name || 'Restaurant'}
+              description={restaurant.address || 'Restaurant location'}
             />
           );
         })}
