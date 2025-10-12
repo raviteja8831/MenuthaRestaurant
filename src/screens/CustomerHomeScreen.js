@@ -1,7 +1,5 @@
- 
 import FilterModal from "../Modals/FilterModal";
-import React, { useState, useEffect, useRef } from "react";
-  
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   View,
   StyleSheet,
@@ -18,295 +16,96 @@ import {
 } from "react-native";
 import { MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-// import SearchModal from "../Modals/SearchModal";
 import * as Location from "expo-location";
-/* Web Google Maps disabled for now. Keep code commented for future use.
-import {
-  GoogleMap,
-  Marker,
-  InfoWindow,
-  Circle,
-  useJsApiLoader,
-} from "@react-google-maps/api";
-*/
-// Use react-native-maps for native platforms (Android / iOS)
-import MapView, { Marker as RNMarker, Circle as RNCircle, Callout as RNCallout } from 'react-native-maps';
-import menuvaMarker from '../assets/menuva.png';
-import menuthaMarker from '../assets/menutha.png';
-// Note: expo-maps will be loaded dynamically inside the component (useEffect)
+import MapView, { Marker, Circle } from 'react-native-maps';
 import { getAllRestaurants } from "../api/restaurantApi";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// Helper function to calculate map region
-const calculateMapRegion = (userLocation, restaurants) => {
-  if (!userLocation) {
-    return {
-      latitude: 17.4375,
-      longitude: 78.4456,
-      latitudeDelta: 0.0922,
-      longitudeDelta: 0.0421,
-    };
-  }
-
-  if (!restaurants || restaurants.length === 0) {
-    return {
-      latitude: userLocation.latitude,
-      longitude: userLocation.longitude,
-      latitudeDelta: 0.0922,
-      longitudeDelta: 0.0421,
-    };
-  }
-
-  const validRestaurants = restaurants.filter(
-    r => typeof r.latitude === 'number' && typeof r.longitude === 'number'
-  );
-
-  if (validRestaurants.length === 0) {
-    return {
-      latitude: userLocation.latitude,
-      longitude: userLocation.longitude,
-      latitudeDelta: 0.0922,
-      longitudeDelta: 0.0421,
-    };
-  }
-
-  const latitudes = [userLocation.latitude, ...validRestaurants.map(r => r.latitude)];
-  const longitudes = [userLocation.longitude, ...validRestaurants.map(r => r.longitude)];
-
-  const minLat = Math.min(...latitudes);
-  const maxLat = Math.max(...latitudes);
-  const minLng = Math.min(...longitudes);
-  const maxLng = Math.max(...longitudes);
-
-  const latDelta = (maxLat - minLat) * 1.5;
-  const lngDelta = (maxLng - minLng) * 1.5;
-
-  return {
-    latitude: (minLat + maxLat) / 2,
-    longitude: (minLng + maxLng) / 2,
-    latitudeDelta: Math.max(latDelta, 0.0922),
-    longitudeDelta: Math.max(lngDelta, 0.0421),
-  };
-};
-
-// Custom Marker Component for restaurants
-const CustomMarker = ({ restaurant, isSelected, onPress }) => {
-  return (
-    <Pressable onPress={() => onPress(restaurant)}>
-      <View style={[styles.markerWrapper, isSelected && styles.markerSelected]}>
-        <Text style={[styles.markerText, isSelected && styles.markerTextSelected]}>M</Text>
-      </View>
-    </Pressable>
-  );
-};
-
-// Restaurant Tooltip Component
-const RestaurantTooltip = ({ restaurant, onClose }) => {
-  return (
-    <View style={styles.tooltip}>
-      <Pressable style={styles.tooltipClose} onPress={onClose}>
-        <MaterialIcons name="close" size={20} color="#666" />
-      </Pressable>
-      <Text style={styles.tooltipTitle}>{restaurant.name}</Text>
-      <Text style={styles.tooltipAddress}>{restaurant.address}</Text>
-      <Text style={styles.tooltipType}>{restaurant.restaurantType}</Text>
-      {restaurant.rating && (
-        <View style={styles.tooltipRating}>
-          <Text style={{ color: '#FFD700' }}>⭐</Text>
-          <Text style={styles.tooltipRatingText}>{restaurant.rating}</Text>
-        </View>
-      )}
-    </View>
-  );
-};
-
-// Open Google Maps for directions
-const openGoogleMapsDirections = (restaurant) => {
-  if (!restaurant || typeof restaurant.latitude !== 'number' || typeof restaurant.longitude !== 'number') {
-    Alert.alert("Error", "Restaurant location not available");
-    return;
-  }
-
-  const scheme = Platform.select({
-    ios: 'maps:0,0?q=',
-    android: 'geo:0,0?q='
-  });
-  const latLng = `${restaurant.latitude},${restaurant.longitude}`;
-  const label = restaurant.name || 'Restaurant';
-  const url = Platform.select({
-    ios: `${scheme}${label}@${latLng}`,
-    android: `${scheme}${latLng}(${label})`
-  });
-
-  Linking.openURL(url).catch(() => {
-    Alert.alert("Error", "Unable to open maps");
-  });
-};
-
-// Main Component
 const CustomerHomeScreen = () => {
-  // Bypass all logic and render nothing on web
-  if (Platform.OS === 'web') {
-    return null;
-  }
-  // State declarations
+  // ✅ ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL LOGIC OR EARLY RETURNS
   const router = useRouter();
   const searchInputRef = useRef(null);
+  const mapRef = useRef(null);
 
+  // State
   const [loading, setLoading] = useState(true);
+  const [geocodingProgress, setGeocodingProgress] = useState(0);
   const [userLocation, setUserLocation] = useState(null);
-  const [cityCenter, setCityCenter] = useState(null);
-  const [cityZoom, setCityZoom] = useState(12);
   const [restaurants, setRestaurants] = useState([]);
   const [selectedFilters, setSelectedFilters] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilter, setShowFilter] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
-  const [selectedRestaurantTooltip, setSelectedRestaurantTooltip] = useState(null);
-  const [showAllTooltips, setShowAllTooltips] = useState(true); // Show all tooltips by default
-  const [mapRegion, setMapRegion] = useState(null);
   const [showNavModal, setShowNavModal] = useState(false);
   const [navOptions, setNavOptions] = useState([]);
 
-  // Only for web: load Google Maps API
-  // Web maps disabled for now. Keep loader commented out for future use.
-  // const { isLoaded } =
-  //   Platform.OS === "web"
-  //     ? // eslint-disable-next-line react-hooks/rules-of-hooks
-  //       useJsApiLoader({
-  //         googleMapsApiKey: "YOUR_GOOGLE_MAPS_API_KEY",
-  //       })
-  //     : { isLoaded: true };
-  const isLoaded = false; // web disabled
-  // Navigation button handler (must be after filteredRestaurants is defined)
-  const handleNavigationPress = () => {
-    if (!filteredRestaurants.length) {
-      Alert.alert("No restaurants found", "No filtered restaurants to navigate to.");
-      return;
+  // Geocoding cache functions
+  const GEOCODE_CACHE_KEY = 'restaurant_geocode_cache';
+
+  const getGeocodingCache = async () => {
+    try {
+      const cache = await AsyncStorage.getItem(GEOCODE_CACHE_KEY);
+      return cache ? JSON.parse(cache) : {};
+    } catch (error) {
+      console.error('❌ Error reading geocoding cache:', error);
+      return {};
     }
-    if (filteredRestaurants.length === 1) {
-      openGoogleMapsDirections(filteredRestaurants[0]);
-      return;
-    }
-    // Multiple: show modal to pick
-    setNavOptions(filteredRestaurants);
-    setShowNavModal(true);
   };
 
-  // Handler for selecting a restaurant in nav modal
-  const handleNavSelect = (restaurant) => {
-    setShowNavModal(false);
-    openGoogleMapsDirections(restaurant);
+  const saveGeocodingCache = async (cache) => {
+    try {
+      await AsyncStorage.setItem(GEOCODE_CACHE_KEY, JSON.stringify(cache));
+    } catch (error) {
+      console.error('❌ Error saving geocoding cache:', error);
+    }
   };
-  // Get user location and fetch restaurants on mount
-  useEffect(() => {
-    (async () => {
-      try {
-        let { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== "granted") {
-          setLoading(false);
-          return;
-        }
-        let location = await Location.getCurrentPositionAsync({});
-        const newUserLocation = {
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-        };
-        console.log('📍 Got user location:', newUserLocation);
-        setUserLocation(newUserLocation);
-        // Reverse geocode to get city and center
-        try {
-          const apiKey = "AIzaSyCJT87ZYDqm6bVLxRsg4Zde87HyefUfASQ";
-          const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${location.coords.latitude},${location.coords.longitude}&key=${apiKey}`;
-          const resp = await fetch(url);
-          const json = await resp.json();
-          if (json.status === "OK" && json.results.length > 0) {
-            const cityComp = json.results[0].address_components.find((c) => c.types.includes("locality"));
-            const city = cityComp ? cityComp.long_name : null;
-            if (city) {
-              // Get city center by geocoding city name
-              const cityUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(city)}&key=${apiKey}`;
-              const cityResp = await fetch(cityUrl);
-              const cityJson = await cityResp.json();
-              if (cityJson.status === "OK" && cityJson.results.length > 0) {
-                const loc = cityJson.results[0].geometry.location;
-                setCityCenter({ latitude: loc.lat, longitude: loc.lng });
-                setCityZoom(12); // City-level zoom
-              }
-            }
-          }
-        } catch (_e) {}
-      } catch (_e) {
-        // Use default location
-      }
-      try {
-        let data = await getAllRestaurants();
-        console.log(`📦 Fetched ${data.length} restaurants from API`);
 
-        // For restaurants missing lat/lng, fetch from address
-        const geocodeAddress = async (address) => {
-          if (!address) return null;
-          try {
-            const apiKey = "AIzaSyCJT87ZYDqm6bVLxRsg4Zde87HyefUfASQ";
-            const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`;
-            const resp = await fetch(url);
-            const json = await resp.json();
-            if (json.status === "OK" && json.results.length > 0) {
-              const loc = json.results[0].geometry.location;
-              return { latitude: loc.lat, longitude: loc.lng };
-            }
-          } catch (err) {
-            console.log('⚠️ Geocoding error:', err);
-          }
-          return null;
+  // Geocode address to lat/lng
+  const geocodeAddress = async (address, cache) => {
+    if (!address || typeof address !== 'string') return null;
+
+    const cleanAddress = address.trim();
+    if (!cleanAddress) return null;
+
+    // Check cache first
+    if (cache[cleanAddress]) {
+      console.log('📦 Using cached coordinates for:', cleanAddress);
+      return cache[cleanAddress];
+    }
+
+    try {
+      const apiKey = "AIzaSyCJT87ZYDqm6bVLxRsg4Zde87HyefUfASQ";
+      const encodedAddress = encodeURIComponent(cleanAddress);
+      const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodedAddress}&key=${apiKey}`;
+
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.status === "OK" && data.results.length > 0) {
+        const location = data.results[0].geometry.location;
+        const coordinates = {
+          latitude: location.lat,
+          longitude: location.lng
         };
 
-        // Map and update missing lat/lng
-        const updated = await Promise.all(
-          data.map(async (r) => {
-            if (
-              typeof r.latitude === "number" &&
-              typeof r.longitude === "number" &&
-              !isNaN(r.latitude) &&
-              !isNaN(r.longitude)
-            ) {
-              return r;
-            }
-            console.log(`🔍 Geocoding address for restaurant: ${r.name}`);
-            const coords = await geocodeAddress(r.address);
-            if (coords) {
-              console.log(`✅ Geocoded ${r.name}: ${coords.latitude}, ${coords.longitude}`);
-              return { ...r, latitude: coords.latitude, longitude: coords.longitude };
-            }
-            console.log(`⚠️ Could not geocode ${r.name}`);
-            return r;
-          })
-        );
-        console.log(`✅ Finished processing ${updated.length} restaurants`);
-        setRestaurants(updated);
-
-
-      } catch (err) {
-        console.error('❌ Error fetching restaurants:', err);
-        setRestaurants([]);
-      } finally {
-        // Always set loading to false, whether successful or not
-        console.log('✅ Setting loading to false');
-        setLoading(false);
+        // Cache the result
+        cache[cleanAddress] = coordinates;
+        console.log('✅ Geocoded:', cleanAddress, '→', coordinates);
+        return coordinates;
+      } else {
+        console.log('⚠️ Geocoding failed for:', cleanAddress, 'Status:', data.status);
+        return null;
       }
-    })();
-  }, []);
+    } catch (error) {
+      console.error('❌ Geocoding error for:', cleanAddress, error);
+      return null;
+    }
+  };
 
-  // Advanced filtering logic
-  function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
-    if (
-      typeof lat1 !== "number" ||
-      typeof lon1 !== "number" ||
-      typeof lat2 !== "number" ||
-      typeof lon2 !== "number"
-    )
-      return Infinity;
-    const R = 6371; // Radius of the earth in km
+  // Distance calculation (move before useEffect to ensure consistent order)
+  const getDistanceFromLatLonInKm = (lat1, lon1, lat2, lon2) => {
+    if (!lat1 || !lon1 || !lat2 || !lon2) return Infinity;
+    const R = 6371;
     const dLat = ((lat2 - lat1) * Math.PI) / 180;
     const dLon = ((lon2 - lon1) * Math.PI) / 180;
     const a =
@@ -315,20 +114,13 @@ const CustomerHomeScreen = () => {
         Math.cos((lat2 * Math.PI) / 180) *
         Math.sin(dLon / 2) * Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const d = R * c; // Distance in km
-    return d;
-  }
+    return R * c;
+  };
 
+  // Filter restaurants (useMemo hook)
   const filteredRestaurants = React.useMemo(() => {
     return restaurants.filter((r) => {
-      // Only include restaurants with valid lat/lng for 'Near Me' and distance-based filters
-      const hasValidLatLng =
-        typeof r.latitude === "number" &&
-        typeof r.longitude === "number" &&
-        !isNaN(r.latitude) &&
-        !isNaN(r.longitude);
-
-      // Search filter (case-insensitive, matches name/address/restaurantType)
+      // Search filter
       if (searchQuery && searchQuery.trim() !== "") {
         const q = searchQuery.trim().toLowerCase();
         const name = (r.name || "").toLowerCase();
@@ -340,12 +132,12 @@ const CustomerHomeScreen = () => {
       }
 
       if (!selectedFilters.length) return true;
-      // All selected filters must match (AND logic)
+
+      // Apply filters
       return selectedFilters.every((f) => {
         const filterName = f.name;
         if (filterName === "Near Me") {
-          if (!hasValidLatLng) return false;
-          // Show within 5km radius
+          if (!userLocation) return false;
           const dist = getDistanceFromLatLonInKm(
             userLocation.latitude,
             userLocation.longitude,
@@ -363,108 +155,185 @@ const CustomerHomeScreen = () => {
         if (filterName === "5 Star Hotel") return r.restaurantType && r.restaurantType.toLowerCase().includes("5 star");
         if (filterName === "5 Star Rating") return r.rating && r.rating >= 5;
         if (filterName === "Only Bar & Restaurant") return r.restaurantType && r.restaurantType.toLowerCase().includes("bar");
-        // fallback: show all
         return true;
       });
     });
   }, [restaurants, searchQuery, selectedFilters, userLocation]);
 
-  // Update map region centered on user location with restaurants around them
+  // Get user location and restaurants
   useEffect(() => {
-    if (!userLocation || typeof userLocation.latitude !== 'number' || typeof userLocation.longitude !== 'number') {
-      // Use default location if user location not available
-      const region = {
-        latitude: 17.4375,
-        longitude: 78.4456,
-        latitudeDelta: 0.0922,
-        longitudeDelta: 0.0421,
-      };
-      setMapRegion(region);
-      console.log('🗺️ Using default map region:', region);
-      return;
-    }
+    const initializeApp = async () => {
+      try {
+        console.log('🚀 Starting app initialization...');
 
-    // Calculate region based on user location and filtered restaurants
-    const validRestaurants = filteredRestaurants.filter(
-      r => typeof r.latitude === 'number' && typeof r.longitude === 'number' && !isNaN(r.latitude) && !isNaN(r.longitude)
-    );
+        // Get user location
+        let { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== "granted") {
+          console.log('❌ Location permission denied');
+          setLoading(false);
+          return;
+        }
 
-    if (validRestaurants.length === 0) {
-      // Only user location, use smaller zoom
-      const region = {
-        latitude: userLocation.latitude,
-        longitude: userLocation.longitude,
-        latitudeDelta: 0.05,
-        longitudeDelta: 0.05,
-      };
-      setMapRegion(region);
-      console.log('🗺️ Updated map region centered on user (no restaurants):', region);
-      return;
-    }
+        let location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High,
+        });
 
-    // Calculate bounds to include user and all restaurants
-    const allLatitudes = [userLocation.latitude, ...validRestaurants.map(r => r.latitude)];
-    const allLongitudes = [userLocation.longitude, ...validRestaurants.map(r => r.longitude)];
+        const userLoc = {
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        };
 
-    const minLat = Math.min(...allLatitudes);
-    const maxLat = Math.max(...allLatitudes);
-    const minLng = Math.min(...allLongitudes);
-    const maxLng = Math.max(...allLongitudes);
+        console.log('📍 User location:', userLoc);
+        setUserLocation(userLoc);
 
-    // Calculate center point (midpoint between min and max)
-    const centerLat = (minLat + maxLat) / 2;
-    const centerLng = (minLng + maxLng) / 2;
+        // Get restaurants
+        const restaurantData = await getAllRestaurants();
+        console.log('🏪 Fetched restaurants:', restaurantData.length);
 
-    // Calculate deltas with proper padding to show all markers
-    const latDelta = Math.max((maxLat - minLat) * 2.0, 0.05);
-    const lngDelta = Math.max((maxLng - minLng) * 2.0, 0.05);
+        // Load geocoding cache
+        const cache = await getGeocodingCache();
 
-    const region = {
-      latitude: centerLat, // Center on midpoint to show all markers
-      longitude: centerLng,
-      latitudeDelta: latDelta,
-      longitudeDelta: lngDelta,
+        // Separate restaurants that already have coordinates vs those that need geocoding
+        const restaurantsWithCoords = [];
+        const restaurantsNeedingGeocode = [];
+
+        restaurantData.forEach(restaurant => {
+          if (restaurant.latitude && restaurant.longitude &&
+              typeof restaurant.latitude === 'number' &&
+              typeof restaurant.longitude === 'number' &&
+              !isNaN(restaurant.latitude) && !isNaN(restaurant.longitude)) {
+            restaurantsWithCoords.push(restaurant);
+          } else {
+            restaurantsNeedingGeocode.push(restaurant);
+          }
+        });
+
+        console.log('✅ Restaurants with coordinates:', restaurantsWithCoords.length);
+        console.log('🔍 Restaurants needing geocoding:', restaurantsNeedingGeocode.length);
+
+        // Start with restaurants that already have coordinates
+        let allRestaurants = [...restaurantsWithCoords];
+        setRestaurants(allRestaurants);
+
+        // Geocode restaurants that need it
+        if (restaurantsNeedingGeocode.length > 0) {
+          console.log('🌍 Starting geocoding process...');
+
+          for (let i = 0; i < restaurantsNeedingGeocode.length; i++) {
+            const restaurant = restaurantsNeedingGeocode[i];
+            const progress = Math.round((i / restaurantsNeedingGeocode.length) * 100);
+            setGeocodingProgress(progress);
+
+            if (restaurant.address) {
+              const coordinates = await geocodeAddress(restaurant.address, cache);
+              if (coordinates) {
+                const updatedRestaurant = { ...restaurant, ...coordinates };
+                allRestaurants.push(updatedRestaurant);
+                setRestaurants([...allRestaurants]); // Update state incrementally
+              }
+            }
+
+            // Small delay to prevent API rate limiting
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+
+          // Save updated cache
+          await saveGeocodingCache(cache);
+          setGeocodingProgress(100);
+        }
+
+        console.log('✅ Final restaurant count with coordinates:', allRestaurants.length);
+
+        // Animate map to show user + restaurants
+        if (mapRef.current && allRestaurants.length > 0) {
+          const allCoords = [
+            userLoc,
+            ...allRestaurants.map(r => ({ latitude: r.latitude, longitude: r.longitude }))
+          ];
+
+          setTimeout(() => {
+            mapRef.current?.fitToCoordinates(allCoords, {
+              edgePadding: { top: 100, right: 100, bottom: 200, left: 100 },
+              animated: true,
+            });
+          }, 1000);
+        }
+
+      } catch (error) {
+        console.error('❌ Error initializing app:', error);
+      } finally {
+        setLoading(false);
+        setGeocodingProgress(0);
+      }
     };
-    setMapRegion(region);
-    console.log('🗺️ Updated map region centered on midpoint with all markers visible:', region);
-  }, [userLocation, filteredRestaurants]);
 
-  // Debug: log restaurants and filteredRestaurants after data load
-  useEffect(() => {
-    if (!loading) {
-      console.log('restaurants:', restaurants);
-      console.log('filteredRestaurants:', filteredRestaurants);
+    initializeApp();
+  }, []);
+
+  // Navigation functions
+  const openGoogleMapsDirections = (restaurant) => {
+    if (!restaurant || !restaurant.latitude || !restaurant.longitude) {
+      Alert.alert("Error", "Restaurant location not available");
+      return;
     }
-  }, [loading, restaurants, filteredRestaurants]);
-  // Handlers
+
+    const scheme = Platform.select({
+      ios: 'maps:0,0?q=',
+      android: 'geo:0,0?q='
+    });
+    const latLng = `${restaurant.latitude},${restaurant.longitude}`;
+    const label = restaurant.name || 'Restaurant';
+    const url = Platform.select({
+      ios: `${scheme}${label}@${latLng}`,
+      android: `${scheme}${latLng}(${label})`
+    });
+
+    Linking.openURL(url).catch(() => {
+      Alert.alert("Error", "Unable to open maps");
+    });
+  };
+
+  const handleNavigationPress = () => {
+    if (!filteredRestaurants.length) {
+      Alert.alert("No restaurants found", "No filtered restaurants to navigate to.");
+      return;
+    }
+    if (filteredRestaurants.length === 1) {
+      openGoogleMapsDirections(filteredRestaurants[0]);
+      return;
+    }
+    setNavOptions(filteredRestaurants);
+    setShowNavModal(true);
+  };
+
+  const handleNavSelect = (restaurant) => {
+    setShowNavModal(false);
+    openGoogleMapsDirections(restaurant);
+  };
+
+  // Filter handlers
   const handleFilterPress = () => setShowFilter(true);
-  // const handleSearchPress = () => setShowSearch(true);
+
   const handleFilterSelect = (filter) => {
-    setSearchQuery(""); // Reset search on filter
+    setSearchQuery("");
     setSelectedFilters((prev) => {
       const exists = prev.find((f) => f.name === filter.name);
       if (exists) {
-        // Remove if already selected
         return prev.filter((f) => f.name !== filter.name);
       } else {
-        // Add new filter
         return [...prev, filter];
       }
     });
   };
 
-  // When filter modal closes, just close
-  const handleFilterModalClose = () => {
-    setShowFilter(false);
-  };
+  const handleFilterModalClose = () => setShowFilter(false);
 
-  // When search is typed, reset filters
+  // Search handlers
   const handleSearchQueryChange = (q) => {
     setSearchQuery(q);
     if (q && q.trim() !== "") setSelectedFilters([]);
   };
 
-  // Open search bar and focus input
   const handleOpenSearch = () => {
     setSearchOpen(true);
     setTimeout(() => {
@@ -474,324 +343,182 @@ const CustomerHomeScreen = () => {
     }, 100);
   };
 
-  // Close search bar and clear input
   const handleCloseSearch = () => {
     setSearchOpen(false);
     setSearchQuery("");
   };
-  // const handleSearch = (query) => {
-  //   setSearchQuery(query);
-  //   setShowSearch(false);
-  // };
 
+  // Navigation handlers
   const handlePersonTabPress = () => router.push("/user-profile");
   const handleScanPress = () => router.push("/qr-scanner");
-  useEffect(() => {
-    console.log("Selected Restaurant:", selectedRestaurant);
-    if (selectedRestaurant && selectedRestaurant?.id) {
-      router.push({
-        pathname: "/menu-list",
-        params: {
-          restaurantId: selectedRestaurant ? selectedRestaurant.id : null,
-          ishotel: "false",
-        },
-      });
 
-    }
-  },
- [selectedRestaurant, router]);
+  // Custom marker component for restaurants
+  const CustomRestaurantMarker = ({ restaurant }) => {
+    const getMarkerColor = (type) => {
+      const lowerType = (type || '').toLowerCase();
+      if (lowerType.includes('5 star')) return '#FFD700'; // Gold for 5 star
+      if (lowerType.includes('3 star')) return '#C0C0C0'; // Silver for 3 star
+      if (lowerType.includes('bar')) return '#8B4513'; // Brown for bars
+      if (lowerType.includes('hotel')) return '#FF6B6B'; // Red for hotels
+      if (lowerType.includes('restaurant')) return '#4ECDC4'; // Teal for restaurants
+      return '#6B4EFF'; // Default purple
+    };
 
-  // Platform-specific map rendering
-  let mapContent = null;
+    const getMarkerIcon = (type) => {
+      const lowerType = (type || '').toLowerCase();
+      if (lowerType.includes('hotel')) return '🏨';
+      if (lowerType.includes('bar')) return '🍺';
+      if (lowerType.includes('restaurant')) return '🍽️';
+      return '🏪'; // Default
+    };
 
-  // Calculate circle centered on user with radius based on filtered restaurants
-  let centerForCircle = userLocation || { latitude: 17.4375, longitude: 78.4456 };
-  let radiusMeters = 3000; // Default 3km radius
+    const markerColor = getMarkerColor(restaurant.restaurantType);
+    const markerIcon = getMarkerIcon(restaurant.restaurantType);
 
-  if (userLocation) {
-    // Calculate max distance from user to any filtered restaurant
-    const validRestaurants = filteredRestaurants.filter(r =>
-      typeof r.latitude === 'number' && typeof r.longitude === 'number' && !isNaN(r.latitude) && !isNaN(r.longitude)
+    return (
+      <View style={styles.customMarkerContainer}>
+        <View style={[styles.customMarker, { backgroundColor: markerColor }]}>
+          <Text style={styles.customMarkerIcon}>{markerIcon}</Text>
+        </View>
+        <View style={[styles.markerShadow, { backgroundColor: markerColor + '30' }]} />
+      </View>
     );
-
-    if (validRestaurants.length > 0) {
-      let maxDist = 0;
-      validRestaurants.forEach(r => {
-        const toRad = deg => deg * Math.PI / 180;
-        const R = 6371000; // meters
-        const dLat = toRad(r.latitude - userLocation.latitude);
-        const dLon = toRad(r.longitude - userLocation.longitude);
-        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                  Math.cos(toRad(userLocation.latitude)) * Math.cos(toRad(r.latitude)) *
-                  Math.sin(dLon/2) * Math.sin(dLon/2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        const dist = R * c;
-        if (dist > maxDist) maxDist = dist;
-      });
-      // Use 1.3x the max distance to ensure all restaurants fit inside the circle
-      radiusMeters = Math.max(3000, maxDist * 1.3);
-      console.log(`🔵 Circle radius: ${(radiusMeters/1000).toFixed(2)}km for ${validRestaurants.length} restaurants`);
-    }
-  }
-
-  // Define currentRegion first for web
-  const currentRegion = mapRegion || {
-    latitude: userLocation?.latitude || 17.4375,
-    longitude: userLocation?.longitude || 78.4456,
-    latitudeDelta: 0.0922,
-    longitudeDelta: 0.0421,
   };
 
-  if (Platform.OS === "web") {
-    if (!isLoaded) {
-      mapContent = <Text>Loading map...</Text>;
-    } else {
-      const zoomLevel = Math.max(10, 15 - Math.log2(currentRegion.latitudeDelta * 100));
-
-      mapContent = (
-        <GoogleMap
-          key={`${currentRegion.latitude}-${currentRegion.longitude}`}
-          mapContainerStyle={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            width: "100vw",
-            height: "100vh",
-            margin: 0,
-            padding: 0,
-            borderRadius: 0,
-            overflow: "hidden",
-          }}
-          center={{ lat: currentRegion.latitude, lng: currentRegion.longitude }}
-          zoom={zoomLevel}
-          options={{
-            fullscreenControl: false,
-            streetViewControl: false,
-            mapTypeControl: false,
-            zoomControl: false,
-          }}
-        >
-          {/* User marker */}
-          {userLocation && (
-            <Marker
-              position={{
-                lat: userLocation.latitude,
-                lng: userLocation.longitude,
-              }}
-              label={"You"}
-              icon={{
-                url: `data:image/svg+xml,${encodeURIComponent(`
-                  <svg width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="24" cy="24" r="22" fill="#fff" stroke="#6B4EFF" stroke-width="2"/>
-                    <circle cx="24" cy="20" r="10" fill="#6B4EFF"/>
-                    <ellipse cx="24" cy="36" rx="12" ry="5" fill="#E0E7FF"/>
-                    <text x="24" y="25" text-anchor="middle" fill="#fff" font-family="Arial, sans-serif" font-size="13" font-weight="bold">You</text>
-                  </svg>
-                `)}`,
-                scaledSize: new window.google.maps.Size(48, 48),
-                anchor: new window.google.maps.Point(24, 24),
-              }}
-            />
-          )}
-          {/* Dynamic perimeter/circle */}
-          <Circle
-            center={{
-              lat: centerForCircle.latitude,
-              lng: centerForCircle.longitude,
-            }}
-            radius={radiusMeters}
-            options={{
-              fillColor: '#3838FB22',
-              strokeColor: '#3838FB',
-              strokeOpacity: 0.7,
-              strokeWeight: 2,
-            }}
-          />
-          {/* Restaurant markers and tooltips */}
-          {filteredRestaurants
-            .filter(r => typeof r.latitude === "number" && typeof r.longitude === "number" && !isNaN(r.latitude) && !isNaN(r.longitude))
-            .map((r) => (
-              <Marker
-                key={r.id}
-                position={{ lat: r.latitude, lng: r.longitude }}
-                onClick={() => {
-                  router.push({
-                    pathname: "/HotelDetails",
-                    params: {
-                      id: r.id,
-                      name: r.name,
-                      address: r.address,
-                      starRating: r.rating || 0,
-                    },
-                  });
-                }}
-                icon={{
-                  url: `data:image/svg+xml,${encodeURIComponent(`
-                    <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
-                      <circle cx="20" cy="20" r="18" fill="#6854FF" stroke="#ffffff" stroke-width="2"/>
-                      <text x="20" y="26" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="16" font-weight="bold">M</text>
-                    </svg>
-                  `)}`,
-                  scaledSize: new window.google.maps.Size(40, 40),
-                  anchor: new window.google.maps.Point(20, 20),
-                }}
-              >
-                {(showAllTooltips || (selectedRestaurantTooltip && selectedRestaurantTooltip.id === r.id)) && (
-                  <InfoWindow
-                    position={{ lat: r.latitude, lng: r.longitude }}
-                    onCloseClick={() => {
-                      setSelectedRestaurant(null);
-                      setSelectedRestaurantTooltip(null);
-                      setShowAllTooltips(false);
-                    }}
-                  >
-                    <div style={{ padding: '8px', minWidth: '200px' }}>
-                      <h3 style={{ margin: '0 0 8px 0', color: '#333' }}>{r.name}</h3>
-                      <p style={{ margin: '4px 0', color: '#666', fontSize: '14px' }}>{r.address}</p>
-                      <p style={{ margin: '4px 0', color: '#666', fontSize: '14px' }}>{r.restaurantType}</p>
-                      {r.rating && (
-                        <div style={{ display: 'flex', alignItems: 'center', margin: '4px 0' }}>
-                          <span style={{ color: '#FFD700', marginRight: '4px' }}>⭐</span>
-                          <span style={{ color: '#333', fontSize: '14px' }}>{r.rating}</span>
-                        </div>
-                      )}
-                    </div>
-                  </InfoWindow>
-                )}
-              </Marker>
-            ))}
-        </GoogleMap>
-      );
-    }
-  } else {
-  // Use expo-maps directly on native platforms (Android/iOS); web uses @react-google-maps/api
-    // currentRegion is already defined above
-    // Use react-native-maps statically imported for native platforms
-    const DynMapView = MapView;
-    const DynMarker = RNMarker;
-    const DynCircle = RNCircle;
-
-    if (DynMapView) {
-      mapContent = (
-        <View style={styles.mapContainer}>
-          <DynMapView
-            style={styles.map}
-            region={currentRegion}
-            showsUserLocation={true}
-            showsMyLocationButton={false}
-            onMapReady={() => console.log("🗺️ react-native-maps ready")}
-          >
-            {/* User marker / center marker */}
-            {DynMarker && userLocation && (
-              <DynMarker
-                coordinate={userLocation}
-                title="You"
-                image={menuvaMarker}
-              />
-            )}
-
-            {/* Circle */}
-            {DynCircle && (
-              <DynCircle
-                center={centerForCircle}
-                radius={radiusMeters}
-                strokeColor="#3838FB"
-                fillColor="#3838FB22"
-                strokeWidth={2}
-              />
-            )}
-
-            {/* Restaurant markers */}
-            {filteredRestaurants
-              .filter(r => typeof r.latitude === "number" && typeof r.longitude === "number" && !isNaN(r.latitude) && !isNaN(r.longitude))
-              .map((r) => (
-                  <DynMarker
-                    key={r.id}
-                    coordinate={{ latitude: r.latitude, longitude: r.longitude }}
-                    title={r.name}
-                    description={`${r.restaurantType || ''} ${r.rating ? `⭐ ${r.rating}` : ''}`}
-                    image={menuthaMarker}
-                    onPress={() => {
-                      router.push({ pathname: "/HotelDetails", params: { id: r.id, name: r.name, address: r.address, starRating: r.rating || 0 } });
-                    }}
-                  />
-              ))}
-          </DynMapView>
-        </View>
-      );
-    } else {
-      mapContent = (
-        <View style={styles.mapNotAvailable}>
-          <MaterialCommunityIcons name="map-outline" size={64} color="#ccc" />
-          <Text style={styles.mapText}>Map View Unavailable</Text>
-          <Text style={styles.mapSubText}>
-            {Platform.OS === 'web'
-              ? "Use web browser for map features"
-              : "Native map library not installed. Run `npx expo install expo-maps` (for Expo) or install `react-native-maps` and rebuild the app."}
-          </Text>
-          <Text style={styles.mapSubTextSmall}>
-            Showing {filteredRestaurants.length} restaurants nearby
-          </Text>
-        </View>
-      );
-    }
+  // ✅ Handle web rendering AFTER all hooks are called
+  if (Platform.OS === 'web') {
+    return null;
   }
 
   if (loading) {
     return (
       <View style={[styles.container, styles.centerContent]}>
         <ActivityIndicator size="large" color="#6B4EFF" />
+        <Text style={{ marginTop: 10, color: '#666', fontSize: 16 }}>
+          Loading map and restaurants...
+        </Text>
+        {geocodingProgress > 0 && (
+          <View style={styles.geocodingProgress}>
+            <Text style={{ color: '#666', marginBottom: 8 }}>
+              Getting restaurant locations: {geocodingProgress}%
+            </Text>
+            <View style={styles.progressBar}>
+              <View
+                style={[styles.progressFill, { width: `${geocodingProgress}%` }]}
+              />
+            </View>
+          </View>
+        )}
       </View>
     );
   }
 
   return (
-    <View
-      style={Platform.OS === "web" ? styles.fullScreenWeb : styles.container}
-    >
+    <View style={styles.container}>
+      {/* Map */}
+      <MapView
+        ref={mapRef}
+        style={styles.map}
+        initialRegion={{
+          latitude: userLocation?.latitude || 17.4375,
+          longitude: userLocation?.longitude || 78.4456,
+          latitudeDelta: 0.05,
+          longitudeDelta: 0.05,
+        }}
+        showsUserLocation={true}
+        showsMyLocationButton={false}
+        followsUserLocation={false}
+        onMapReady={() => {
+          console.log('🗺️ Map ready');
+          // Fit to coordinates after map is ready
+          if (userLocation && filteredRestaurants.length > 0) {
+            const allCoords = [
+              userLocation,
+              ...filteredRestaurants.map(r => ({ latitude: r.latitude, longitude: r.longitude }))
+            ];
+
+            setTimeout(() => {
+              mapRef.current?.fitToCoordinates(allCoords, {
+                edgePadding: { top: 100, right: 100, bottom: 200, left: 100 },
+                animated: true,
+              });
+            }, 500);
+          }
+        }}
+      >
+        {/* User Location Circle */}
+        {userLocation && (
+          <Circle
+            center={userLocation}
+            radius={5000}
+            strokeColor="#3838FB"
+            fillColor="#3838FB22"
+            strokeWidth={2}
+          />
+        )}
+
+        {/* Restaurant Markers */}
+        {filteredRestaurants.map((restaurant) => (
+          <Marker
+            key={restaurant.id}
+            coordinate={{
+              latitude: restaurant.latitude,
+              longitude: restaurant.longitude,
+            }}
+            title={restaurant.name}
+            description={`${restaurant.restaurantType || ''} ${restaurant.rating ? `⭐ ${restaurant.rating}` : ''}`}
+            onPress={() => {
+              console.log('🏪 Restaurant marker pressed:', restaurant.name);
+              router.push({
+                pathname: "/HotelDetails",
+                params: {
+                  id: restaurant.id,
+                  name: restaurant.name,
+                  address: restaurant.address,
+                  starRating: restaurant.rating || 0,
+                },
+              });
+            }}
+          >
+            <CustomRestaurantMarker restaurant={restaurant} />
+          </Marker>
+        ))}
+      </MapView>
+
       {/* Top Controls */}
       <View style={styles.topControls}>
-        <Pressable
-          style={styles.gpsIndicator}
-          onPress={handleFilterPress}
-        >
+        <Pressable style={styles.filterButton} onPress={handleFilterPress}>
           <Image
             source={require("../assets/images/filter-image.png")}
             style={styles.filterImage}
           />
         </Pressable>
-        {/* Animated Search Bar */}
-        <View style={styles.animatedSearchBarContainer}>
+
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
           {!searchOpen ? (
             <Pressable style={styles.searchIconButton} onPress={handleOpenSearch}>
               <MaterialIcons name="search" size={28} color="#6B4EFF" />
             </Pressable>
           ) : (
-            <View style={[styles.animatedSearchBar, searchOpen && styles.animatedSearchBarOpen]}>
+            <View style={[styles.searchBar, searchOpen && styles.searchBarOpen]}>
               <MaterialIcons name="search" size={22} color="#6B4EFF" style={{ marginLeft: 10, marginRight: 4 }} />
               <TextInput
                 ref={searchInputRef}
-                style={styles.animatedSearchInput}
-                placeholder="Search your city, area or restaurant"
+                style={styles.searchInput}
+                placeholder="Search restaurants..."
                 placeholderTextColor="#888"
                 value={searchQuery}
                 onChangeText={handleSearchQueryChange}
                 autoCorrect={false}
                 autoCapitalize="none"
-                underlineColorAndroid="transparent"
               />
               {searchQuery.length > 0 ? (
-                <Pressable
-                  onPress={() => setSearchQuery("")}
-                  style={styles.animatedSearchClear}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
+                <Pressable onPress={() => setSearchQuery("")} style={styles.searchClear}>
                   <MaterialIcons name="close" size={20} color="#888" />
                 </Pressable>
               ) : (
-                <Pressable onPress={handleCloseSearch} style={styles.animatedSearchClose}>
+                <Pressable onPress={handleCloseSearch} style={styles.searchClose}>
                   <MaterialIcons name="close" size={24} color="#6B4EFF" />
                 </Pressable>
               )}
@@ -800,22 +527,11 @@ const CustomerHomeScreen = () => {
         </View>
       </View>
 
-      {/* Map Area */}
-      <View style={styles.mapWebContainer}>
-        {mapContent}
-
-        {/* Restaurant Tooltip Overlay for Native Maps */}
-        {Platform.OS !== 'web' && selectedRestaurantTooltip && (
-          <View style={styles.tooltipOverlay}>
-            <RestaurantTooltip
-              restaurant={selectedRestaurantTooltip}
-              onClose={() => {
-                setSelectedRestaurant(null);
-                setSelectedRestaurantTooltip(null);
-              }}
-            />
-          </View>
-        )}
+      {/* Results Counter */}
+      <View style={styles.resultsCounter}>
+        <Text style={styles.resultsText}>
+          {filteredRestaurants.length} restaurant{filteredRestaurants.length !== 1 ? 's' : ''} found
+        </Text>
       </View>
 
       {/* Filter Modal */}
@@ -827,134 +543,52 @@ const CustomerHomeScreen = () => {
         onClearAll={() => setSelectedFilters([])}
       />
 
-
-
       {/* Bottom Navigation */}
       <View style={styles.bottomNavigation}>
-        <Pressable
-          style={styles.navIconButton}
-          onPress={handlePersonTabPress}
-        >
+        <Pressable style={styles.navButton} onPress={handlePersonTabPress}>
           <MaterialIcons name="person" size={22} color="white" />
         </Pressable>
 
-        <Pressable
-          style={styles.navIconButtonCenter}
-          onPress={handleScanPress}
-        >
+        <Pressable style={styles.navButtonCenter} onPress={handleScanPress}>
           <MaterialCommunityIcons name="qrcode-scan" size={36} color="white" />
         </Pressable>
 
-        <Pressable
-          style={styles.navIconButton}
-          onPress={handleNavigationPress}
-        >
+        <Pressable style={styles.navButton} onPress={handleNavigationPress}>
           <MaterialIcons name="navigation" size={22} color="white" />
         </Pressable>
-
-        {/* Navigation Modal for multiple restaurants */}
-        <Modal
-          visible={showNavModal}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setShowNavModal(false)}
-        >
-          <View style={{ flex:1, backgroundColor:'rgba(0,0,0,0.4)', justifyContent:'center', alignItems:'center' }}>
-            <View style={{ backgroundColor:'#fff', borderRadius:12, padding:20, minWidth:280, maxHeight:'70%' }}>
-              <Text style={{ fontWeight:'bold', fontSize:18, marginBottom:12 }}>Select Restaurant</Text>
-              <FlatList
-                data={navOptions}
-                keyExtractor={item => item.id?.toString() || item.name}
-                renderItem={({item}) => (
-                  <Pressable onPress={() => handleNavSelect(item)} style={{ paddingVertical:10, borderBottomWidth:1, borderColor:'#eee' }}>
-                    <Text style={{ fontSize:16 }}>{item.name}</Text>
-                    <Text style={{ fontSize:13, color:'#888' }}>{item.address}</Text>
-                  </Pressable>
-                )}
-              />
-              <Pressable onPress={() => setShowNavModal(false)} style={{ marginTop:16, alignSelf:'flex-end' }}>
-                <Text style={{ color:'#6B4EFF', fontWeight:'bold' }}>Cancel</Text>
-              </Pressable>
-            </View>
-          </View>
-        </Modal>
       </View>
+
+      {/* Navigation Modal */}
+      <Modal
+        visible={showNavModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowNavModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Restaurant</Text>
+            <FlatList
+              data={navOptions}
+              keyExtractor={item => item.id?.toString() || item.name}
+              renderItem={({item}) => (
+                <Pressable onPress={() => handleNavSelect(item)} style={styles.modalItem}>
+                  <Text style={styles.modalItemName}>{item.name}</Text>
+                  <Text style={styles.modalItemAddress}>{item.address}</Text>
+                </Pressable>
+              )}
+            />
+            <Pressable onPress={() => setShowNavModal(false)} style={styles.modalCancel}>
+              <Text style={styles.modalCancelText}>Cancel</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  markerCircle: {
-    position: 'absolute',
-    bottom: -8,
-    left: '50%',
-    marginLeft: -16,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#3838FB22',
-    borderWidth: 2,
-    borderColor: '#3838FB',
-    zIndex: -1,
-  },
-  restaurantListContainer: {
-    position: "absolute",
-    top: 90,
-    left: 20,
-    right: 20,
-    backgroundColor: "rgba(255,255,255,0.95)",
-    borderRadius: 12,
-    padding: 10,
-    zIndex: 2,
-    maxHeight: 260,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  restaurantListItem: {
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-  },
-  restaurantName: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#333",
-  },
-  restaurantCuisine: {
-    fontSize: 14,
-    color: "#666",
-  },
-  noRestaurantsText: {
-    textAlign: "center",
-    color: "#999",
-    fontSize: 16,
-    paddingVertical: 12,
-  },
-  mapWebContainer: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    width: "100vw",
-    height: "100vh",
-    zIndex: 0,
-  },
-  fullScreenWeb: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    width: "100vw",
-    height: "100vh",
-    margin: 0,
-    padding: 0,
-    backgroundColor: "#fff",
-    zIndex: 0,
-  },
   container: {
     flex: 1,
     backgroundColor: "#fff",
@@ -963,25 +597,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-
-  mapArea: {
-    flex: 1,
-    height: 300, // or whatever height you want
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 10,
-    overflow: "hidden",
-  },
   map: {
     ...StyleSheet.absoluteFillObject,
-    width: '100%',
-    height: '100%',
-    minHeight: 300,
   },
-
   topControls: {
     position: "absolute",
-    top: 20,
+    top: 50,
     left: 20,
     right: 20,
     flexDirection: "row",
@@ -989,35 +610,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     zIndex: 1,
   },
-  gpsIndicator: {
-    // backgroundColor: "white",
+  filterButton: {
+    backgroundColor: "white",
     borderRadius: 20,
     padding: 8,
-    /*   shadowColor: "#000",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
-    elevation: 5, */
+    elevation: 5,
   },
   filterImage: {
     width: 36,
     height: 36,
     resizeMode: "contain",
-    fontSize: 36,
   },
-  searchButton: {
-    display: 'none',
-  },
-  animatedSearchBarContainer: {
-    position: 'absolute',
-    top: 10,
-    right: 0,
-    zIndex: 10,
+  searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    minWidth: 48,
-    minHeight: 48,
-    justifyContent: 'flex-end',
   },
   searchIconButton: {
     width: 48,
@@ -1032,75 +642,78 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  animatedSearchBar: {
+  searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
     borderRadius: 18,
     borderWidth: 1,
     borderColor: '#e0e0e0',
-    minWidth: 60,
-    width: 0,
     height: 48,
     paddingRight: 8,
-    paddingLeft: 0,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.10,
     shadowRadius: 4,
     elevation: 2,
-    overflow: 'hidden',
-    transitionProperty: 'width',
-    transitionDuration: '0.3s',
-    transitionTimingFunction: 'ease',
+    width: 60,
   },
-  animatedSearchBarOpen: {
-    width: 340,
-    paddingLeft: 8,
+  searchBarOpen: {
+    width: 280,
   },
-  animatedSearchInput: {
+  searchInput: {
     flex: 1,
     fontSize: 17,
     color: '#222',
-    backgroundColor: 'transparent',
-    borderWidth: 0,
     paddingHorizontal: 8,
-    paddingVertical: 0,
     height: 48,
-    outlineStyle: 'none',
   },
-  animatedSearchClear: {
+  searchClear: {
+    padding: 2,
     marginRight: 2,
-    marginLeft: 2,
+  },
+  searchClose: {
     padding: 2,
-  },
-  animatedSearchClose: {
     marginLeft: 2,
-    padding: 2,
   },
-
-  mapNotAvailable: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#f5f5f5",
+  resultsCounter: {
+    position: 'absolute',
+    top: 110,
+    left: 20,
+    right: 20,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderRadius: 8,
+    padding: 8,
+    alignItems: 'center',
+    zIndex: 1,
   },
-  mapText: {
-    fontSize: 18,
-    color: "#666",
-    textAlign: "center",
-  },
-  mapSubText: {
+  resultsText: {
     fontSize: 14,
-    color: "#999",
-    textAlign: "center",
-    marginTop: 8,
+    color: '#333',
+    fontWeight: '500',
   },
-  mapSubTextSmall: {
-    fontSize: 12,
-    color: "#bbb",
-    textAlign: "center",
-    marginTop: 4,
+  markerContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  marker: {
+    backgroundColor: '#6B4EFF',
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  markerText: {
+    fontSize: 16,
+    color: 'white',
   },
   bottomNavigation: {
     position: "absolute",
@@ -1111,9 +724,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     zIndex: 1000,
-    elevation: 1000,
   },
-  navIconButton: {
+  navButton: {
     backgroundColor: '#3838FB',
     borderRadius: 16,
     width: 48,
@@ -1127,7 +739,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 6,
   },
-  navIconButtonCenter: {
+  navButtonCenter: {
     backgroundColor: '#3838FB',
     borderRadius: 18,
     width: 64,
@@ -1142,148 +754,92 @@ const styles = StyleSheet.create({
     elevation: 10,
     top: -16,
   },
-  filterBar: {
-    position: "absolute",
-    top: 10,
-    left: 10,
-    right: 10,
-    zIndex: 10,
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    padding: 8,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  filterInput: {
-    fontSize: 16,
-    padding: 6,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#eee",
-    backgroundColor: "#f7f7ff",
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    minWidth: 280,
+    maxHeight: '70%',
   },
-  bottomNav: {
-    position: "absolute",
-    bottom: 16,
-    left: 0,
-    right: 0,
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    backgroundColor: "rgba(107, 78, 255, 0.08)",
+  modalTitle: {
+    fontWeight: 'bold',
+    fontSize: 18,
+    marginBottom: 12,
+  },
+  modalItem: {
     paddingVertical: 10,
-    borderRadius: 24,
-    marginHorizontal: 24,
+    borderBottomWidth: 1,
+    borderColor: '#eee',
   },
-  navBtn: {
-    backgroundColor: "#eae6ff",
-    borderRadius: 18,
-    width: 48,
-    height: 48,
-    alignItems: "center",
-    justifyContent: "center",
-    elevation: 2,
+  modalItemName: {
+    fontSize: 16,
   },
-  navIcon: {
-    fontSize: 28,
-    color: "#6B4EFF",
-    fontWeight: "bold",
+  modalItemAddress: {
+    fontSize: 13,
+    color: '#888',
+  },
+  modalCancel: {
+    marginTop: 16,
+    alignSelf: 'flex-end',
+  },
+  modalCancelText: {
+    color: '#6B4EFF',
+    fontWeight: 'bold',
+  },
+  // Geocoding progress styles
+  geocodingProgress: {
+    marginTop: 20,
+    alignItems: 'center',
+    width: '80%',
+  },
+  progressBar: {
+    width: '100%',
+    height: 8,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#6B4EFF',
+    borderRadius: 4,
   },
   // Custom marker styles
-  markerContainer: {
+  customMarkerContainer: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  markerWrapper: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#6854FF',
-    borderWidth: 2,
-    borderColor: '#ffffff',
+  customMarker: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: '#fff',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  markerSelected: {
-    transform: [{ scale: 1.2 }],
-    backgroundColor: '#5a47d9',
-  },
-  markerText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  markerTextSelected: {
-    fontSize: 18,
-  },
-  // Tooltip styles
-  tooltip: {
-    position: 'absolute',
-    bottom: 60,
-    left: 20,
-    right: 20,
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
     elevation: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
   },
-  tooltipClose: {
+  customMarkerIcon: {
+    fontSize: 20,
+    textAlign: 'center',
+  },
+  markerShadow: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    padding: 4,
-    zIndex: 1,
-  },
-  tooltipTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
-    marginRight: 24,
-  },
-  tooltipAddress: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 2,
-  },
-  tooltipType: {
-    fontSize: 14,
-    color: '#888',
-    marginBottom: 8,
-  },
-  tooltipRating: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  tooltipRatingText: {
-    fontSize: 14,
-    color: '#333',
-    marginLeft: 4,
-    fontWeight: '500',
-  },
-  tooltipOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
-  },
-  mapContainer: {
-    flex: 1,
-    position: 'relative',
+    bottom: -6,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    opacity: 0.3,
   },
 });
 

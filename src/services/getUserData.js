@@ -33,11 +33,8 @@ export function useUserData() {
     }
   };
 
-  useEffect(() => {
-    fetchUserData();
-  }, []);
-
-  // Re-check user data when screen comes into focus
+  // Use useFocusEffect instead of useEffect to handle both initial load and focus
+  // This prevents duplicate data fetching and hook order issues
   useFocusEffect(
     React.useCallback(() => {
       fetchUserData();

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -196,7 +196,7 @@ export default function ItemsListScreen() {
     console.log('orderitems: initializing with params:', params);
     getMenu();
     initializeData();
-  }, [params.category, params.orderID, userId]);
+  }, [params?.category, params?.orderID, userId]);
   const initializeData = async () => {
     try {
       setLoading(true);
@@ -328,7 +328,7 @@ export default function ItemsListScreen() {
     });
     // }
   };
-  const deleteOrder_items = async () => {
+  const deleteOrder_items = useCallback(async () => {
     // Only send minimal removed item identifiers
     const order = {
       userId: userId,
@@ -348,7 +348,7 @@ export default function ItemsListScreen() {
       // console.error("Error creating order:", error);
     }
     setShowOrderModal(true);
-  };
+  }, [userId, params.restaurantId, params.orderID, remove_list]);
 
   const handleItemSelect = (itemId) => {
     setItems((prevData) => {
