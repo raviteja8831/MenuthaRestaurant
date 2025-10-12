@@ -38,12 +38,7 @@ const CustomerHomeScreen = () => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [showNavModal, setShowNavModal] = useState(false);
   const [navOptions, setNavOptions] = useState([]);
-  const [region, setRegion] = useState({
-    latitude: 17.4375,
-    longitude: 78.4456,
-    latitudeDelta: 0.5,
-    longitudeDelta: 0.5,
-  });
+  const [mapReady, setMapReady] = useState(false);
 
   // Geocoding cache functions
   const GEOCODE_CACHE_KEY = 'restaurant_geocode_cache';
@@ -280,14 +275,6 @@ const CustomerHomeScreen = () => {
         console.log('📍 User location:', userLoc);
         setUserLocation(userLoc);
 
-        // Update region to center on user location
-        setRegion({
-          latitude: userLoc.latitude,
-          longitude: userLoc.longitude,
-          latitudeDelta: 0.05,
-          longitudeDelta: 0.05,
-        });
-
         // Get restaurants
         const restaurantData = await getAllRestaurants();
         console.log('🏪 Fetched restaurants:', restaurantData.length);
@@ -331,7 +318,7 @@ const CustomerHomeScreen = () => {
               if (coordinates) {
                 const updatedRestaurant = { ...restaurant, ...coordinates };
                 allRestaurants.push(updatedRestaurant);
-                setRestaurants([...allRestaurants]); // Update state incrementally
+                // Don't update state incrementally - wait for the end
               }
             }
 
@@ -346,13 +333,8 @@ const CustomerHomeScreen = () => {
 
         console.log('✅ Final restaurant count with coordinates:', allRestaurants.length);
 
-        // Set the final restaurants list
+        // Set the final restaurants list only once at the end
         setRestaurants(allRestaurants);
-
-        // Update region to include all restaurants
-        const optimalRegion = calculateOptimalRegion(userLoc, allRestaurants);
-        console.log('🗺️ Setting optimal region:', optimalRegion);
-        setRegion(optimalRegion);
 
       } catch (error) {
         console.error('❌ Error initializing app:', error);
@@ -365,17 +347,36 @@ const CustomerHomeScreen = () => {
     initializeApp();
   }, []);
 
-  // Update region when filtered restaurants change
+  // Update map region when data is ready and map is loaded
   useEffect(() => {
-    if (userLocation && filteredRestaurants) {
-      const optimalRegion = calculateOptimalRegion(userLocation, filteredRestaurants);
-      console.log('🗺️ Updating region for filtered restaurants:', {
-        restaurantCount: filteredRestaurants.length,
-        newRegion: optimalRegion
-      });
-      setRegion(optimalRegion);
+    if (mapReady && mapRef.current && userLocation) {
+      // First center on user location
+      const userRegion = {
+        latitude: userLocation.latitude,
+        longitude: userLocation.longitude,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      };
+
+      console.log('🗺️ Centering map on user location');
+      mapRef.current.animateToRegion(userRegion, 1000);
     }
-  }, [filteredRestaurants, userLocation]);
+  }, [mapReady, userLocation]);
+
+  // Update region when filtered restaurants change (but only if map is ready)
+  useEffect(() => {
+    if (mapReady && mapRef.current && userLocation && filteredRestaurants && filteredRestaurants.length > 0) {
+      // Add a delay to let markers render first
+      setTimeout(() => {
+        const optimalRegion = calculateOptimalRegion(userLocation, filteredRestaurants);
+        console.log('🗺️ Updating region for filtered restaurants:', {
+          restaurantCount: filteredRestaurants.length,
+          newRegion: optimalRegion
+        });
+        mapRef.current.animateToRegion(optimalRegion, 2000);
+      }, 500);
+    }
+  }, [filteredRestaurants, mapReady, userLocation]);
 
   // Navigation functions
   const openGoogleMapsDirections = (restaurant) => {
@@ -532,16 +533,13 @@ const CustomerHomeScreen = () => {
           latitudeDelta: 0.5,
           longitudeDelta: 0.5,
         }}
-        region={region}
         showsUserLocation={true}
         showsMyLocationButton={true}
         followsUserLocation={false}
         loadingEnabled={true}
         onMapReady={() => {
           console.log('🗺️ Map ready!');
-          console.log('🗺️ User location:', userLocation);
-          console.log('🗺️ Filtered restaurants count:', filteredRestaurants.length);
-          console.log('🗺️ Current region:', region);
+          setMapReady(true);
         }}
       >
         {/* User Location Circle */}

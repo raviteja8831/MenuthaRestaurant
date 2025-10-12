@@ -117,7 +117,8 @@ const defaultIcon = "food-outline";
 // Default fallback image
 const defaultCategoryImage = require("../src/assets/images/menu.png");
 export default function ItemsListScreen() {
-  console.log('🔄 ItemsListScreen rendering...');
+  // Remove console.log from render to reduce noise
+  // console.log('🔄 ItemsListScreen rendering...');
 
   // ✅ ALL HOOKS MUST BE CALLED FIRST - NO EXCEPTIONS
   const router = useRouter();
@@ -172,7 +173,8 @@ export default function ItemsListScreen() {
 
   //   initializeProfile();
   // }, []);
-  useEffect(() => {
+  // Memoize the initialization function to prevent recreation on every render
+  const initializeComponent = useCallback(() => {
     // Defensive: only initialize if we have userId and required params
     if (!userId) {
       console.log('orderitems: waiting for userId...');
@@ -195,7 +197,11 @@ export default function ItemsListScreen() {
     console.log('orderitems: initializing with params:', params);
     getMenu();
     initializeData();
-  }, [params?.category, params?.orderID, userId]); // Removed getMenu and initializeData from dependencies
+  }, [params?.category, params?.orderID, userId, getMenu, initializeData, router]);
+
+  useEffect(() => {
+    initializeComponent();
+  }, [initializeComponent]);
 
   const initializeData = useCallback(async () => {
     try {
@@ -283,9 +289,8 @@ export default function ItemsListScreen() {
       if (isMounted.current) {
         try {
           console.log('🔄 Setting items state...');
-          setItems(combinedItems);
 
-          console.log('🔄 Filtering selected items...');
+          // Batch state updates to prevent multiple re-renders
           const selectedItems = combinedItems.filter((item) => {
             // Defensive check for each item
             if (!item || typeof item !== 'object') {
@@ -295,8 +300,10 @@ export default function ItemsListScreen() {
             return !!item.selected;
           });
 
-          console.log('🔄 Setting selected items state...', selectedItems.length);
+          // Use functional updates to ensure state consistency
+          setItems(combinedItems);
           setSelectedItems(selectedItems);
+
           console.log('✅ State updated successfully');
         } catch (stateError) {
           console.error('❌ Error updating state:', stateError);
@@ -417,7 +424,7 @@ export default function ItemsListScreen() {
     setShowOrderModal(true);
   }, [userId, params.restaurantId, params.orderID, remove_list, initializeData]);
 
-  const handleItemSelect = (itemId) => {
+  const handleItemSelect = useCallback((itemId) => {
     setItems((prevData) => {
       const updatedItems = prevData.map((item) => {
         if (item.id === itemId) {
@@ -442,38 +449,36 @@ export default function ItemsListScreen() {
 
       return updatedItems;
     });
-  };
+  }, []);
+  // Optimize: Use a ref to track previous state to prevent unnecessary calls
+  const prevStateRef = useRef({ selectedCount: 0, removeListLength: 0 });
+
   useEffect(() => {
     const selected = items.filter((i) => i.selected);
-    if (selected.length === 0 && remove_list.length > 0) {
+    const selectedCount = selected.length;
+    const removeListLength = remove_list.length;
+
+    // Only call deleteOrder_items if state actually changed
+    if (selectedCount === 0 &&
+        removeListLength > 0 &&
+        (prevStateRef.current.selectedCount !== selectedCount ||
+         prevStateRef.current.removeListLength !== removeListLength)) {
+
+      prevStateRef.current = { selectedCount, removeListLength };
       deleteOrder_items();
+    } else {
+      prevStateRef.current = { selectedCount, removeListLength };
     }
   }, [items, remove_list, deleteOrder_items]);
 
-  const handleEdit = (item) => {
-    let foundItem = null;
-    /*  setItems(
-      (prevSections) =>
-        prevSections.map((item) => {
-          if (item.id === itemId) {
-            foundItem = {
-              ...item,
-              selected: true,
-              quantity: item.quantity || 1,
-            };
-            return foundItem;
-          }
-          return item;
-        })
-      // }))
-    ); */
+  const handleEdit = useCallback((item) => {
     if (item.id) {
       console.log("Editing item:", item);
       setSelectedItem(item.id);
       setComment(item.comments || "");
       setIsModalOpen(true);
     }
-  };
+  }, []);
 
   const handleCommentSubmit = () => {
     console.log(
@@ -497,7 +502,7 @@ export default function ItemsListScreen() {
     setSelectedItem(null);
     setComment("");
   };
-  const handleQuantityChange = (itemId, increment) => {
+  const handleQuantityChange = useCallback((itemId, increment) => {
     setItems((prevData) => {
       const updatedItems = prevData.map((item) => {
         if (item.id === itemId) {
@@ -521,29 +526,25 @@ export default function ItemsListScreen() {
         return item;
       });
 
-      // ✅ After items updated, check selected count
-      const selected = updatedItems.filter((i) => i.selected);
-
-      /*  if (selected.length === 0) {
-        // 👇 Only call API here
-        // params.orderID = null;
-        deleteOrder_items();
-        // createOrder_data(false, "calling_selected");
-      } */
-
       return updatedItems;
     });
-  };
+  }, []);
 
-  useEffect(() => {
-    const selected = items.filter((item) => item.selected);
-    setSelectedItems(selected);
+  // Optimize: Memoize the expensive calculations
+  const { selectedItems: calculatedSelectedItems, totalCost: calculatedTotalCost } = useMemo(() => {
+    const selected = items.filter((item) => item?.selected);
     const total = selected.reduce((sum, item) => {
-      const price = parseInt(item.price);
-      return sum + price * item.quantity;
+      const price = parseInt(item?.price || 0);
+      return sum + price * (item?.quantity || 0);
     }, 0);
-    setTotalCost(total);
+    return { selectedItems: selected, totalCost: total };
   }, [items]);
+
+  // Update state only when calculated values change
+  useEffect(() => {
+    setSelectedItems(calculatedSelectedItems);
+    setTotalCost(calculatedTotalCost);
+  }, [calculatedSelectedItems, calculatedTotalCost]);
 
   const handleConfirmOrder = () => {
     router.push({
@@ -653,7 +654,7 @@ export default function ItemsListScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Group items by type */}
-        {(() => {
+        {useMemo(() => {
           try {
             // Group items by type with safety checks
             const groupedItems = items.reduce((acc, item) => {
@@ -743,7 +744,7 @@ export default function ItemsListScreen() {
               </View>
             );
           }
-        })()}
+        }, [items, params.ishotel, handleItemSelect, handleQuantityChange, handleEdit])}
         {params.ishotel == "false" && (
           <View style={orderitemsstyle.orderSummary}>
             <Text style={orderitemsstyle.summaryText}>
