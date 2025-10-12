@@ -283,35 +283,33 @@ const CustomerHomeScreen = () => {
 
         // Animate map to show user + restaurants after a short delay
         setTimeout(() => {
-          if (mapRef.current && allRestaurants.length > 0) {
-            // Create list of marker identifiers for restaurants
-            const restaurantMarkerIds = allRestaurants.map(r => `restaurant-${r.id}`);
+          if (mapRef.current) {
+            if (allRestaurants.length > 0) {
+              // Create list of marker identifiers for restaurants
+              const restaurantMarkerIds = allRestaurants
+                .filter(r => r.latitude && r.longitude)
+                .map(r => `restaurant-${r.id}`);
 
-            // Include user location and test markers in fitting
-            const allMarkerIds = [
-              'user-location',
-              'test-marker-1',
-              'test-marker-2',
-              'test-marker-3',
-              ...restaurantMarkerIds
-            ];
+              // Include user location in fitting
+              const allMarkerIds = ['user-location', ...restaurantMarkerIds];
 
-            console.log('🗺️ Fitting map to supplied markers:', allMarkerIds.length);
-            mapRef.current.fitToSuppliedMarkers(allMarkerIds, {
-              edgePadding: { top: 150, right: 50, bottom: 300, left: 50 },
-              animated: true,
-            });
-          } else {
-            // If no restaurants, just center on user
-            console.log('🗺️ Centering map on user location');
-            mapRef.current.animateToRegion({
-              latitude: userLoc.latitude,
-              longitude: userLoc.longitude,
-              latitudeDelta: 0.01,
-              longitudeDelta: 0.01,
-            }, 1000);
+              console.log('🗺️ Fitting map to markers:', allMarkerIds.length);
+              mapRef.current.fitToSuppliedMarkers(allMarkerIds, {
+                edgePadding: { top: 150, right: 50, bottom: 300, left: 50 },
+                animated: true,
+              });
+            } else {
+              // If no restaurants, center on user
+              console.log('🗺️ Centering map on user location');
+              mapRef.current.animateToRegion({
+                latitude: userLoc.latitude,
+                longitude: userLoc.longitude,
+                latitudeDelta: 0.05,
+                longitudeDelta: 0.05,
+              }, 1000);
+            }
           }
-        }, 2000);
+        }, 1000);
 
       } catch (error) {
         console.error('❌ Error initializing app:', error);
@@ -324,21 +322,30 @@ const CustomerHomeScreen = () => {
     initializeApp();
   }, []);
 
+  // Center map on user location when it becomes available
+  useEffect(() => {
+    if (mapRef.current && userLocation) {
+      console.log('🗺️ User location available, centering map');
+      mapRef.current.animateToRegion({
+        latitude: userLocation.latitude,
+        longitude: userLocation.longitude,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      }, 1000);
+    }
+  }, [userLocation]);
+
   // Fit map to all visible markers when filters change
   useEffect(() => {
     if (mapRef.current && userLocation && filteredRestaurants.length > 0) {
       setTimeout(() => {
         // Create list of marker identifiers for filtered restaurants
-        const restaurantMarkerIds = filteredRestaurants.map(r => `restaurant-${r.id}`);
+        const restaurantMarkerIds = filteredRestaurants
+          .filter(r => r.latitude && r.longitude)
+          .map(r => `restaurant-${r.id}`);
 
-        // Include user location and test markers in fitting
-        const allMarkerIds = [
-          'user-location',
-          'test-marker-1',
-          'test-marker-2',
-          'test-marker-3',
-          ...restaurantMarkerIds
-        ];
+        // Include user location in fitting
+        const allMarkerIds = ['user-location', ...restaurantMarkerIds];
 
         console.log('🗺️ Refitting map to filtered markers:', allMarkerIds.length);
         mapRef.current.fitToSuppliedMarkers(allMarkerIds, {
@@ -346,8 +353,16 @@ const CustomerHomeScreen = () => {
           animated: true,
         });
       }, 500);
+    } else if (mapRef.current && userLocation && filteredRestaurants.length === 0) {
+      // If no restaurants found, center on user
+      mapRef.current.animateToRegion({
+        latitude: userLocation.latitude,
+        longitude: userLocation.longitude,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      }, 1000);
     }
-  }, [filteredRestaurants, userLocation]);
+  }, [filteredRestaurants]);
 
   // Navigation functions
   const openGoogleMapsDirections = (restaurant) => {
@@ -499,23 +514,30 @@ const CustomerHomeScreen = () => {
         ref={mapRef}
         style={styles.map}
         initialRegion={{
-          latitude: userLocation?.latitude || 17.4375,
-          longitude: userLocation?.longitude || 78.4456,
-          latitudeDelta: 0.05,
-          longitudeDelta: 0.05,
+          latitude: 17.4375,
+          longitude: 78.4456,
+          latitudeDelta: 0.5,
+          longitudeDelta: 0.5,
         }}
         showsUserLocation={true}
-        showsMyLocationButton={false}
+        showsMyLocationButton={true}
         followsUserLocation={false}
+        loadingEnabled={true}
         onMapReady={() => {
           console.log('🗺️ Map ready!');
           console.log('🗺️ User location:', userLocation);
           console.log('🗺️ Filtered restaurants count:', filteredRestaurants.length);
-          console.log('🗺️ First 3 restaurants:', filteredRestaurants.slice(0, 3).map(r => ({
-            name: r.name,
-            lat: r.latitude,
-            lng: r.longitude
-          })));
+
+          // Animate to user location immediately when map is ready
+          if (userLocation && mapRef.current) {
+            console.log('🗺️ Animating to user location on map ready');
+            mapRef.current.animateToRegion({
+              latitude: userLocation.latitude,
+              longitude: userLocation.longitude,
+              latitudeDelta: 0.05,
+              longitudeDelta: 0.05,
+            }, 500);
+          }
         }}
       >
         {/* User Location Circle */}
@@ -529,7 +551,7 @@ const CustomerHomeScreen = () => {
           />
         )}
 
-        {/* Test: User Location Marker */}
+        {/* User Location Marker */}
         {userLocation && (
           <Marker
             identifier="user-location"
@@ -539,29 +561,6 @@ const CustomerHomeScreen = () => {
             pinColor="blue"
           />
         )}
-
-        {/* Test: Hardcoded markers to verify markers work */}
-        <Marker
-          identifier="test-marker-1"
-          coordinate={{ latitude: 17.4375, longitude: 78.4456 }}
-          title="Test Marker 1"
-          description="Hyderabad center"
-          pinColor="green"
-        />
-        <Marker
-          identifier="test-marker-2"
-          coordinate={{ latitude: 17.4475, longitude: 78.4556 }}
-          title="Test Marker 2"
-          description="Test location"
-          pinColor="purple"
-        />
-        <Marker
-          identifier="test-marker-3"
-          coordinate={{ latitude: 17.4275, longitude: 78.4356 }}
-          title="Test Marker 3"
-          description="Another test"
-          pinColor="orange"
-        />
 
         {/* Restaurant Markers - Simplified default markers with identifiers for fitToSuppliedMarkers */}
         {filteredRestaurants.map((restaurant, index) => {

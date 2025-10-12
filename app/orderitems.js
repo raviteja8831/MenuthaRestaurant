@@ -633,14 +633,14 @@ export default function ItemsListScreen() {
         {/* Group items by type */}
         {(() => {
           try {
-            // Group items by itemType with safety checks
+            // Group items by type with safety checks
             const groupedItems = items.reduce((acc, item) => {
               if (!item || typeof item !== 'object') {
                 console.warn('⚠️ Invalid item in render:', item);
                 return acc;
               }
 
-              const type = item.itemType || 'Other';
+              const type = item.type || 'Other';
               if (!acc[type]) {
                 acc[type] = [];
               }
@@ -713,6 +713,14 @@ export default function ItemsListScreen() {
               ))}
             </View>
           ));
+          } catch (error) {
+            console.error('❌ Error rendering items:', error);
+            return (
+              <View style={{ padding: 20 }}>
+                <Text style={{ color: '#333' }}>Error displaying menu items</Text>
+              </View>
+            );
+          }
         })()}
         {params.ishotel == "false" && (
           <View style={orderitemsstyle.orderSummary}>
