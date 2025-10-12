@@ -301,6 +301,27 @@ const CustomerHomeScreen = () => {
     initializeApp();
   }, []);
 
+  // Update map when filtered restaurants change
+  useEffect(() => {
+    if (mapRef.current && userLocation && filteredRestaurants.length > 0) {
+      setTimeout(() => {
+        const allCoords = [
+          userLocation,
+          ...filteredRestaurants.map(r => ({
+            latitude: parseFloat(r.latitude),
+            longitude: parseFloat(r.longitude)
+          }))
+        ];
+
+        console.log('🗺️ Updating map bounds for', allCoords.length, 'coordinates');
+        mapRef.current.fitToCoordinates(allCoords, {
+          edgePadding: { top: 150, right: 50, bottom: 300, left: 50 },
+          animated: true,
+        });
+      }, 1000);
+    }
+  }, [filteredRestaurants, userLocation]);
+
   // Navigation functions
   const openGoogleMapsDirections = (restaurant) => {
     if (!restaurant || !restaurant.latitude || !restaurant.longitude) {
@@ -465,7 +486,14 @@ const CustomerHomeScreen = () => {
         showsMyLocationButton={false}
         followsUserLocation={false}
         onMapReady={() => {
-          console.log('🗺️ Map ready, restaurants count:', filteredRestaurants.length);
+          console.log('🗺️ Map ready!');
+          console.log('🗺️ User location:', userLocation);
+          console.log('🗺️ Filtered restaurants count:', filteredRestaurants.length);
+          console.log('🗺️ First 3 restaurants:', filteredRestaurants.slice(0, 3).map(r => ({
+            name: r.name,
+            lat: r.latitude,
+            lng: r.longitude
+          })));
         }}
       >
         {/* User Location Circle */}
@@ -479,18 +507,39 @@ const CustomerHomeScreen = () => {
           />
         )}
 
-        {/* Restaurant Markers */}
+        {/* Test: User Location Marker */}
+        {userLocation && (
+          <Marker
+            coordinate={userLocation}
+            title="Your Location"
+            description="This is where you are"
+            pinColor="blue"
+          />
+        )}
+
+        {/* Restaurant Markers - Using default markers for better reliability */}
         {filteredRestaurants.map((restaurant, index) => {
           console.log(`🏪 Rendering marker ${index + 1}:`, restaurant.name, restaurant.latitude, restaurant.longitude);
+
+          const lat = parseFloat(restaurant.latitude);
+          const lng = parseFloat(restaurant.longitude);
+
+          // Validate coordinates
+          if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
+            console.log(`❌ Invalid coordinates for ${restaurant.name}:`, lat, lng);
+            return null;
+          }
+
           return (
             <Marker
               key={`restaurant-${restaurant.id}-${index}`}
               coordinate={{
-                latitude: parseFloat(restaurant.latitude),
-                longitude: parseFloat(restaurant.longitude),
+                latitude: lat,
+                longitude: lng,
               }}
               title={restaurant.name}
               description={`${restaurant.restaurantType || ''} ${restaurant.rating ? `⭐ ${restaurant.rating}` : ''}`}
+              pinColor="red"
               onPress={() => {
                 console.log('🏪 Restaurant marker pressed:', restaurant.name);
                 router.push({
@@ -503,11 +552,7 @@ const CustomerHomeScreen = () => {
                   },
                 });
               }}
-            >
-              <View style={styles.simpleMarker}>
-                <Text style={styles.simpleMarkerText}>🏪</Text>
-              </View>
-            </Marker>
+            />
           );
         })}
 
