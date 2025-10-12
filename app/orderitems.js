@@ -197,7 +197,7 @@ export default function ItemsListScreen() {
     console.log('orderitems: initializing with params:', params);
     getMenu();
     initializeData();
-  }, [params?.category, params?.orderID, userId, getMenu, initializeData, router]);
+  }, [params?.category, params?.orderID, userId]);
 
   useEffect(() => {
     initializeComponent();

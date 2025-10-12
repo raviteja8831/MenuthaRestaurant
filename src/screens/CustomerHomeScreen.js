@@ -39,6 +39,12 @@ const CustomerHomeScreen = () => {
   const [showNavModal, setShowNavModal] = useState(false);
   const [navOptions, setNavOptions] = useState([]);
   const [mapReady, setMapReady] = useState(false);
+  const [mapRegion, setMapRegion] = useState({
+    latitude: 17.4375,
+    longitude: 78.4456,
+    latitudeDelta: 0.1,
+    longitudeDelta: 0.1,
+  });
 
   // Geocoding cache functions
   const GEOCODE_CACHE_KEY = 'restaurant_geocode_cache';
@@ -124,8 +130,8 @@ const CustomerHomeScreen = () => {
       return {
         latitude: 17.4375,
         longitude: 78.4456,
-        latitudeDelta: 0.5,
-        longitudeDelta: 0.5,
+        latitudeDelta: 0.1,
+        longitudeDelta: 0.1,
       };
     }
 
@@ -274,6 +280,20 @@ const CustomerHomeScreen = () => {
 
         console.log('📍 User location:', userLoc);
         setUserLocation(userLoc);
+
+        // Force immediate map centering on user location
+        const userRegion = {
+          latitude: userLoc.latitude,
+          longitude: userLoc.longitude,
+          latitudeDelta: 0.05,
+          longitudeDelta: 0.05,
+        };
+        setMapRegion(userRegion);
+        console.log('🗺️ Force centering map on user location immediately');
+
+        if (mapRef.current) {
+          mapRef.current.animateToRegion(userRegion, 1000);
+        }
 
         // Get restaurants
         const restaurantData = await getAllRestaurants();
@@ -527,12 +547,7 @@ const CustomerHomeScreen = () => {
       <MapView
         ref={mapRef}
         style={styles.map}
-        initialRegion={{
-          latitude: 17.4375,
-          longitude: 78.4456,
-          latitudeDelta: 0.5,
-          longitudeDelta: 0.5,
-        }}
+        region={mapRegion}
         showsUserLocation={true}
         showsMyLocationButton={true}
         followsUserLocation={false}
@@ -540,6 +555,9 @@ const CustomerHomeScreen = () => {
         onMapReady={() => {
           console.log('🗺️ Map ready!');
           setMapReady(true);
+        }}
+        onRegionChangeComplete={(region) => {
+          console.log('🗺️ Map region changed to:', region);
         }}
       >
         {/* User Location Circle */}
@@ -578,6 +596,7 @@ const CustomerHomeScreen = () => {
               }}
               title={restaurant.name || 'Restaurant'}
               description={restaurant.address || 'Restaurant location'}
+              pinColor="red"
               onPress={() => {
                 console.log('🏪 Restaurant marker pressed:', restaurant.name);
                 router.push({
