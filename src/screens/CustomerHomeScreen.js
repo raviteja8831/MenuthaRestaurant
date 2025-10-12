@@ -119,7 +119,19 @@ const CustomerHomeScreen = () => {
 
   // Filter restaurants (useMemo hook)
   const filteredRestaurants = React.useMemo(() => {
-    return restaurants.filter((r) => {
+    console.log('🔍 Filtering restaurants:', {
+      totalRestaurants: restaurants.length,
+      searchQuery: searchQuery,
+      selectedFilters: selectedFilters.map(f => f.name),
+      userLocation: userLocation ? 'available' : 'missing'
+    });
+
+    const filtered = restaurants.filter((r) => {
+      // Ensure restaurant has valid coordinates
+      if (!r.latitude || !r.longitude || isNaN(r.latitude) || isNaN(r.longitude)) {
+        return false;
+      }
+
       // Search filter
       if (searchQuery && searchQuery.trim() !== "") {
         const q = searchQuery.trim().toLowerCase();
@@ -136,6 +148,8 @@ const CustomerHomeScreen = () => {
       // Apply filters
       return selectedFilters.every((f) => {
         const filterName = f.name;
+        console.log('🔍 Applying filter:', filterName, 'to restaurant:', r.name);
+
         if (filterName === "Near Me") {
           if (!userLocation) return false;
           const dist = getDistanceFromLatLonInKm(
@@ -144,6 +158,7 @@ const CustomerHomeScreen = () => {
             r.latitude,
             r.longitude
           );
+          console.log('📍 Distance to', r.name, ':', dist.toFixed(2), 'km');
           return dist <= 5;
         }
         if (filterName === "Only Veg Restaurant") return r.enableVeg === true && r.enableNonveg === false;
@@ -158,6 +173,9 @@ const CustomerHomeScreen = () => {
         return true;
       });
     });
+
+    console.log('✅ Filtered result:', filtered.length, 'restaurants');
+    return filtered;
   }, [restaurants, searchQuery, selectedFilters, userLocation]);
 
   // Get user location and restaurants
@@ -244,20 +262,33 @@ const CustomerHomeScreen = () => {
 
         console.log('✅ Final restaurant count with coordinates:', allRestaurants.length);
 
-        // Animate map to show user + restaurants
-        if (mapRef.current && allRestaurants.length > 0) {
-          const allCoords = [
-            userLoc,
-            ...allRestaurants.map(r => ({ latitude: r.latitude, longitude: r.longitude }))
-          ];
+        // Set the final restaurants list
+        setRestaurants(allRestaurants);
 
-          setTimeout(() => {
-            mapRef.current?.fitToCoordinates(allCoords, {
-              edgePadding: { top: 100, right: 100, bottom: 200, left: 100 },
+        // Animate map to show user + restaurants after a short delay
+        setTimeout(() => {
+          if (mapRef.current && allRestaurants.length > 0) {
+            const allCoords = [
+              userLoc,
+              ...allRestaurants.map(r => ({ latitude: r.latitude, longitude: r.longitude }))
+            ];
+
+            console.log('🗺️ Fitting map to coordinates:', allCoords.length);
+            mapRef.current.fitToCoordinates(allCoords, {
+              edgePadding: { top: 150, right: 50, bottom: 300, left: 50 },
               animated: true,
             });
-          }, 1000);
-        }
+          } else {
+            // If no restaurants, just center on user
+            console.log('🗺️ Centering map on user location');
+            mapRef.current.animateToRegion({
+              latitude: userLoc.latitude,
+              longitude: userLoc.longitude,
+              latitudeDelta: 0.01,
+              longitudeDelta: 0.01,
+            }, 1000);
+          }
+        }, 2000);
 
       } catch (error) {
         console.error('❌ Error initializing app:', error);
@@ -419,31 +450,22 @@ const CustomerHomeScreen = () => {
       <MapView
         ref={mapRef}
         style={styles.map}
-        initialRegion={{
-          latitude: userLocation?.latitude || 17.4375,
-          longitude: userLocation?.longitude || 78.4456,
-          latitudeDelta: 0.05,
-          longitudeDelta: 0.05,
+        region={userLocation ? {
+          latitude: userLocation.latitude,
+          longitude: userLocation.longitude,
+          latitudeDelta: 0.02,
+          longitudeDelta: 0.02,
+        } : {
+          latitude: 17.4375,
+          longitude: 78.4456,
+          latitudeDelta: 0.1,
+          longitudeDelta: 0.1,
         }}
         showsUserLocation={true}
         showsMyLocationButton={false}
         followsUserLocation={false}
         onMapReady={() => {
-          console.log('🗺️ Map ready');
-          // Fit to coordinates after map is ready
-          if (userLocation && filteredRestaurants.length > 0) {
-            const allCoords = [
-              userLocation,
-              ...filteredRestaurants.map(r => ({ latitude: r.latitude, longitude: r.longitude }))
-            ];
-
-            setTimeout(() => {
-              mapRef.current?.fitToCoordinates(allCoords, {
-                edgePadding: { top: 100, right: 100, bottom: 200, left: 100 },
-                animated: true,
-              });
-            }, 500);
-          }
+          console.log('🗺️ Map ready, restaurants count:', filteredRestaurants.length);
         }}
       >
         {/* User Location Circle */}
@@ -458,31 +480,49 @@ const CustomerHomeScreen = () => {
         )}
 
         {/* Restaurant Markers */}
-        {filteredRestaurants.map((restaurant) => (
+        {filteredRestaurants.map((restaurant, index) => {
+          console.log(`🏪 Rendering marker ${index + 1}:`, restaurant.name, restaurant.latitude, restaurant.longitude);
+          return (
+            <Marker
+              key={`restaurant-${restaurant.id}-${index}`}
+              coordinate={{
+                latitude: parseFloat(restaurant.latitude),
+                longitude: parseFloat(restaurant.longitude),
+              }}
+              title={restaurant.name}
+              description={`${restaurant.restaurantType || ''} ${restaurant.rating ? `⭐ ${restaurant.rating}` : ''}`}
+              onPress={() => {
+                console.log('🏪 Restaurant marker pressed:', restaurant.name);
+                router.push({
+                  pathname: "/HotelDetails",
+                  params: {
+                    id: restaurant.id,
+                    name: restaurant.name,
+                    address: restaurant.address,
+                    starRating: restaurant.rating || 0,
+                  },
+                });
+              }}
+            >
+              <View style={styles.simpleMarker}>
+                <Text style={styles.simpleMarkerText}>🏪</Text>
+              </View>
+            </Marker>
+          );
+        })}
+
+        {/* Debug: Show total markers count */}
+        {filteredRestaurants.length === 0 && (
           <Marker
-            key={restaurant.id}
-            coordinate={{
-              latitude: restaurant.latitude,
-              longitude: restaurant.longitude,
-            }}
-            title={restaurant.name}
-            description={`${restaurant.restaurantType || ''} ${restaurant.rating ? `⭐ ${restaurant.rating}` : ''}`}
-            onPress={() => {
-              console.log('🏪 Restaurant marker pressed:', restaurant.name);
-              router.push({
-                pathname: "/HotelDetails",
-                params: {
-                  id: restaurant.id,
-                  name: restaurant.name,
-                  address: restaurant.address,
-                  starRating: restaurant.rating || 0,
-                },
-              });
-            }}
+            coordinate={userLocation || { latitude: 17.4375, longitude: 78.4456 }}
+            title="No Restaurants Found"
+            description="Try adjusting your filters"
           >
-            <CustomRestaurantMarker restaurant={restaurant} />
+            <View style={styles.debugMarker}>
+              <Text style={styles.debugText}>❌</Text>
+            </View>
           </Marker>
-        ))}
+        )}
       </MapView>
 
       {/* Top Controls */}
@@ -527,12 +567,14 @@ const CustomerHomeScreen = () => {
         </View>
       </View>
 
-      {/* Results Counter */}
-      <View style={styles.resultsCounter}>
-        <Text style={styles.resultsText}>
-          {filteredRestaurants.length} restaurant{filteredRestaurants.length !== 1 ? 's' : ''} found
-        </Text>
-      </View>
+      {/* Results Counter - Hidden when filter modal is open */}
+      {!showFilter && (
+        <View style={styles.resultsCounter}>
+          <Text style={styles.resultsText}>
+            {filteredRestaurants.length} restaurant{filteredRestaurants.length !== 1 ? 's' : ''} found
+          </Text>
+        </View>
+      )}
 
       {/* Filter Modal */}
       <FilterModal
@@ -840,6 +882,40 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     opacity: 0.3,
+  },
+  // Simple marker styles for debugging
+  simpleMarker: {
+    backgroundColor: '#FF4444',
+    borderRadius: 15,
+    width: 30,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 5,
+  },
+  simpleMarkerText: {
+    fontSize: 16,
+    color: 'white',
+  },
+  debugMarker: {
+    backgroundColor: '#FFA500',
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  debugText: {
+    fontSize: 20,
+    color: 'white',
   },
 });
 

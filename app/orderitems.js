@@ -117,36 +117,33 @@ const defaultIcon = "food-outline";
 // Default fallback image
 const defaultCategoryImage = require("../src/assets/images/menu.png");
 export default function ItemsListScreen() {
+  // ✅ ALL HOOKS MUST BE CALLED FIRST - NO EXCEPTIONS
   const router = useRouter();
   const params = useLocalSearchParams();
   const isMounted = useRef(true);
-  useEffect(() => {
-    // track mount state so async callbacks don't call setState after unmount
-    return () => {
-      isMounted.current = false;
-    };
-  }, []);
-  /*  const { category, categoryName, restaurantId, userId, orderID, ishotel } =
-    params; */
-  // console.log("ghgsd", useLocalSearchParams());
 
-  // ✅ Initialize items state from menuItemsData
-
+  // ✅ All useState hooks grouped together at the top
   const [selectedItems, setSelectedItems] = useState([]);
   const [remove_list, setRemoveList] = useState([]);
   const [totalCost, setTotalCost] = useState(0);
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [loading, setLoading] = useState(false);
-  // const [userId, setUserId] = useState(null);
-  // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [comment, setComment] = useState("");
   const [items, setItems] = useState([]);
   const [menuData, setMenuData] = useState({});
 
-  // ✅ MUST call all hooks before any conditional returns
+  // ✅ Custom hooks after useState but before useEffect
   const { userId, error } = useUserData();
+
+  // ✅ useEffect hooks - mount tracking first
+  useEffect(() => {
+    // track mount state so async callbacks don't call setState after unmount
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   var itemfirstcalling = false;
   // useEffect(() => {
@@ -196,8 +193,9 @@ export default function ItemsListScreen() {
     console.log('orderitems: initializing with params:', params);
     getMenu();
     initializeData();
-  }, [params?.category, params?.orderID, userId]);
-  const initializeData = async () => {
+  }, [params?.category, params?.orderID, userId, getMenu, initializeData]);
+
+  const initializeData = useCallback(async () => {
     try {
       setLoading(true);
       console.log('📋 Fetching menu items for category:', params.category);
@@ -252,7 +250,7 @@ export default function ItemsListScreen() {
     } finally {
       if (isMounted.current) setLoading(false);
     }
-  };
+  }, [params.category, params.orderID, userId]);
 
   // Helper to add item to remove_list without duplicates
   const addToRemoveList = (item) => {
@@ -262,7 +260,8 @@ export default function ItemsListScreen() {
       return [...prev, { orderItemId: item.orderItemId || item.id }];
     });
   };
-  const getMenu = async () => {
+
+  const getMenu = useCallback(async () => {
     try {
       if (isMounted.current) setLoading(true);
       const menu = await getSpecificMenu(params.category);
@@ -276,7 +275,7 @@ export default function ItemsListScreen() {
     } finally {
       if (isMounted.current) setLoading(false);
     }
-  };
+  }, [params.category]);
 
   const createOrder_data = async () => {
     // basic validation
@@ -348,7 +347,7 @@ export default function ItemsListScreen() {
       // console.error("Error creating order:", error);
     }
     setShowOrderModal(true);
-  }, [userId, params.restaurantId, params.orderID, remove_list]);
+  }, [userId, params.restaurantId, params.orderID, remove_list, initializeData]);
 
   const handleItemSelect = (itemId) => {
     setItems((prevData) => {
@@ -381,7 +380,7 @@ export default function ItemsListScreen() {
     if (selected.length === 0 && remove_list.length > 0) {
       deleteOrder_items();
     }
-  }, [items, remove_list]);
+  }, [items, remove_list, deleteOrder_items]);
 
   const handleEdit = (item) => {
     let foundItem = null;
