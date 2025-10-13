@@ -30,15 +30,15 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useUserData } from "../src/services/getUserData";
 // import { deleteOrderItems } from "../../server/app/controllers/order.controller";
   const categoryImages = {
-    "beverage": require("../../src/assets/images/bevereage.png"),
-    "soups": require("../../src/assets/images/soup.png"),
-    "breakfast": require("../../src/assets/images/breakfast.png"),
-    "starters": require("../../src/assets/images/staters.png"),
-    "ibreads": require("../../src/assets/images/indian-bread.png"),
-    "mc": require("../../src/assets/images/main-course.png"),
-    "salads": require("../../src/assets/images/salads.png"),
-    "iced": require("../../src/assets/images/ice-cream-desserts.png"),
-    "liquor": require("../../src/assets/images/liquor.jpg"),
+    "beverage": require("../src/assets/images/bevereage.png"),
+    "soups": require("../src/assets/images/soup.png"),
+    "breakfast": require("../src/assets/images/breakfast.png"),
+    "starters": require("../src/assets/images/staters.png"),
+    "ibreads": require("../src/assets/images/indian-bread.png"),
+    "mc": require("../src/assets/images/main-course.png"),
+    "salads": require("../src/assets/images/salads.png"),
+    "iced": require("../src/assets/images/ice-cream-desserts.png"),
+    "liquor": require("../src/assets/images/liquor.jpg"),
   };
 
 // Icon mapping object - Maps icon names from API to MaterialCommunityIcons
