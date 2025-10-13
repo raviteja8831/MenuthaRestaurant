@@ -46,6 +46,35 @@ const CustomerHomeScreen = () => {
     longitudeDelta: 0.1,
   });
 
+  // Default markers to show immediately while data loads
+  const defaultUserLocation = { latitude: 17.4375, longitude: 78.4456 };
+  const defaultRestaurants = [
+    {
+      id: 'default-1',
+      name: 'Loading Restaurant 1...',
+      latitude: 17.4475,
+      longitude: 78.4556,
+      address: 'Loading address...',
+      rating: 0,
+    },
+    {
+      id: 'default-2',
+      name: 'Loading Restaurant 2...',
+      latitude: 17.4275,
+      longitude: 78.4356,
+      address: 'Loading address...',
+      rating: 0,
+    },
+    {
+      id: 'default-3',
+      name: 'Loading Restaurant 3...',
+      latitude: 17.4575,
+      longitude: 78.4656,
+      address: 'Loading address...',
+      rating: 0,
+    },
+  ];
+
   // Geocoding cache functions
   const GEOCODE_CACHE_KEY = 'restaurant_geocode_cache';
 
@@ -81,7 +110,7 @@ const CustomerHomeScreen = () => {
     }
 
     try {
-      const apiKey = "AIzaSyB5P-PTRn7E0xkRlkiHWkjadh3nbT7yu7U";
+      const apiKey = "AIzaSyCJT87ZYDqm6bVLxRsg4Zde87HyefUfASQ";
       const encodedAddress = encodeURIComponent(cleanAddress);
       const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodedAddress}&key=${apiKey}`;
 
@@ -604,9 +633,9 @@ const CustomerHomeScreen = () => {
         }}
       >
         {/* User Location Circle */}
-        {userLocation && (
+        {(userLocation || loading) && (
           <Circle
-            center={userLocation}
+            center={userLocation || defaultUserLocation}
             radius={5000}
             strokeColor="#3838FB"
             fillColor="#3838FB22"
@@ -614,19 +643,17 @@ const CustomerHomeScreen = () => {
           />
         )}
 
-        {/* User Location Marker */}
-        {userLocation && (
-          <Marker
-            identifier="user-location"
-            coordinate={userLocation}
-            title="Your Location"
-            description="This is where you are"
-            pinColor="blue"
-          />
-        )}
+        {/* User Location Marker - Show default initially, then real location */}
+        <Marker
+          identifier="user-location"
+          coordinate={userLocation || defaultUserLocation}
+          title={userLocation ? "Your Location" : "Loading Your Location..."}
+          description={userLocation ? "This is where you are" : "Getting your current location"}
+          pinColor={userLocation ? "blue" : "orange"}
+        />
 
-        {/* Restaurant Markers - Simplified default markers with identifiers for fitToSuppliedMarkers */}
-        {filteredRestaurants.map((restaurant, index) => {
+        {/* Restaurant Markers - Show default markers while loading, then real data */}
+        {(loading ? defaultRestaurants : filteredRestaurants).map((restaurant, index) => {
           // ✅ CRITICAL: Add safety checks to prevent crashes
           if (!restaurant || !restaurant.id) {
             console.warn('⚠️ Invalid restaurant in markers:', restaurant);
@@ -641,7 +668,8 @@ const CustomerHomeScreen = () => {
             return null;
           }
 
-          console.log(`🏪 Rendering marker ${index + 1}:`, restaurant.name, lat, lng);
+          const isDefaultMarker = restaurant.id.startsWith('default-');
+          console.log(`🏪 Rendering ${isDefaultMarker ? 'default' : 'real'} marker ${index + 1}:`, restaurant.name, lat, lng);
 
           return (
             <Marker
@@ -653,9 +681,13 @@ const CustomerHomeScreen = () => {
               }}
               title={restaurant.name || 'Restaurant'}
               description={restaurant.address || 'Restaurant location'}
-              pinColor="red"
+              pinColor={isDefaultMarker ? "yellow" : "red"}
               onPress={() => {
                 console.log('🏪 Restaurant marker pressed:', restaurant.name);
+                if (isDefaultMarker) {
+                  console.log('⏳ Default marker pressed - data still loading');
+                  return;
+                }
                 try {
                   router.push({
                     pathname: "/HotelDetails",
@@ -674,8 +706,8 @@ const CustomerHomeScreen = () => {
           );
         }).filter(Boolean)}
 
-        {/* Debug: Show total markers count */}
-        {filteredRestaurants.length === 0 && (
+        {/* Debug: Show total markers count - only when not loading and no results */}
+        {!loading && filteredRestaurants.length === 0 && (
           <Marker
             coordinate={userLocation || { latitude: 17.4375, longitude: 78.4456 }}
             title="No Restaurants Found"
@@ -734,7 +766,10 @@ const CustomerHomeScreen = () => {
       {!showFilter && (
         <View style={styles.resultsCounter}>
           <Text style={styles.resultsText}>
-            {filteredRestaurants.length} restaurant{filteredRestaurants.length !== 1 ? 's' : ''} found
+            {loading
+              ? `Loading restaurants... (${geocodingProgress > 0 ? geocodingProgress + '% geocoded' : 'fetching data'})`
+              : `${filteredRestaurants.length} restaurant${filteredRestaurants.length !== 1 ? 's' : ''} found`
+            }
           </Text>
         </View>
       )}

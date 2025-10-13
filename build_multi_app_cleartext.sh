@@ -77,7 +77,7 @@ EOF
 
   # Ensure Google Maps API key is present
   if ! grep -q "com.google.android.geo.API_KEY" "$MF"; then
-    sed -i '/<application/a\    <meta-data android:name="com.google.android.geo.API_KEY" android:value="AIzaSyB5P-PTRn7E0xkRlkiHWkjadh3nbT7yu7U"/>' "$MF"
+    sed -i '/<application/a\    <meta-data android:name="com.google.android.geo.API_KEY" android:value="AIzaSyCJT87ZYDqm6bVLxRsg4Zde87HyefUfASQ"/>' "$MF"
   fi
 
   print_success "Cleartext + camera + location permissions configured"
