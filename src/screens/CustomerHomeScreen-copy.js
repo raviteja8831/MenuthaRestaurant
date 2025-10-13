@@ -126,7 +126,7 @@ function CustomerHomeScreen() {
         });
         // Reverse geocode to get city and center
         try {
-          const apiKey = "AIzaSyCJT87ZYDqm6bVLxRsg4Zde87HyefUfASQ";
+          const apiKey = "AIzaSyB5P-PTRn7E0xkRlkiHWkjadh3nbT7yu7U";
           const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${location.coords.latitude},${location.coords.longitude}&key=${apiKey}`;
           const resp = await fetch(url);
           const json = await resp.json();
@@ -155,7 +155,7 @@ function CustomerHomeScreen() {
         const geocodeAddress = async (address) => {
           if (!address) return null;
           try {
-            const apiKey = "AIzaSyCJT87ZYDqm6bVLxRsg4Zde87HyefUfASQ";
+            const apiKey = "AIzaSyB5P-PTRn7E0xkRlkiHWkjadh3nbT7yu7U";
             const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`;
             const resp = await fetch(url);
             const json = await resp.json();

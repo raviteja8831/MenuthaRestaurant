@@ -53,7 +53,7 @@ This document summarizes the configuration changes made to support QR code scann
 ```json
 "ios": {
   "config": {
-    "googleMapsApiKey": "AIzaSyCJT87ZYDqm6bVLxRsg4Zde87HyefUfASQ"
+    "googleMapsApiKey": "AIzaSyB5P-PTRn7E0xkRlkiHWkjadh3nbT7yu7U"
   }
 }
 ```
@@ -63,7 +63,7 @@ This document summarizes the configuration changes made to support QR code scann
 "android": {
   "config": {
     "googleMaps": {
-      "apiKey": "AIzaSyCJT87ZYDqm6bVLxRsg4Zde87HyefUfASQ"
+      "apiKey": "AIzaSyB5P-PTRn7E0xkRlkiHWkjadh3nbT7yu7U"
     }
   }
 }
@@ -72,7 +72,7 @@ This document summarizes the configuration changes made to support QR code scann
 #### AndroidManifest.xml
 ```xml
 <meta-data android:name="com.google.android.geo.API_KEY" 
-           android:value="AIzaSyCJT87ZYDqm6bVLxRsg4Zde87HyefUfASQ"/>
+           android:value="AIzaSyB5P-PTRn7E0xkRlkiHWkjadh3nbT7yu7U"/>
 <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
 <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
 ```

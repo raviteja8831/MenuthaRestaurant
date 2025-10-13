@@ -110,7 +110,7 @@ const CustomerHomeScreen = () => {
     }
 
     try {
-      const apiKey = "AIzaSyCJT87ZYDqm6bVLxRsg4Zde87HyefUfASQ";
+      const apiKey = "AIzaSyB5P-PTRn7E0xkRlkiHWkjadh3nbT7yu7U";
       const encodedAddress = encodeURIComponent(cleanAddress);
       const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodedAddress}&key=${apiKey}`;
 

@@ -20,7 +20,7 @@ export function MapView({ style, initialRegion, children }) {
   const webKey = (global?.__expoConfig?.extra && global.__expoConfig.extra.GOOGLE_MAPS_API_KEY) ||
     (global?.GOOGLE_MAPS_API_KEY) ||
     // fallback to a permissive key used in the project for geocoding (may be restricted)
-    'AIzaSyCJT87ZYDqm6bVLxRsg4Zde87HyefUfASQ';
+    'AIzaSyB5P-PTRn7E0xkRlkiHWkjadh3nbT7yu7U';
 
   const center = initialRegion
     ? { lat: initialRegion.latitude, lng: initialRegion.longitude }
