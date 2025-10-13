@@ -29,24 +29,17 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useUserData } from "../src/services/getUserData";
 // import { deleteOrderItems } from "../../server/app/controllers/order.controller";
-const categoryImages = {
-  "Hot & Cold beverages": require("../src/assets/images/bevereage.png"),
-  "Hot & Cold Beverages": require("../src/assets/images/bevereage.png"),
-  "Beverages": require("../src/assets/images/bevereage.png"),
-  Soups: require("../src/assets/images/soup.png"),
-  Breakfast: require("../src/assets/images/breakfast.png"),
-  Starters: require("../src/assets/images/staters.png"),
-  "Indian Breads": require("../src/assets/images/indian-bread.png"),
-  "Indian Bread": require("../src/assets/images/indian-bread.png"),
-  "Main Course": require("../src/assets/images/main-course.png"),
-  "Main Courses": require("../src/assets/images/main-course.png"),
-  Salads: require("../src/assets/images/salads.png"),
-  Salad: require("../src/assets/images/salads.png"),
-  "Ice creams & Desserts": require("../src/assets/images/ice-cream-sesserts.png"),
-  "Ice Creams & Desserts": require("../src/assets/images/ice-cream-sesserts.png"),
-  "Desserts": require("../src/assets/images/ice-cream-sesserts.png"),
-  Liquor: require("../src/assets/images/liquor.jpg"),
-};
+  const categoryImages = {
+    "beverage": require("../../src/assets/images/bevereage.png"),
+    "soups": require("../../src/assets/images/soup.png"),
+    "breakfast": require("../../src/assets/images/breakfast.png"),
+    "starters": require("../../src/assets/images/staters.png"),
+    "ibreads": require("../../src/assets/images/indian-bread.png"),
+    "mc": require("../../src/assets/images/main-course.png"),
+    "salads": require("../../src/assets/images/salads.png"),
+    "iced": require("../../src/assets/images/ice-cream-desserts.png"),
+    "liquor": require("../../src/assets/images/liquor.jpg"),
+  };
 
 // Icon mapping object - Maps icon names from API to MaterialCommunityIcons
 // Based on the Figma design, mapping common menu category icons
@@ -116,7 +109,7 @@ const defaultIcon = "food-outline";
 
 // Default fallback image
 const defaultCategoryImage = require("../src/assets/images/menu.png");
-export default function ItemsListScreen() {
+export default function orderitems() {
   // Remove console.log from render to reduce noise
   // console.log('🔄 ItemsListScreen rendering...');
 
@@ -638,13 +631,12 @@ export default function ItemsListScreen() {
             // { width: "100px", height: "100px" },
           ]}
         >
-          <MaterialCommunityIcons
-            name={iconMapping[menuData.icon] || defaultIcon}
-            size={50}
-            color="#333"
-            style={orderitemsstyle.categoryIcon}
-          />
-          <Text style={orderitemsstyle.title}>{params.categoryName}</Text>
+            <Image
+                             source={categoryImages[category.icon]}
+                             style={menuliststyles.categoryImage}
+                             resizeMode="contain"
+                           />
+          <Text style={orderitemsstyle.title}>{category?.name}</Text>
         </View>
       </View>
 
