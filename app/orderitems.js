@@ -14,15 +14,15 @@ import {
   Feather,
 } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import CommentModal from "./Modals/menueditModal"; // 👈 new component
-import { orderitemsstyle, responsiveStyles } from "./styles/responsive";
-import { AlertService } from "./services/alert.service";
-import { getitemsbasedonmenu, getSpecificMenu } from "./api/menuApi";
+import CommentModal from "../src/Modals/menueditModal"; // 👈 new component
+import { orderitemsstyle, responsiveStyles } from "../src/styles/responsive";
+import { AlertService } from "../src/services/alert.service";
+import { getitemsbasedonmenu, getSpecificMenu } from "../src/api/menuApi";
 import {
   createOrder,
   getOrderItemList,
   deleteOrderItems,
-} from "./api/orderApi";
+} from "../src/api/orderApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useUserData } from "./services/getUserData";
 // import { deleteOrderItems } from "../../server/app/controllers/order.controller";

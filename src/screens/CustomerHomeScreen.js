@@ -575,9 +575,9 @@ const CustomerHomeScreen = () => {
   onMapReady={() => setMapReady(true)}
   onLayout={() => {
     setTimeout(() => {
-      if (mapRef.current && mapReady && filteredRestaurants && filteredRestaurants.length > 0) {
+      if (mapRef.current && mapReady && filtered && filtered.length > 0) {
         try {
-          const coords = filteredRestaurants.map(r => ({
+          const coords = filtered.map(r => ({
             latitude: Number(r.latitude),
             longitude: Number(r.longitude),
           }));
@@ -617,7 +617,7 @@ const CustomerHomeScreen = () => {
     </>
   )}
 
-  {filteredRestaurants.map((r, i) => {
+  {filtered.map((r, i) => {
     if (!r.latitude || !r.longitude) return null;
     const lat = Number(r.latitude);
     const lng = Number(r.longitude);
@@ -629,11 +629,18 @@ const CustomerHomeScreen = () => {
         onPress={() => handleMarkerPress(r)}
         tracksViewChanges={false}
       >
-        <Image
-          source={require("../assets/menutha_original.png")}
-          style={{ width: 40, height: 40 }}
-          resizeMode="contain"
-        />
+        <View style={styles.markerContainer}>
+          <Image
+            source={require("../assets/images/marker-bg.png")}
+            style={styles.markerBackground}
+            resizeMode="contain"
+          />
+          <Image
+            source={require("../assets/menutha.png")}
+            style={styles.markerLogo}
+            resizeMode="contain"
+          />
+        </View>
       </Marker>
     );
   })}
