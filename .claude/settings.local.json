@@ -41,7 +41,10 @@
       "Bash(./build_multi_app_cleartext.sh:*)",
       "Bash(cp:*)",
       "Bash(convert:*)",
-      "Bash(identify:*)"
+      "Bash(identify:*)",
+      "Bash(cat:*)",
+      "Read(//home/ec2-user/menutha/**)",
+      "Bash(npx eslint:*)"
     ],
     "deny": [],
     "ask": []

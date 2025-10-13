@@ -13,12 +13,11 @@ import {
   Linking,
   Platform,
   Alert,
-  Animated,
 } from "react-native";
 import { MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import * as Location from "expo-location";
-import MapView, { Marker, Circle, Callout, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Marker, Circle, PROVIDER_GOOGLE } from 'react-native-maps';
 import { getAllRestaurants } from "../api/restaurantApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -46,69 +45,6 @@ const CustomerHomeScreen = () => {
     latitudeDelta: 0.1,
     longitudeDelta: 0.1,
   });
-
-  // Default markers to show immediately while data loads (following spirokit pattern)
-  const defaultUserLocation = { latitude: 17.4375, longitude: 78.4456 };
-  const defaultRestaurants = [
-    {
-      id: 'default-1',
-      coordinate: {
-        latitude: 17.4475,
-        longitude: 78.4556,
-      },
-      title: 'Loading Restaurant 1...',
-      description: 'Loading address...',
-      name: 'Loading Restaurant 1...',
-      address: 'Loading address...',
-      rating: 0,
-    },
-    {
-      id: 'default-2',
-      coordinate: {
-        latitude: 17.4275,
-        longitude: 78.4356,
-      },
-      title: 'Loading Restaurant 2...',
-      description: 'Loading address...',
-      name: 'Loading Restaurant 2...',
-      address: 'Loading address...',
-      rating: 0,
-    },
-    {
-      id: 'default-3',
-      coordinate: {
-        latitude: 17.4575,
-        longitude: 78.4656,
-      },
-      title: 'Loading Restaurant 3...',
-      description: 'Loading address...',
-      name: 'Loading Restaurant 3...',
-      address: 'Loading address...',
-      rating: 0,
-    },
-  ];
-
-  // Marker animation scales (following spirokit pattern)
-  const markerScales = useRef({});
-
-  // Initialize animation scales for markers
-  useEffect(() => {
-    const initializeScales = (markersToInit) => {
-      markersToInit.forEach(marker => {
-        if (!markerScales.current[marker.id]) {
-          markerScales.current[marker.id] = new Animated.Value(1);
-        }
-      });
-    };
-
-    // Initialize for default markers
-    initializeScales(defaultRestaurants);
-
-    // Initialize for real restaurants when they load
-    if (restaurants.length > 0) {
-      initializeScales(restaurants);
-    }
-  }, [restaurants]);
 
   // Geocoding cache functions
   const GEOCODE_CACHE_KEY = 'restaurant_geocode_cache';
@@ -259,11 +195,16 @@ const CustomerHomeScreen = () => {
     const filtered = restaurants.filter((r) => {
       // Ensure restaurant is a valid object
       if (!r || typeof r !== 'object') {
+        console.log('❌ Filtered out: Invalid object');
         return false;
       }
 
       // Ensure restaurant has valid coordinates
-      if (!r.latitude || !r.longitude || isNaN(r.latitude) || isNaN(r.longitude)) {
+      const lat = parseFloat(r.latitude);
+      const lng = parseFloat(r.longitude);
+
+      if (!r.latitude || !r.longitude || isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) {
+        console.log('❌ Filtered out:', r.name, '- Invalid coordinates:', r.latitude, r.longitude);
         return false;
       }
 
@@ -272,13 +213,13 @@ const CustomerHomeScreen = () => {
         const distance = getDistanceFromLatLonInKm(
           userLocation.latitude,
           userLocation.longitude,
-          r.latitude,
-          r.longitude
+          lat,
+          lng
         );
 
         // Filter out restaurants more than 200km away (likely bad coordinates)
         if (distance > 200) {
-          console.log('🌍 Excluding distant restaurant:', r.name, 'Distance:', distance.toFixed(2), 'km');
+          console.log('🌍 Filtered out:', r.name, '- Too far:', distance.toFixed(2), 'km');
           return false;
         }
       }
@@ -290,14 +231,18 @@ const CustomerHomeScreen = () => {
         const address = (r.address || "").toLowerCase();
         const type = (r.restaurantType || "").toLowerCase();
         if (!name.includes(q) && !address.includes(q) && !type.includes(q)) {
+          console.log('🔍 Filtered out:', r.name, '- Doesn\'t match search query:', q);
           return false;
         }
       }
 
-      if (!Array.isArray(selectedFilters) || !selectedFilters.length) return true;
+      if (!Array.isArray(selectedFilters) || !selectedFilters.length) {
+        console.log('✅ Including:', r.name, '- No filters applied');
+        return true;
+      }
 
       // Apply filters
-      return selectedFilters.every((f) => {
+      const passesFilters = selectedFilters.every((f) => {
         if (!f || !f.name) {
           console.warn('⚠️ Invalid filter object:', f);
           return true; // Skip invalid filters
@@ -327,45 +272,35 @@ const CustomerHomeScreen = () => {
         if (filterName === "Only Bar & Restaurant") return r.restaurantType && r.restaurantType.toLowerCase().includes("bar");
         return true;
       });
+
+      if (passesFilters) {
+        console.log('✅ Including:', r.name);
+      } else {
+        console.log('❌ Filtered out:', r.name, '- Didn\'t pass filters');
+      }
+
+      return passesFilters;
     });
 
-    console.log('✅ Filtered result:', filtered.length, 'restaurants');
+    console.log('✅ Filtered result:', filtered.length, 'restaurants out of', restaurants.length);
+    filtered.forEach((r, i) => {
+      console.log(`  ${i + 1}. ${r.name} at [${r.latitude}, ${r.longitude}]`);
+    });
     return filtered;
   }, [restaurants, searchQuery, selectedFilters, userLocation]);
 
-  // Handle marker press with animation (following spirokit pattern)
-  const handleMarkerPress = (marker) => {
-    const scale = markerScales.current[marker.id];
-    if (scale) {
-      Animated.timing(scale, {
-        toValue: 1.25,
-        duration: 100,
-        useNativeDriver: false
-      }).start(() => {
-        Animated.timing(scale, {
-          toValue: 1,
-          duration: 100,
-          useNativeDriver: false
-        }).start();
-      });
-    }
-
-    const isDefaultMarker = marker.id.toString().startsWith('default-');
-    console.log('🏪 Restaurant marker pressed:', marker.title || marker.name);
-
-    if (isDefaultMarker) {
-      console.log('⏳ Default marker pressed - data still loading');
-      return;
-    }
+  // Handle marker press - simplified
+  const handleMarkerPress = (restaurant) => {
+    console.log('🏪 Restaurant marker pressed:', restaurant.name);
 
     try {
       router.push({
         pathname: "/HotelDetails",
         params: {
-          id: marker.id,
-          name: marker.title || marker.name || 'Restaurant',
-          address: marker.description || marker.address || '',
-          starRating: marker.rating || 0,
+          id: restaurant.id,
+          name: restaurant.name || 'Restaurant',
+          address: restaurant.address || '',
+          starRating: restaurant.rating || 0,
         },
       });
     } catch (routeError) {
@@ -373,127 +308,55 @@ const CustomerHomeScreen = () => {
     }
   };
 
-  // Custom Callout Component (following spirokit pattern)
-  const CustomCallout = ({ marker }) => {
-    const isDefaultMarker = marker.id.toString().startsWith('default-');
-
-    return (
-      <View style={styles.callout}>
-        <Text style={styles.calloutTitle}>{marker.title || marker.name}</Text>
-        <Text style={styles.calloutDescription}>{marker.description || marker.address}</Text>
-        {!isDefaultMarker && (
-          <View style={styles.calloutDetails}>
-            <Text style={styles.calloutRating}>⭐ {marker.rating || 'N/A'}</Text>
-            <Text style={styles.calloutAction}>Tap to view details</Text>
-          </View>
-        )}
-      </View>
-    );
-  };
-
-  // Render markers function (following spirokit pattern)
-  const renderRestaurantMarkers = () => {
-    const markersToRender = loading ? defaultRestaurants : filteredRestaurants;
-
-    return markersToRender.map((restaurant, index) => {
-      // Safety checks to prevent crashes
-      if (!restaurant || !restaurant.id) {
-        console.warn('⚠️ Invalid restaurant in markers:', restaurant);
-        return null;
-      }
-
-      // Get coordinates from restaurant or coordinate object (spirokit pattern)
-      const coordinate = restaurant.coordinate || {
-        latitude: restaurant.latitude,
-        longitude: restaurant.longitude
-      };
-
-      const lat = parseFloat(coordinate.latitude);
-      const lng = parseFloat(coordinate.longitude);
-
-      if (isNaN(lat) || isNaN(lng)) {
-        console.warn('⚠️ Invalid coordinates for restaurant:', restaurant.name, lat, lng);
-        return null;
-      }
-
-      const isDefaultMarker = restaurant.id.toString().startsWith('default-');
-      console.log(`🏪 Rendering ${isDefaultMarker ? 'default' : 'real'} marker ${index + 1}:`, restaurant.title || restaurant.name, lat, lng);
-
-      // Get animation scale for this marker
-      const scale = markerScales.current[restaurant.id] || new Animated.Value(1);
-
-      return (
-        <Marker
-          key={restaurant.id}
-          coordinate={{
-            latitude: lat,
-            longitude: lng,
-          }}
-          onPress={() => handleMarkerPress(restaurant)}
-        >
-          <Animated.View style={[
-            styles.markerContainer,
-            { transform: [{ scale }] }
-          ]}>
-            <View style={[
-              styles.marker,
-              { backgroundColor: isDefaultMarker ? '#FFA500' : '#FF4444' }
-            ]}>
-              <Text style={styles.markerText}>
-                {isDefaultMarker ? '⏳' : '🍽️'}
-              </Text>
-            </View>
-          </Animated.View>
-          <Callout>
-            <CustomCallout marker={restaurant} />
-          </Callout>
-        </Marker>
-      );
-    }).filter(Boolean);
-  };
-
-  // Get user location and restaurants
+  // Get user location and restaurants - async loading
   useEffect(() => {
     const initializeApp = async () => {
       try {
         console.log('🚀 Starting app initialization...');
 
-        // Get user location
-        let { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== "granted") {
-          console.log('❌ Location permission denied');
-          setLoading(false);
-          return;
+        // Start both location and restaurant fetch in parallel
+        const locationPromise = (async () => {
+          let { status } = await Location.requestForegroundPermissionsAsync();
+          if (status !== "granted") {
+            console.log('❌ Location permission denied');
+            return null;
+          }
+
+          let location = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.High,
+          });
+
+          return {
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+          };
+        })();
+
+        const restaurantsPromise = getAllRestaurants();
+
+        // Wait for both to complete
+        const [userLoc, restaurantData] = await Promise.all([locationPromise, restaurantsPromise]);
+
+        // Set user location
+        if (userLoc) {
+          console.log('📍 User location:', userLoc);
+          setUserLocation(userLoc);
+
+          // Force immediate map centering on user location
+          const userRegion = {
+            latitude: userLoc.latitude,
+            longitude: userLoc.longitude,
+            latitudeDelta: 0.05,
+            longitudeDelta: 0.05,
+          };
+          setMapRegion(userRegion);
+          console.log('🗺️ Force centering map on user location immediately');
+
+          if (mapRef.current) {
+            mapRef.current.animateToRegion(userRegion, 1000);
+          }
         }
 
-        let location = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.High,
-        });
-
-        const userLoc = {
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-        };
-
-        console.log('📍 User location:', userLoc);
-        setUserLocation(userLoc);
-
-        // Force immediate map centering on user location
-        const userRegion = {
-          latitude: userLoc.latitude,
-          longitude: userLoc.longitude,
-          latitudeDelta: 0.05,
-          longitudeDelta: 0.05,
-        };
-        setMapRegion(userRegion);
-        console.log('🗺️ Force centering map on user location immediately');
-
-        if (mapRef.current) {
-          mapRef.current.animateToRegion(userRegion, 1000);
-        }
-
-        // Get restaurants
-        const restaurantData = await getAllRestaurants();
         console.log('🏪 Fetched restaurants:', restaurantData.length);
 
         // Load geocoding cache
@@ -730,28 +593,18 @@ const CustomerHomeScreen = () => {
     return null;
   }
 
-  if (loading) {
-    return (
-      <View style={[styles.container, styles.centerContent]}>
-        <ActivityIndicator size="large" color="#6B4EFF" />
-        <Text style={{ marginTop: 10, color: '#666', fontSize: 16 }}>
-          Loading map and restaurants...
-        </Text>
-        {geocodingProgress > 0 && (
-          <View style={styles.geocodingProgress}>
-            <Text style={{ color: '#666', marginBottom: 8 }}>
-              Getting restaurant locations: {geocodingProgress}%
-            </Text>
-            <View style={styles.progressBar}>
-              <View
-                style={[styles.progressFill, { width: `${geocodingProgress}%` }]}
-              />
-            </View>
-          </View>
-        )}
-      </View>
-    );
-  }
+  // Show map immediately with loading overlay instead of blank screen
+  const showLoadingOverlay = loading && !userLocation;
+
+  // Debug: Log when rendering
+  console.log('🎨 CustomerHomeScreen rendering:', {
+    loading,
+    mapReady,
+    userLocation: userLocation ? 'available' : 'null',
+    restaurantsCount: restaurants.length,
+    filteredRestaurantsCount: filteredRestaurants.length,
+    mapRegion
+  });
 
   return (
     <View style={styles.container}>
@@ -766,7 +619,11 @@ const CustomerHomeScreen = () => {
         followsUserLocation={false}
         loadingEnabled={true}
         onMapReady={() => {
-          console.log('🗺️ Map ready!');
+          console.log('🗺️ Map ready! Current state:', {
+            restaurantsCount: restaurants.length,
+            filteredRestaurantsCount: filteredRestaurants.length,
+            userLocation: userLocation ? 'available' : 'null'
+          });
           setMapReady(true);
         }}
         onRegionChangeComplete={(region) => {
@@ -774,9 +631,9 @@ const CustomerHomeScreen = () => {
         }}
       >
         {/* User Location Circle */}
-        {(userLocation || loading) && (
+        {userLocation && (
           <Circle
-            center={userLocation || defaultUserLocation}
+            center={userLocation}
             radius={5000}
             strokeColor="#3838FB"
             fillColor="#3838FB22"
@@ -784,27 +641,68 @@ const CustomerHomeScreen = () => {
           />
         )}
 
-        {/* User Location Marker - Show default initially, then real location */}
-        <Marker
-          coordinate={userLocation || defaultUserLocation}
-          title={userLocation ? "Your Location" : "Loading Your Location..."}
-          description={userLocation ? "This is where you are" : "Getting your current location"}
-          pinColor={userLocation ? "blue" : "orange"}
-        />
-
-        {/* Restaurant Markers using spirokit pattern */}
-        {renderRestaurantMarkers()}
-
-        {/* Debug: Show total markers count - only when not loading and no results */}
-        {!loading && filteredRestaurants.length === 0 && (
+        {/* User Location Marker - Default blue pin */}
+        {userLocation && (
           <Marker
-            coordinate={userLocation || { latitude: 17.4375, longitude: 78.4456 }}
-            title="No Restaurants Found"
-            description="Try adjusting your filters"
-            pinColor="purple"
+            key="user-location"
+            coordinate={userLocation}
+            title="Your Location"
+            description="You are here"
+            pinColor="blue"
           />
         )}
+
+        {/* Restaurant Markers - Simple default red pins */}
+        {filteredRestaurants.map((restaurant, index) => {
+          if (!restaurant || !restaurant.latitude || !restaurant.longitude) {
+            return null;
+          }
+
+          const lat = parseFloat(restaurant.latitude);
+          const lng = parseFloat(restaurant.longitude);
+
+          if (isNaN(lat) || isNaN(lng)) {
+            return null;
+          }
+
+          return (
+            <Marker
+              key={`restaurant-${restaurant.id || index}`}
+              coordinate={{
+                latitude: lat,
+                longitude: lng,
+              }}
+              title={restaurant.name || 'Restaurant'}
+              description={restaurant.address || ''}
+              onPress={() => handleMarkerPress(restaurant)}
+            />
+          );
+        })}
       </MapView>
+
+      {/* Loading Overlay - Show on top of map */}
+      {showLoadingOverlay && (
+        <View style={styles.loadingOverlay}>
+          <View style={styles.loadingContent}>
+            <ActivityIndicator size="large" color="#6B4EFF" />
+            <Text style={styles.loadingText}>
+              Loading map and restaurants...
+            </Text>
+            {geocodingProgress > 0 && (
+              <View style={styles.geocodingProgress}>
+                <Text style={styles.geocodingText}>
+                  Getting restaurant locations: {geocodingProgress}%
+                </Text>
+                <View style={styles.progressBar}>
+                  <View
+                    style={[styles.progressFill, { width: `${geocodingProgress}%` }]}
+                  />
+                </View>
+              </View>
+            )}
+          </View>
+        </View>
+      )}
 
       {/* Top Controls */}
       <View style={styles.topControls}>
@@ -1095,11 +993,41 @@ const styles = StyleSheet.create({
     color: '#6B4EFF',
     fontWeight: 'bold',
   },
+  // Loading overlay styles
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 9999,
+  },
+  loadingContent: {
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  loadingText: {
+    marginTop: 10,
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '500',
+  },
   // Geocoding progress styles
   geocodingProgress: {
     marginTop: 20,
     alignItems: 'center',
-    width: '80%',
+    width: 240,
+  },
+  geocodingText: {
+    color: '#666',
+    marginBottom: 8,
+    fontSize: 14,
   },
   progressBar: {
     width: '100%',
@@ -1112,72 +1040,6 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: '#6B4EFF',
     borderRadius: 4,
-  },
-  // Spirokit pattern styles for markers and callouts
-  markerContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  marker: {
-    backgroundColor: '#FF4444',
-    borderRadius: 20,
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  markerText: {
-    fontSize: 16,
-    color: 'white',
-  },
-  callout: {
-    backgroundColor: 'white',
-    borderRadius: 8,
-    padding: 12,
-    minWidth: 200,
-    maxWidth: 250,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  calloutTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
-  },
-  calloutDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
-  },
-  calloutDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-  },
-  calloutRating: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFA500',
-  },
-  calloutAction: {
-    fontSize: 12,
-    color: '#6B4EFF',
-    fontStyle: 'italic',
   },
 });
 
