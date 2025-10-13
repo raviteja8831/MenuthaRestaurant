@@ -208,7 +208,7 @@ const CustomerHomeScreen = () => {
   };
 
   // Filter restaurants (useMemo hook)
-  const filteredRestaurants = React.useMemo(() => {
+  const filteredRestaurants = useMemo(() => {
     console.log('🔍 Filtering restaurants:', {
       totalRestaurants: restaurants.length,
       searchQuery: searchQuery,
