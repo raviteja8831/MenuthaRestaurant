@@ -21,8 +21,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./src/assets/menutha.png",
-        "backgroundColor": "#FFFFFF",
-        "monochromeImage": "./src/assets/menutha.png"
+        "backgroundColor": "#6B46C1"
       },
       "config": {
         "googleMaps": {
