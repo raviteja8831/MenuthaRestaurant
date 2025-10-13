@@ -2,7 +2,7 @@ const https = require('https');
 const http = require('http');
 
 const API_BASE_URL = 'http://13.127.228.119:8090/api';
-const GOOGLE_MAPS_API_KEY = 'AIzaSyB5P-PTRn7E0xkRlkiHWkjadh3nbT7yu7U';
+const GOOGLE_MAPS_API_KEY = 'AIzaSyCJT87ZYDqm6bVLxRsg4Zde87HyefUfASQ';
 const RESTAURANT_ID = 48;
 
 function httpGet(url) {

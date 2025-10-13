@@ -30,7 +30,7 @@ const DEFAULT_ADDRESS =
 export default function ManagerRegisterScreen() {
   const [address, setAddress] = React.useState(DEFAULT_ADDRESS);
   // Location logic
-  const GOOGLE_API_KEY = "AIzaSyB5P-PTRn7E0xkRlkiHWkjadh3nbT7yu7U";
+  const GOOGLE_API_KEY = "AIzaSyCJT87ZYDqm6bVLxRsg4Zde87HyefUfASQ";
   const handleUseCurrentLocation = async () => {
     try {
       let { status } = await Location.requestForegroundPermissionsAsync();

@@ -60,7 +60,7 @@ export default function ManagerRegisterScreen() {
   }, [enableBoth]);
 
   // Location logic
-  const GOOGLE_API_KEY = "AIzaSyB5P-PTRn7E0xkRlkiHWkjadh3nbT7yu7U";
+  const GOOGLE_API_KEY = AIzaSyCJT87ZYDqm6bVLxRsg4Zde87HyefUfASQ";
   const handleUseCurrentLocation = async () => {
     try {
       let { status } = await Location.requestForegroundPermissionsAsync();
