@@ -400,6 +400,8 @@ const CustomerHomeScreen = () => {
 
           await saveGeocodingCache(cache);
           setGeocodingProgress(100);
+        } else {
+          console.log("✅ No geocoding needed - all restaurants have coordinates");
         }
 
         console.log("✅ Final restaurant count with coordinates:", allRestaurants.length);
@@ -410,7 +412,7 @@ const CustomerHomeScreen = () => {
 
         // Mark data loading as complete - this will allow markers to render
         setDataLoadingComplete(true);
-        console.log("✅ Data loading complete - markers can now be displayed");
+        console.log("✅ Data loading complete - markers can now be displayed. Restaurants ready:", cleaned.length);
       } catch (error) {
         console.error("❌ Error initializing app:", error);
       } finally {
@@ -547,7 +549,7 @@ const CustomerHomeScreen = () => {
   }
 
   // Show map immediately with loading overlay while data is loading
-  const showLoadingOverlay = loading || !dataLoadingComplete;
+  const showLoadingOverlay = loading || (!dataLoadingComplete && restaurants.length === 0);
 
   console.log("🎨 CustomerHomeScreen rendering:", {
     loading,
@@ -612,7 +614,7 @@ const CustomerHomeScreen = () => {
         )}
 
         {/* Restaurant Markers - Only render when data loading is complete */}
-        {dataLoadingComplete && filtered && filtered.map((restaurant, index) => {
+        {(dataLoadingComplete || (!loading && restaurants.length > 0)) && filtered && filtered.map((restaurant, index) => {
           if (!restaurant || restaurant.latitude == null || restaurant.longitude == null) {
             console.log("❌ Skipping marker for restaurant:", restaurant?.name || "Unknown", "- Missing coordinates");
             return null;
