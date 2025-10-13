@@ -24,7 +24,7 @@ import {
   deleteOrderItems,
 } from "../src/api/orderApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useUserData } from "./services/getUserData";
+import { useUserData } from "../src/services/getUserData";
 // import { deleteOrderItems } from "../../server/app/controllers/order.controller";
 
 export default function ItemsListScreen() {
@@ -314,7 +314,7 @@ export default function ItemsListScreen() {
   return (
     <SafeAreaView style={orderitemsstyle.container}>
       <ImageBackground
-        source={require("../assets/images/menu-bg.png")}
+        source={require("../src/assets/images/menu-bg.png")}
         style={orderitemsstyle.backgroundImage}
         resizeMode="repeat"
       />
