@@ -1,14 +1,12 @@
+// orderitems.js (updated - defensive + ErrorBoundary)
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   View,
   Text,
   Image,
   Pressable,
-  StyleSheet,
   ScrollView,
   SafeAreaView,
-  TextInput,
-  ImageBackground,
 } from "react-native";
 import {
   MaterialCommunityIcons,
@@ -26,75 +24,96 @@ import {
   getOrderItemList,
   deleteOrderItems,
 } from "../src/api/orderApi";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useUserData } from "../src/services/getUserData";
 
+// --- Category images mapping (unchanged) ---
 const categoryImages = {
-  "beverage": require("../src/assets/images/bevereage.png"),
-  "soups": require("../src/assets/images/soup.png"),
-  "breakfast": require("../src/assets/images/breakfast.png"),
-  "starters": require("../src/assets/images/staters.png"),
-  "ibreads": require("../src/assets/images/indian-bread.png"),
-  "mc": require("../src/assets/images/main-course.png"),
-  "salads": require("../src/assets/images/salads.png"),
-  "iced": require("../src/assets/images/ice-cream-desserts.png"),
-  "liquor": require("../src/assets/images/liquor.jpg"),
+  beverage: require("../src/assets/images/bevereage.png"),
+  soups: require("../src/assets/images/soup.png"),
+  breakfast: require("../src/assets/images/breakfast.png"),
+  starters: require("../src/assets/images/staters.png"),
+  ibreads: require("../src/assets/images/indian-bread.png"),
+  mc: require("../src/assets/images/main-course.png"),
+  salads: require("../src/assets/images/salads.png"),
+  iced: require("../src/assets/images/ice-cream-desserts.png"),
+  liquor: require("../src/assets/images/liquor.jpg"),
 };
-
-// Icon mapping object
-const iconMapping = {
-  "cup-outline": "cup-outline",
-  "coffee": "coffee",
-  "glass-cocktail": "glass-cocktail",
-  "cup": "cup-outline",
-  "beverage": "cup-outline",
-  "drinks": "cup-outline",
-  "bowl-mix-outline": "bowl-mix-outline",
-  "bowl-outline": "bowl-outline",
-  "pot-steam-outline": "pot-steam-outline",
-  "soup": "bowl-mix-outline",
-  "bread-slice-outline": "bread-slice-outline",
-  "food-croissant": "food-croissant",
-  "egg-fried": "egg-fried",
-  "breakfast": "bread-slice-outline",
-  "bread": "bread-slice-outline",
-  "food-drumstick-outline": "food-drumstick-outline",
-  "food-variant": "food-variant",
-  "silverware-fork-knife": "silverware-fork-knife",
-  "starters": "silverware-fork-knife",
-  "appetizers": "silverware-fork-knife",
-  "circle-outline": "circle-outline",
-  "food-off-outline": "food-off-outline",
-  "layers-outline": "layers-outline",
-  "indian_bread": "layers-outline",
-  "silverware-clean": "silverware-clean",
-  "food": "food",
-  "bowl-mix": "bowl-mix",
-  "main_course": "food",
-  "main": "food",
-  "leaf": "leaf",
-  "food-apple-outline": "food-apple-outline",
-  "salad": "food-apple-outline",
-  "salads": "food-apple-outline",
-  "ice-cream": "ice-cream",
-  "cake-variant-outline": "cake-variant-outline",
-  "candy-outline": "candy-outline",
-  "dessert": "ice-cream",
-  "desserts": "ice-cream",
-  "ice_cream": "ice-cream",
-  "food-outline": "food-outline"
-};
-
-const defaultIcon = "food-outline";
 const defaultCategoryImage = require("../src/assets/images/menu.png");
 
-export default function orderitems() {
-  // ========== ALL HOOKS FIRST ==========
+// --- Safe style access (fallback) ---
+const safeStyles = (orderitemsstyle && typeof orderitemsstyle === "object")
+  ? orderitemsstyle
+  : {
+      container: { flex: 1, padding: 16 },
+      header: { flexDirection: "row", alignItems: "center", padding: 8 },
+      backButton: {},
+      headerContent: { marginLeft: 8 },
+      title: { fontSize: 20 },
+      scrollView: { flex: 1 },
+      sectionHeader: { fontSize: 18, marginTop: 12, marginBottom: 6 },
+      itemRow: { flexDirection: "row", alignItems: "center", padding: 8 },
+      checkboxContainer: {},
+      checkbox: { width: 24, height: 24, borderRadius: 4, borderWidth: 1 },
+      checkboxSelected: { backgroundColor: "#000" },
+      itemInfo: { flex: 1, paddingHorizontal: 8 },
+      itemName: { fontSize: 16 },
+      dottedLine: { height: 1 },
+      itemPrice: { fontSize: 14 },
+      quantityContainer: { flexDirection: "row", alignItems: "center" },
+      quantityButton: { padding: 6 },
+      quantityButtonText: { fontSize: 16 },
+      quantityText: { width: 30, textAlign: "center" },
+      orderSummary: { padding: 12 },
+      summaryText: { fontSize: 16 },
+      placeOrderButton: { padding: 12, borderRadius: 8, alignItems: "center" },
+      placeOrderButtonDisabled: { opacity: 0.6 },
+      placeOrderButtonText: { color: "#fff" },
+    };
+
+// --- ErrorBoundary class to catch render-time errors ---
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null, info: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, info) {
+    // You can log the error to an error reporting service here
+    console.error("ErrorBoundary caught an error:", error, info);
+    this.setState({ info });
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <LinearGradient colors={["#C4B5FD", "#A78BFA"]} style={safeStyles.container}>
+          <SafeAreaView style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+            <Text style={{ fontSize: 18, color: "#000", marginBottom: 8 }}>
+              Something went wrong rendering this screen.
+            </Text>
+            <Text selectable style={{ color: "#333", marginHorizontal: 20 }}>
+              {this.state.error ? String(this.state.error) : "Unknown error"}
+            </Text>
+          </SafeAreaView>
+        </LinearGradient>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// --- Main component (capitalized) ---
+export default function OrderItems() {
+  // router + params (guard with default empty object)
   const router = useRouter();
-  const params = useLocalSearchParams();
+  const rawParams = useLocalSearchParams() || {};
+  // normalize params to a plain object with string values
+  const params = { ...(rawParams || {}) };
+
   const isMounted = useRef(true);
 
-  // State hooks
+  // State
   const [selectedItems, setSelectedItems] = useState([]);
   const [remove_list, setRemoveList] = useState([]);
   const [totalCost, setTotalCost] = useState(0);
@@ -106,103 +125,89 @@ export default function orderitems() {
   const [items, setItems] = useState([]);
   const [menuData, setMenuData] = useState(null);
 
-  // Custom hooks
-  const { userId, error } = useUserData();
+  // custom hook (guarded)
+  const userData = useUserData();
+  const userId = userData?.userId;
+  const error = userData?.error;
 
-  // Ref for tracking previous state
+  // prev state ref
   const prevStateRef = useRef({ selectedCount: 0, removeListLength: 0 });
 
-  // ========== MOUNT TRACKING ==========
   useEffect(() => {
     return () => {
       isMounted.current = false;
     };
   }, []);
 
-  // ========== HELPER FUNCTIONS ==========
-
-  // Add item to remove_list without duplicates
+  // Add to remove list w/o duplicates
   const addToRemoveList = useCallback((item) => {
-    const id = item.orderItemId || item.id;
-    setRemoveList((prev) => {
-      if (prev.some((r) => (r.orderItemId || r.id) === id)) return prev;
-      return [...prev, { orderItemId: item.orderItemId || item.id }];
-    });
+    try {
+      const id = item.orderItemId || item.id;
+      setRemoveList((prev) => {
+        if (!Array.isArray(prev)) return [{ orderItemId: id }];
+        if (prev.some((r) => (r.orderItemId || r.id) === id)) return prev;
+        return [...prev, { orderItemId: id }];
+      });
+    } catch (e) {
+      console.error("addToRemoveList error:", e);
+    }
   }, []);
 
-  // Fetch menu details
   const getMenu = useCallback(async () => {
     try {
       if (!params?.category) {
-        console.error('No category provided for getMenu');
-       // return;
+        console.warn("getMenu: params.category missing");
+        // still try to fetch if API can handle undefined, otherwise skip
       }
-
       const menu = await getSpecificMenu(params.category);
       if (isMounted.current && menu) {
         setMenuData(menu);
         console.log("Menu fetched:", menu);
       }
-    } catch (error) {
-      console.error("Error fetching menu:", error);
+    } catch (err) {
+      console.error("Error fetching menu:", err);
       if (isMounted.current) {
-        AlertService.error("Error fetching menu: " + (error?.message || 'Unknown error'));
+        AlertService?.error?.("Error fetching menu: " + (err?.message || "Unknown error"));
       }
     }
   }, [params?.category]);
 
-  // Initialize menu items with order data
   const initializeData = useCallback(async () => {
     try {
       setLoading(true);
-      console.log('Fetching menu items for category:', params?.category);
+      console.log("initializeData: fetching menu items for category:", params?.category);
 
-      if (!params?.category) {
-        console.error('No category provided');
-       // return;
-      }
-
-      // Fetch menu items
       const menuItems = await getitemsbasedonmenu(params.category);
-      console.log('Menu items fetched:', menuItems?.length || 0);
-
       if (!menuItems || !Array.isArray(menuItems)) {
-        console.error('Invalid menu items response');
-        AlertService.error('Failed to load menu items');
-       // return;
+        console.warn("initializeData: menuItems invalid:", menuItems);
+        // set empty array so render won't crash
+        if (isMounted.current) setItems([]);
+        return;
       }
 
-      // Fetch order items if orderID exists
       let orderResponse = [];
       if (params.orderID && userId) {
-        console.log('Fetching order items for orderID:', params.orderID);
         try {
           const ord_res = await getOrderItemList(params.orderID, userId);
           if (ord_res?.orderItems) {
             orderResponse = ord_res.orderItems;
-            console.log('Order items fetched:', orderResponse.length);
           }
         } catch (orderError) {
-          console.error('Error fetching order items:', orderError);
+          console.error("Error fetching order items:", orderError);
         }
       }
 
-      // Create order items map
       const orderItems = orderResponse.reduce((acc, orderItem) => {
-        if (orderItem?.menuItemId) {
-          acc[orderItem.menuItemId] = orderItem;
-        }
+        if (orderItem?.menuItemId) acc[orderItem.menuItemId] = orderItem;
         return acc;
       }, {});
 
-      // Combine menu items with order data
       const combinedItems = menuItems.map((item, index) => {
         try {
-          if (!item || typeof item !== 'object' || !item.id) {
+          if (!item || typeof item !== "object" || !item.id) {
             console.warn(`Invalid menu item at index ${index}:`, item);
             return null;
           }
-
           return {
             ...item,
             selected: !!orderItems[item.id],
@@ -216,62 +221,53 @@ export default function orderitems() {
         }
       }).filter(Boolean);
 
-      console.log('Combined items ready:', combinedItems.length);
-
       if (isMounted.current) {
-        const selectedItems = combinedItems.filter((item) => item?.selected);
+        const selected = combinedItems.filter((i) => i.selected);
         setItems(combinedItems);
-        setSelectedItems(selectedItems);
-        console.log('State updated successfully');
+        setSelectedItems(selected);
       }
-    } catch (error) {
-      console.error('Error in initializeData:', error);
-      AlertService.error('Failed to load menu data: ' + (error?.message || 'Unknown error'));
+    } catch (err) {
+      console.error("initializeData error:", err);
+      AlertService?.error?.("Failed to load menu data: " + (err?.message || "Unknown error"));
     } finally {
       if (isMounted.current) setLoading(false);
     }
   }, [params?.category, params?.orderID, userId]);
 
-  // Initialize component
   const initializeComponent = useCallback(() => {
-    if (!userId) {
-      console.log('orderitems: waiting for userId...');
-      //return;
+    try {
+      if (!params || !params.category) {
+        // redirect back to menu-list if category missing
+        console.warn("initializeComponent: missing params.category, redirecting to menu-list");
+        setTimeout(() => {
+          try {
+            router.push({ pathname: "/menu-list" });
+          } catch (e) {
+            console.warn("router push failed", e);
+          }
+        }, 50);
+      }
+      getMenu();
+      initializeData();
+    } catch (e) {
+      console.error("initializeComponent error:", e);
     }
-
-    if (!params || !params.category) {
-      console.warn('orderitems: missing params.category, redirecting to menu-list');
-      setTimeout(() => {
-        try {
-          router.push({ pathname: '/menu-list' });
-        } catch (e) {
-          console.warn('router push failed', e);
-        }
-      }, 50);
-   //   return;
-    }
-
-    console.log('orderitems: initializing with params:', params);
-    getMenu();
-    initializeData();
-  }, [params?.category, params?.orderID, userId, getMenu, initializeData]);
+  }, [params?.category, getMenu, initializeData, router]);
 
   useEffect(() => {
     initializeComponent();
   }, [initializeComponent]);
 
-  // ========== ORDER OPERATIONS ==========
-
+  // Create order
   const createOrder_data = async () => {
     if (!userId) {
-      AlertService.error("Please login to place an order");
+      AlertService?.error?.("Please login to place an order");
       router.push({ pathname: "/customer-login" });
       return;
     }
-
     if (!params.restaurantId) {
-      AlertService.error("Restaurant not specified");
-    //  return;
+      AlertService?.error?.("Restaurant not specified");
+      // continue, but likely API will error
     }
 
     const sanitizedOrderItems = (selectedItems || []).map((it) => ({
@@ -282,7 +278,7 @@ export default function orderitems() {
     }));
 
     const order = {
-      userId: userId,
+      userId,
       restaurantId: params.restaurantId,
       total: totalCost,
       tableId: params.tableId,
@@ -296,119 +292,137 @@ export default function orderitems() {
       if (isMounted.current) {
         await initializeData();
       }
-      console.log("Order created successfully:", response);
-      AlertService.success("Order placed successfully");
-    } catch (error) {
-      console.error("Error creating order:", error);
-      AlertService.error("Failed to place order");
+      AlertService?.success?.("Order placed successfully");
+      console.log("Order created:", response);
+    } catch (err) {
+      console.error("Error creating order:", err);
+      AlertService?.error?.("Failed to place order");
     }
 
     setShowOrderModal(true);
-    router.push({
-      pathname: "/menu-list",
-      params: {
-        restaurantId: params.restaurantId,
-        tableId: params.tableId,
-      },
-    });
+    try {
+      router.push({
+        pathname: "/menu-list",
+        params: { restaurantId: params.restaurantId, tableId: params.tableId },
+      });
+    } catch (e) {
+      console.warn("router.push failed after order:", e);
+    }
   };
 
   const deleteOrder_items = useCallback(async () => {
     const order = {
-      userId: userId,
+      userId,
       restaurantId: params.restaurantId,
       removedItems: remove_list.map((r) => ({ orderItemId: r.orderItemId || r.id })),
       orderID: params.orderID || null,
     };
-
     try {
       const response = await deleteOrderItems(order);
       if (isMounted.current) {
         await initializeData();
         setRemoveList([]);
       }
-      console.log("Order items deleted successfully:", response);
-    } catch (error) {
-      console.error("Error deleting order items:", error);
+      console.log("Order items deleted:", response);
+    } catch (err) {
+      console.error("Error deleting order items:", err);
     }
     setShowOrderModal(true);
   }, [userId, params.restaurantId, params.orderID, remove_list, initializeData]);
 
   // Auto-delete when no items selected
   useEffect(() => {
-    const selected = items.filter((i) => i.selected);
-    const selectedCount = selected.length;
-    const removeListLength = remove_list.length;
+    try {
+      const selected = items.filter((i) => i.selected);
+      const selectedCount = selected.length;
+      const removeListLength = remove_list.length;
 
-    if (selectedCount === 0 &&
+      if (
+        selectedCount === 0 &&
         removeListLength > 0 &&
         (prevStateRef.current.selectedCount !== selectedCount ||
-         prevStateRef.current.removeListLength !== removeListLength)) {
-
-      prevStateRef.current = { selectedCount, removeListLength };
-      deleteOrder_items();
-    } else {
-      prevStateRef.current = { selectedCount, removeListLength };
+          prevStateRef.current.removeListLength !== removeListLength)
+      ) {
+        prevStateRef.current = { selectedCount, removeListLength };
+        deleteOrder_items();
+      } else {
+        prevStateRef.current = { selectedCount, removeListLength };
+      }
+    } catch (e) {
+      console.error("auto-delete effect error:", e);
     }
   }, [items, remove_list, deleteOrder_items]);
 
-  // ========== ITEM HANDLERS ==========
-
-  const handleItemSelect = useCallback((itemId) => {
-    setItems((prevData) => {
-      const updatedItems = prevData.map((item) => {
-        if (item.id === itemId) {
-          if (item.selected) {
-            addToRemoveList(item);
-          } else {
-            setRemoveList((prev) =>
-              prev.filter((removedItem) => (removedItem.orderItemId || removedItem.id) !== (item.orderItemId || item.id))
-            );
+  // Item handlers
+  const handleItemSelect = useCallback(
+    (itemId) => {
+      setItems((prevData) => {
+        if (!Array.isArray(prevData)) return prevData;
+        return prevData.map((item) => {
+          if (!item || item.id !== itemId) return item;
+          try {
+            if (item.selected) {
+              addToRemoveList(item);
+            } else {
+              setRemoveList((prev) =>
+                (Array.isArray(prev) ? prev : []).filter(
+                  (removedItem) =>
+                    (removedItem.orderItemId || removedItem.id) !== (item.orderItemId || item.id)
+                )
+              );
+            }
+            return {
+              ...item,
+              selected: !item.selected,
+              quantity: item.selected ? 0 : 1,
+            };
+          } catch (e) {
+            console.error("handleItemSelect error for itemId", itemId, e);
+            return item;
           }
-
-          return {
-            ...item,
-            selected: !item.selected,
-            quantity: item.selected ? 0 : 1,
-          };
-        }
-        return item;
+        });
       });
+    },
+    [addToRemoveList]
+  );
 
-      return updatedItems;
-    });
-  }, [addToRemoveList]);
+  const handleQuantityChange = useCallback(
+    (itemId, increment) => {
+      setItems((prevData) => {
+        if (!Array.isArray(prevData)) return prevData;
+        return prevData.map((item) => {
+          if (!item || item.id !== itemId) return item;
+          try {
+            const newQuantity = Math.max(0, (item.quantity || 0) + increment);
 
-  const handleQuantityChange = useCallback((itemId, increment) => {
-    setItems((prevData) => {
-      const updatedItems = prevData.map((item) => {
-        if (item.id === itemId) {
-          const newQuantity = Math.max(0, item.quantity + increment);
+            if (newQuantity === 0 && item.orderItemId) {
+              addToRemoveList(item);
+            } else if (newQuantity > 0) {
+              setRemoveList((prev) =>
+                (Array.isArray(prev) ? prev : []).filter(
+                  (removedItem) =>
+                    (removedItem.orderItemId || removedItem.id) !== (item.orderItemId || item.id)
+                )
+              );
+            }
 
-          if (newQuantity === 0 && item.orderItemId) {
-            addToRemoveList(item);
-          } else if (newQuantity > 0) {
-            setRemoveList((prev) =>
-              prev.filter((removedItem) => (removedItem.orderItemId || removedItem.id) !== (item.orderItemId || item.id))
-            );
+            return {
+              ...item,
+              quantity: newQuantity,
+              selected: newQuantity > 0,
+            };
+          } catch (e) {
+            console.error("handleQuantityChange error for itemId", itemId, e);
+            return item;
           }
-
-          return {
-            ...item,
-            quantity: newQuantity,
-            selected: newQuantity > 0,
-          };
-        }
-        return item;
+        });
       });
-
-      return updatedItems;
-    });
-  }, [addToRemoveList]);
+    },
+    [addToRemoveList]
+  );
 
   const handleEdit = useCallback((item) => {
-    if (item.id) {
-      console.log("Editing item:", item);
+    if (item?.id) {
       setSelectedItem(item.id);
       setComment(item.comments || "");
       setIsModalOpen(true);
@@ -416,31 +430,39 @@ export default function orderitems() {
   }, []);
 
   const handleCommentSubmit = () => {
-    console.log("Submitting comment:", comment, "for item:", selectedItem);
-    setItems((prevSections) =>
-      prevSections.map((section) =>
-        section.id === selectedItem ? { ...section, comments: comment } : section
-      )
-    );
-    setSelectedItems((prev) =>
-      prev.map((item) =>
-        item.id === selectedItem ? { ...item, comments: comment } : item
-      )
-    );
-    setIsModalOpen(false);
-    setSelectedItem(null);
-    setComment("");
+    try {
+      setItems((prevSections) =>
+        (Array.isArray(prevSections) ? prevSections : []).map((section) =>
+          section.id === selectedItem ? { ...section, comments: comment } : section
+        )
+      );
+      setSelectedItems((prev) =>
+        (Array.isArray(prev) ? prev : []).map((item) =>
+          item.id === selectedItem ? { ...item, comments: comment } : item
+        )
+      );
+    } catch (e) {
+      console.error("handleCommentSubmit error:", e);
+    } finally {
+      setIsModalOpen(false);
+      setSelectedItem(null);
+      setComment("");
+    }
   };
 
-  // ========== CALCULATIONS ==========
-
-  const { selectedItems: calculatedSelectedItems, totalCost: calculatedTotalCost } = useMemo(() => {
-    const selected = items.filter((item) => item?.selected);
-    const total = selected.reduce((sum, item) => {
-      const price = parseInt(item?.price || 0);
-      return sum + price * (item?.quantity || 0);
-    }, 0);
-    return { selectedItems: selected, totalCost: total };
+  // Calculations using useMemo
+  const { calculatedSelectedItems, calculatedTotalCost } = useMemo(() => {
+    try {
+      const selected = (items || []).filter((item) => item?.selected);
+      const total = selected.reduce((sum, item) => {
+        const price = parseInt(item?.price || 0, 10) || 0;
+        return sum + price * (item?.quantity || 0);
+      }, 0);
+      return { calculatedSelectedItems: selected, calculatedTotalCost: total };
+    } catch (e) {
+      console.error("calculation useMemo error:", e);
+      return { calculatedSelectedItems: [], calculatedTotalCost: 0 };
+    }
   }, [items]);
 
   useEffect(() => {
@@ -448,233 +470,176 @@ export default function orderitems() {
     setTotalCost(calculatedTotalCost);
   }, [calculatedSelectedItems, calculatedTotalCost]);
 
-  // ========== NAVIGATION ==========
+  // Group items by type for rendering (moved out of JSX)
+  const groupedRendered = useMemo(() => {
+    try {
+      const grouped = (items || []).reduce((acc, item) => {
+        if (!item || typeof item !== "object") return acc;
+        const type = item.type || "Other";
+        if (!acc[type]) acc[type] = [];
+        acc[type].push(item);
+        return acc;
+      }, {});
+      return grouped;
+    } catch (e) {
+      console.error("grouping useMemo error:", e);
+      return {};
+    }
+  }, [items]);
 
+  // Navigation back
   const handleBackPress = () => {
     const obj = { pathname: "/menu-list" };
     if (params.ishotel === "true") {
-      obj.params = {
-        hotelId: params.restaurantId || params.hotelId,
-        ishotel: "true",
-      };
+      obj.params = { hotelId: params.restaurantId || params.hotelId, ishotel: "true" };
     } else {
-      obj.params = {
-        restaurantId: params.restaurantId,
-        tableId: params.tableId,
-        ishotel: "false"
-      };
+      obj.params = { restaurantId: params.restaurantId, tableId: params.tableId, ishotel: "false" };
     }
-    router.push(obj);
+    try {
+      router.push(obj);
+    } catch (e) {
+      console.warn("Back navigation failed:", e);
+    }
   };
 
-  // ========== LOADING & ERROR STATES ==========
-
+  // Loading / error states
   if (!userId && !error) {
     return (
-      <LinearGradient
-        colors={['#C4B5FD', '#A78BFA']}
-        style={[orderitemsstyle.container, { justifyContent: 'center', alignItems: 'center' }]}
-      >
-        <Text style={{ fontSize: 18, color: '#333' }}>Loading...</Text>
+      <LinearGradient colors={["#C4B5FD", "#A78BFA"]} style={[safeStyles.container, { justifyContent: "center", alignItems: "center" }]}>
+        <Text style={{ fontSize: 18, color: "#333" }}>Loading...</Text>
       </LinearGradient>
     );
   }
 
   if (error) {
     return (
-      <LinearGradient
-        colors={['#C4B5FD', '#A78BFA']}
-        style={[orderitemsstyle.container, { justifyContent: 'center', alignItems: 'center' }]}
-      >
-        <Text style={{ fontSize: 18, color: '#333' }}>Error loading user data. Please try again.</Text>
+      <LinearGradient colors={["#C4B5FD", "#A78BFA"]} style={[safeStyles.container, { justifyContent: "center", alignItems: "center" }]}>
+        <Text style={{ fontSize: 18, color: "#333" }}>Error loading user data. Please try again.</Text>
       </LinearGradient>
     );
   }
 
-  if (loading && items.length === 0) {
+  if (loading && (items || []).length === 0) {
     return (
-      <LinearGradient
-        colors={['#C4B5FD', '#A78BFA']}
-        style={[orderitemsstyle.container, { justifyContent: 'center', alignItems: 'center' }]}
-      >
-        <Text style={{ fontSize: 18, color: '#333' }}>Loading menu...</Text>
+      <LinearGradient colors={["#C4B5FD", "#A78BFA"]} style={[safeStyles.container, { justifyContent: "center", alignItems: "center" }]}>
+        <Text style={{ fontSize: 18, color: "#333" }}>Loading menu...</Text>
       </LinearGradient>
     );
   }
 
   if (!Array.isArray(items)) {
-    console.error('Items is not an array in render:', typeof items, items);
+    console.error("Items is not an array in render:", typeof items, items);
     return (
-      <LinearGradient
-        colors={['#C4B5FD', '#A78BFA']}
-        style={[orderitemsstyle.container, { justifyContent: 'center', alignItems: 'center' }]}
-      >
-        <Text style={{ fontSize: 18, color: '#333' }}>Error loading menu items. Please try again.</Text>
+      <LinearGradient colors={["#C4B5FD", "#A78BFA"]} style={[safeStyles.container, { justifyContent: "center", alignItems: "center" }]}>
+        <Text style={{ fontSize: 18, color: "#333" }}>Error loading menu items. Please try again.</Text>
       </LinearGradient>
     );
   }
 
-  // ========== RENDER ==========
-
+  // --- Render wrapped in ErrorBoundary ---
   return (
-    <LinearGradient
-      colors={['#C4B5FD', '#A78BFA']}
-      style={orderitemsstyle.container}
-    >
-      <SafeAreaView style={{ flex: 1 }}>
-        {/* Header */}
-        <View style={orderitemsstyle.header}>
-          <Pressable
-            style={orderitemsstyle.backButton}
-            onPress={handleBackPress}
-          >
-            <MaterialCommunityIcons name="chevron-left" size={44} color="#000" />
-          </Pressable>
-          <View style={orderitemsstyle.headerContent}>
-            {menuData?.icon && categoryImages[menuData.icon] && (
-              <Image
-                source={categoryImages[menuData.icon]}
-                style={{ width: 60, height: 60, marginBottom: 8 }}
-                resizeMode="contain"
-              />
-            )}
-            <Text style={orderitemsstyle.title}>
-              {menuData?.name || params.categoryName || 'Menu Items'}
-            </Text>
+    <ErrorBoundary>
+      <LinearGradient colors={["#C4B5FD", "#A78BFA"]} style={safeStyles.container}>
+        <SafeAreaView style={{ flex: 1 }}>
+          {/* Header */}
+          <View style={safeStyles.header}>
+            <Pressable style={safeStyles.backButton} onPress={handleBackPress}>
+              <MaterialCommunityIcons name="chevron-left" size={44} color="#000" />
+            </Pressable>
+            <View style={safeStyles.headerContent}>
+              {menuData?.icon && categoryImages[menuData.icon] ? (
+                <Image
+                  source={categoryImages[menuData.icon]}
+                  style={{ width: 60, height: 60, marginBottom: 8 }}
+                  resizeMode="contain"
+                />
+              ) : (
+                <Image
+                  source={defaultCategoryImage}
+                  style={{ width: 60, height: 60, marginBottom: 8 }}
+                  resizeMode="contain"
+                />
+              )}
+              <Text style={safeStyles.title}>
+                {menuData?.name || params.categoryName || "Menu Items"}
+              </Text>
+            </View>
           </View>
-        </View>
 
-        {/* Menu Items */}
-        <ScrollView
-          style={orderitemsstyle.scrollView}
-          showsVerticalScrollIndicator={false}
-        >
-          {useMemo(() => {
-            try {
-              // Group items by type
-              const groupedItems = items.reduce((acc, item) => {
-                if (!item || typeof item !== 'object') {
-                  console.warn('Invalid item in render:', item);
-                  return acc;
-                }
+          {/* Menu Items */}
+          <ScrollView style={safeStyles.scrollView} showsVerticalScrollIndicator={false}>
+            {Object.entries(groupedRendered).map(([type, typeItems]) => (
+              <View key={type}>
+                <Text style={safeStyles.sectionHeader}>{type}</Text>
+                {typeItems.map((item) => (
+                  <View key={item.id} style={safeStyles.itemRow}>
+                    {params.ishotel === "false" && (
+                      <Pressable style={safeStyles.checkboxContainer} onPress={() => handleItemSelect(item.id)}>
+                        <View style={[safeStyles.checkbox, item.selected && safeStyles.checkboxSelected]}>
+                          {item.selected && <MaterialIcons name="check" size={16} color="#fff" />}
+                        </View>
+                      </Pressable>
+                    )}
 
-                const type = item.type || 'Other';
-                if (!acc[type]) {
-                  acc[type] = [];
-                }
-                acc[type].push(item);
-                return acc;
-              }, {});
+                    <View style={safeStyles.itemInfo}>
+                      <Text style={safeStyles.itemName}>{item.name}</Text>
+                      <View style={safeStyles.dottedLine} />
+                      <Text style={safeStyles.itemPrice}>₹{item.price}</Text>
+                    </View>
 
-              return Object.entries(groupedItems).map(([type, typeItems]) => (
-                <View key={type}>
-                  <Text style={orderitemsstyle.sectionHeader}>{type}</Text>
-                  {typeItems.map((item) => (
-                    <View key={item.id} style={orderitemsstyle.itemRow}>
-                      {params.ishotel === "false" && (
-                        <Pressable
-                          style={orderitemsstyle.checkboxContainer}
-                          onPress={() => handleItemSelect(item.id)}
-                        >
-                          <View
-                            style={[
-                              orderitemsstyle.checkbox,
-                              item.selected && orderitemsstyle.checkboxSelected,
-                            ]}
-                          >
-                            {item.selected && (
-                              <MaterialIcons name="check" size={16} color="#fff" />
-                            )}
-                          </View>
-                        </Pressable>
-                      )}
-
-                      {/* Item Info */}
-                      <View style={orderitemsstyle.itemInfo}>
-                        <Text style={orderitemsstyle.itemName}>{item.name}</Text>
-                        <View style={orderitemsstyle.dottedLine} />
-                        <Text style={orderitemsstyle.itemPrice}>₹{item.price}</Text>
-                      </View>
-
-                      {params.ishotel === "false" && item.selected && (
-                        <View style={{ flexDirection: "row", alignItems: "center" }}>
-                          <View style={orderitemsstyle.quantityContainer}>
-                            <Pressable
-                              style={orderitemsstyle.quantityButton}
-                              onPress={() => handleQuantityChange(item.id, -1)}
-                            >
-                              <Text style={orderitemsstyle.quantityButtonText}>-</Text>
-                            </Pressable>
-                            <Text style={orderitemsstyle.quantityText}>
-                              {item.quantity}
-                            </Text>
-                            <Pressable
-                              style={orderitemsstyle.quantityButton}
-                              onPress={() => handleQuantityChange(item.id, 1)}
-                            >
-                              <Text style={orderitemsstyle.quantityButtonText}>+</Text>
-                            </Pressable>
-                          </View>
-
-                          <Pressable
-                            onPress={() => handleEdit(item)}
-                            style={{ marginHorizontal: 6 }}
-                          >
-                            <Feather name="edit-2" size={24} color="#000" />
+                    {params.ishotel === "false" && item.selected && (
+                      <View style={{ flexDirection: "row", alignItems: "center" }}>
+                        <View style={safeStyles.quantityContainer}>
+                          <Pressable style={safeStyles.quantityButton} onPress={() => handleQuantityChange(item.id, -1)}>
+                            <Text style={safeStyles.quantityButtonText}>-</Text>
+                          </Pressable>
+                          <Text style={safeStyles.quantityText}>{item.quantity}</Text>
+                          <Pressable style={safeStyles.quantityButton} onPress={() => handleQuantityChange(item.id, 1)}>
+                            <Text style={safeStyles.quantityButtonText}>+</Text>
                           </Pressable>
                         </View>
-                      )}
-                    </View>
-                  ))}
-                </View>
-              ));
-            } catch (error) {
-              console.error('Error rendering items:', error);
-              return (
-                <View style={{ padding: 20 }}>
-                  <Text style={{ color: '#333' }}>Error displaying menu items</Text>
-                </View>
-              );
-            }
-          }, [items, params.ishotel, handleItemSelect, handleQuantityChange, handleEdit])}
 
-          {/* Order Summary */}
-          {params.ishotel === "false" && (
-            <View style={orderitemsstyle.orderSummary}>
-              <Text style={orderitemsstyle.summaryText}>
-                No of item Selected: {selectedItems.length}
-              </Text>
-              <Text style={orderitemsstyle.summaryText}>
-                Total Cost of Selection = ₹{totalCost}
-              </Text>
-              <Pressable
-                style={[
-                  orderitemsstyle.placeOrderButton,
-                  responsiveStyles.bg1,
-                  selectedItems.length === 0 &&
-                    orderitemsstyle.placeOrderButtonDisabled,
-                ]}
-                onPress={createOrder_data}
-                disabled={selectedItems.length === 0}
-              >
-                <Text style={orderitemsstyle.placeOrderButtonText}>
-                  Place Order
-                </Text>
-              </Pressable>
-            </View>
-          )}
-        </ScrollView>
+                        <Pressable onPress={() => handleEdit(item)} style={{ marginHorizontal: 6 }}>
+                          <Feather name="edit-2" size={24} color="#000" />
+                        </Pressable>
+                      </View>
+                    )}
+                  </View>
+                ))}
+              </View>
+            ))}
 
-        {/* Comment Modal */}
-        <CommentModal
-          visible={isModalOpen}
-          item={selectedItem}
-          comment={comment}
-          onChange={setComment}
-          onClose={() => setIsModalOpen(false)}
-          onSubmit={handleCommentSubmit}
-        />
-      </SafeAreaView>
-    </LinearGradient>
+            {/* Order Summary */}
+            {params.ishotel === "false" && (
+              <View style={safeStyles.orderSummary}>
+                <Text style={safeStyles.summaryText}>No of item Selected: {selectedItems.length}</Text>
+                <Text style={safeStyles.summaryText}>Total Cost of Selection = ₹{totalCost}</Text>
+                <Pressable
+                  style={[
+                    safeStyles.placeOrderButton,
+                    responsiveStyles?.bg1,
+                    selectedItems.length === 0 && safeStyles.placeOrderButtonDisabled,
+                  ]}
+                  onPress={createOrder_data}
+                  disabled={selectedItems.length === 0}
+                >
+                  <Text style={safeStyles.placeOrderButtonText}>Place Order</Text>
+                </Pressable>
+              </View>
+            )}
+          </ScrollView>
+
+          {/* Comment Modal */}
+          <CommentModal
+            visible={isModalOpen}
+            item={selectedItem}
+            comment={comment}
+            onChange={setComment}
+            onClose={() => setIsModalOpen(false)}
+            onSubmit={handleCommentSubmit}
+          />
+        </SafeAreaView>
+      </LinearGradient>
+    </ErrorBoundary>
   );
 }
