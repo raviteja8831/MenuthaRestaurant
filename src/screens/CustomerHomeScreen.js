@@ -564,87 +564,81 @@ const CustomerHomeScreen = () => {
   return (
     <View style={styles.container}>
       <MapView
-        provider={PROVIDER_GOOGLE}
-        ref={mapRef}
-        style={styles.map}
-        initialRegion={mapRegion}
-        showsUserLocation={true}
-        showsMyLocationButton={true}
-        followsUserLocation={false}
-        loadingEnabled={true}
-        onMapReady={() => {
-          setMapReady(true);
-        }}
-        onLayout={() => {
-            if (mapRef.current && mapReady && dataLoadingComplete && filtered && filtered.length > 0) {
-              try {
-                const coords = filtered.map((r) => ({ latitude: Number(r.latitude), longitude: Number(r.longitude) }));
-                if (userLocation) coords.push({ latitude: userLocation.latitude, longitude: userLocation.longitude });
-                if (coords.length > 0 && typeof mapRef.current.fitToCoordinates === "function") {
-                  mapRef.current.fitToCoordinates(coords, { edgePadding: { top: 100, right: 100, bottom: 150, left: 100 }, animated: true });
-                }
-              } catch (e) {
-                console.log('error', 'coords error')
-              }
-            }
-        }}
-        onRegionChangeComplete={(region) => {
-          console.log('region after complete', region)
-                    setMapReady(true);
-
-          // optional debug
-        }}
+  provider={PROVIDER_GOOGLE}
+  ref={mapRef}
+  style={styles.map}
+  initialRegion={mapRegion}
+  showsUserLocation={true}
+  showsMyLocationButton={true}
+  followsUserLocation={false}
+  loadingEnabled={true}
+  onMapReady={() => setMapReady(true)}
+  onLayout={() => {
+    setTimeout(() => {
+      if (mapRef.current && mapReady && filteredRestaurants && filteredRestaurants.length > 0) {
+        try {
+          const coords = filteredRestaurants.map(r => ({
+            latitude: Number(r.latitude),
+            longitude: Number(r.longitude),
+          }));
+          if (userLocation) coords.push(userLocation);
+          mapRef.current.fitToCoordinates(coords, {
+            edgePadding: { top: 100, right: 100, bottom: 150, left: 100 },
+            animated: true,
+          });
+        } catch (e) {
+          console.log("coords error", e);
+        }
+      }
+    }, 800);
+  }}
+>
+  {userLocation && (
+    <>
+      <Circle
+        center={userLocation}
+        radius={5000}
+        strokeColor="#3838FB"
+        fillColor="#3838FB22"
+        strokeWidth={2}
+      />
+      <Marker
+        key="user-location"
+        coordinate={userLocation}
+        title="Your Location"
+        tracksViewChanges={false}
       >
-        {/* User Location Circle */}
-        {userLocation && (
-          <Circle
-            center={userLocation}
-            radius={5000}
-            strokeColor="#3838FB"
-            fillColor="#3838FB22"
-            strokeWidth={2}
-          />
-        )}
+        <Image
+          source={require("../assets/menuva_original.png")}
+          style={{ width: 40, height: 40 }}
+          resizeMode="contain"
+        />
+      </Marker>
+    </>
+  )}
 
-        {/* User Location Marker */}
-        {userLocation && (
-          <Marker key="user-location" coordinate={userLocation} title="Your Location" description="You are here" tracksViewChanges={false}>
-            <Image source={require("../assets/menuva_original.png")} style={{ width: 40, height: 40 }} resizeMode="contain" />
-          </Marker>
-        )}
+  {filteredRestaurants.map((r, i) => {
+    if (!r.latitude || !r.longitude) return null;
+    const lat = Number(r.latitude);
+    const lng = Number(r.longitude);
+    if (isNaN(lat) || isNaN(lng)) return null;
+    return (
+      <Marker
+        key={`restaurant-${r.id || i}`}
+        coordinate={{ latitude: lat, longitude: lng }}
+        onPress={() => handleMarkerPress(r)}
+        tracksViewChanges={false}
+      >
+        <Image
+          source={require("../assets/menutha_original.png")}
+          style={{ width: 40, height: 40 }}
+          resizeMode="contain"
+        />
+      </Marker>
+    );
+  })}
+</MapView>
 
-        {/* Restaurant Markers - Only render when data loading is complete */}
-        {(dataLoadingComplete || (!loading && restaurants.length > 0)) && filtered && filtered.map((restaurant, index) => {
-          if (!restaurant || restaurant.latitude == null || restaurant.longitude == null) {
-            console.log("❌ Skipping marker for restaurant:", restaurant?.name || "Unknown", "- Missing coordinates");
-            return null;
-          }
-
-          const lat = Number(restaurant.latitude);
-          const lng = Number(restaurant.longitude);
-
-          if (isNaN(lat) || isNaN(lng)) {
-            console.log("❌ Skipping marker for restaurant:", restaurant.name, "- Invalid coordinates:", lat, lng);
-            return null;
-          }
-
-          console.log("✅ Rendering marker for:", restaurant.name, "at", lat, lng);
-
-          return (
-            <Marker
-              key={`restaurant-${restaurant.id || index}`}
-              coordinate={{ latitude: lat, longitude: lng }}
-              title={restaurant.name || "Restaurant"}
-              description={restaurant.address || ""}
-              onPress={() => handleMarkerPress(restaurant)}
-              pinColor="red"
-              tracksViewChanges={false}
-            >
-              <Image source={require("../assets/menutha_original.png")} style={{ width: 40, height: 40 }} resizeMode="contain" />
-            </Marker>
-          );
-        })}
-      </MapView>
 
       {/* Loading Overlay */}
       {showLoadingOverlay && (
@@ -994,6 +988,23 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: '#6B4EFF',
     borderRadius: 4,
+  },
+  markerContainer: {
+    width: 50,
+    height: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  markerBackground: {
+    width: 50,
+    height: 50,
+    position: 'absolute',
+  },
+  markerLogo: {
+    width: 24,
+    height: 24,
+    position: 'absolute',
+    top: 8,
   },
 });
 
