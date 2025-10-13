@@ -21,8 +21,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./src/assets/menutha.png",
-        "backgroundColor": "#FFFFFF",
-        "monochromeImage": "./src/assets/menutha.png"
+        "backgroundColor": "#FFFFFF"
       },
       "config": {
         "googleMaps": {
@@ -49,6 +48,11 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "splash": {
+      "image": "./src/assets/menutha.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
     },
     "extra": {
       "DEFAULT_LANDING_PAGE": "/login",

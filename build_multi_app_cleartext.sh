@@ -193,7 +193,7 @@ update_app_json() {
   local NAME=$1; local PKG=$2; local LOGO=$3
   [ -f app.json ] && cp app.json app.json.backup
   if command -v jq &>/dev/null; then
-    jq ".expo.name=\"$NAME\" | .expo.android.package=\"$PKG\" | .expo.ios.bundleIdentifier=\"$PKG\" | .expo.icon=\"$LOGO\" | .expo.android.adaptiveIcon.foregroundImage=\"$LOGO\" | .expo.android.adaptiveIcon.backgroundColor=\"#FFFFFF\" | .expo.android.adaptiveIcon.monochromeImage=\"$LOGO\" | .expo.plugins=[\"expo-router\"]" app.json > app.json.tmp && mv app.json.tmp app.json
+    jq ".expo.name=\"$NAME\" | .expo.android.package=\"$PKG\" | .expo.ios.bundleIdentifier=\"$PKG\" | .expo.icon=\"$LOGO\" | .expo.android.adaptiveIcon.foregroundImage=\"$LOGO\" | .expo.android.adaptiveIcon.backgroundColor=\"#FFFFFF\" | .expo.plugins=[\"expo-router\"]" app.json > app.json.tmp && mv app.json.tmp app.json
   else
     sed -i "s/\"name\": \".*\"/\"name\": \"$NAME\"/" app.json
     sed -i "s/\"package\": \".*\"/\"package\": \"$PKG\"/" app.json
