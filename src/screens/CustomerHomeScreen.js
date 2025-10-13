@@ -81,7 +81,7 @@ const CustomerHomeScreen = () => {
     }
 
     try {
-      const apiKey = "AIzaSyCJT87ZYDqm6bVLxRsg4Zde87HyefUfASQ";
+      const apiKey = "AIzaSyB5P-PTRn7E0xkRlkiHWkjadh3nbT7yu7U";
       const encodedAddress = encodeURIComponent(cleanAddress);
       const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodedAddress}&key=${apiKey}`;
 
@@ -307,10 +307,53 @@ const CustomerHomeScreen = () => {
         const restaurantsNeedingGeocode = [];
 
         restaurantData.forEach(restaurant => {
-          if (restaurant.latitude && restaurant.longitude &&
-              typeof restaurant.latitude === 'number' &&
-              typeof restaurant.longitude === 'number' &&
-              !isNaN(restaurant.latitude) && !isNaN(restaurant.longitude)) {
+          // ✅ CRITICAL: Add data validation to prevent crashes from corrupted data
+          if (!restaurant || typeof restaurant !== 'object') {
+            console.warn('⚠️ Invalid restaurant object:', restaurant);
+            return;
+          }
+
+          // ✅ Fix corrupted boolean fields that come as numbers
+          if (typeof restaurant.enableBuffet === 'number') {
+            restaurant.enableBuffet = restaurant.enableBuffet === 1;
+          }
+          if (typeof restaurant.enableVeg === 'number') {
+            restaurant.enableVeg = restaurant.enableVeg === 1;
+          }
+          if (typeof restaurant.enableNonveg === 'number') {
+            restaurant.enableNonveg = restaurant.enableNonveg === 1;
+          }
+          if (typeof restaurant.enableTableService === 'number') {
+            restaurant.enableTableService = restaurant.enableTableService === 1;
+          }
+          if (typeof restaurant.enableSelfService === 'number') {
+            restaurant.enableSelfService = restaurant.enableSelfService === 1;
+          }
+
+          // ✅ Fix coordinates that might be in wrong fields or as strings
+          let lat = restaurant.latitude;
+          let lng = restaurant.longitude;
+
+          // Check if coordinates are accidentally stored in other fields
+          if (!lat && restaurant.logoImage && !isNaN(parseFloat(restaurant.logoImage))) {
+            lat = parseFloat(restaurant.logoImage);
+            console.log('📍 Found latitude in logoImage field:', lat);
+          }
+
+          // Convert string coordinates to numbers
+          if (typeof lat === 'string') lat = parseFloat(lat);
+          if (typeof lng === 'string') lng = parseFloat(lng);
+
+          // ✅ Validate restaurant type field (fix corrupted dates)
+          if (restaurant.restaurantType && restaurant.restaurantType.includes('2025')) {
+            restaurant.restaurantType = 'Restaurant'; // Default fallback
+            console.log('⚠️ Fixed corrupted restaurantType for:', restaurant.name);
+          }
+
+          if (lat && lng && typeof lat === 'number' && typeof lng === 'number' &&
+              !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+            restaurant.latitude = lat;
+            restaurant.longitude = lng;
             restaurantsWithCoords.push(restaurant);
           } else {
             restaurantsNeedingGeocode.push(restaurant);
@@ -584,34 +627,52 @@ const CustomerHomeScreen = () => {
 
         {/* Restaurant Markers - Simplified default markers with identifiers for fitToSuppliedMarkers */}
         {filteredRestaurants.map((restaurant, index) => {
-          console.log(`🏪 Rendering marker ${index + 1}:`, restaurant.name, restaurant.latitude, restaurant.longitude);
+          // ✅ CRITICAL: Add safety checks to prevent crashes
+          if (!restaurant || !restaurant.id) {
+            console.warn('⚠️ Invalid restaurant in markers:', restaurant);
+            return null;
+          }
+
+          const lat = parseFloat(restaurant.latitude);
+          const lng = parseFloat(restaurant.longitude);
+
+          if (isNaN(lat) || isNaN(lng)) {
+            console.warn('⚠️ Invalid coordinates for restaurant:', restaurant.name, lat, lng);
+            return null;
+          }
+
+          console.log(`🏪 Rendering marker ${index + 1}:`, restaurant.name, lat, lng);
 
           return (
             <Marker
               key={`restaurant-${restaurant.id}-${index}`}
               identifier={`restaurant-${restaurant.id}`}
               coordinate={{
-                latitude: parseFloat(restaurant.latitude),
-                longitude: parseFloat(restaurant.longitude),
+                latitude: lat,
+                longitude: lng,
               }}
               title={restaurant.name || 'Restaurant'}
               description={restaurant.address || 'Restaurant location'}
               pinColor="red"
               onPress={() => {
                 console.log('🏪 Restaurant marker pressed:', restaurant.name);
-                router.push({
-                  pathname: "/HotelDetails",
-                  params: {
-                    id: restaurant.id,
-                    name: restaurant.name,
-                    address: restaurant.address,
-                    starRating: restaurant.rating || 0,
-                  },
-                });
+                try {
+                  router.push({
+                    pathname: "/HotelDetails",
+                    params: {
+                      id: restaurant.id,
+                      name: restaurant.name || 'Restaurant',
+                      address: restaurant.address || '',
+                      starRating: restaurant.rating || 0,
+                    },
+                  });
+                } catch (routeError) {
+                  console.error('❌ Router error:', routeError);
+                }
               }}
             />
           );
-        })}
+        }).filter(Boolean)}
 
         {/* Debug: Show total markers count */}
         {filteredRestaurants.length === 0 && (
