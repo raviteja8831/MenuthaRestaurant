@@ -203,9 +203,15 @@ const CustomerHomeScreen = () => {
       const lat = parseFloat(r.latitude);
       const lng = parseFloat(r.longitude);
 
-      if (!r.latitude || !r.longitude || isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) {
+      if (!r.latitude || !r.longitude || isNaN(lat) || isNaN(lng)) {
         console.log('❌ Filtered out:', r.name, '- Invalid coordinates:', r.latitude, r.longitude);
         return false;
+      }
+
+      // Allow coordinates of 0,0 in case some restaurants have them
+      // but warn about suspicious coordinates
+      if (lat === 0 && lng === 0) {
+        console.log('⚠️  Warning:', r.name, '- Has coordinates at 0,0');
       }
 
       // Filter out restaurants that are too far from user (likely bad data)
@@ -217,8 +223,9 @@ const CustomerHomeScreen = () => {
           lng
         );
 
-        // Filter out restaurants more than 200km away (likely bad coordinates)
-        if (distance > 200) {
+        // Filter out restaurants more than 500km away (likely bad coordinates)
+        // Increased from 200km to be more lenient
+        if (distance > 500) {
           console.log('🌍 Filtered out:', r.name, '- Too far:', distance.toFixed(2), 'km');
           return false;
         }
@@ -316,26 +323,61 @@ const CustomerHomeScreen = () => {
 
         // Start both location and restaurant fetch in parallel
         const locationPromise = (async () => {
-          let { status } = await Location.requestForegroundPermissionsAsync();
-          if (status !== "granted") {
-            console.log('❌ Location permission denied');
-            return null;
+          try {
+            let { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== "granted") {
+              console.log('❌ Location permission denied');
+              // Use default location (Hyderabad) if permission denied
+              return {
+                latitude: 17.4375,
+                longitude: 78.4456,
+              };
+            }
+
+            let location = await Location.getCurrentPositionAsync({
+              accuracy: Location.Accuracy.High,
+              timeout: 10000, // 10 second timeout
+            });
+
+            return {
+              latitude: location.coords.latitude,
+              longitude: location.coords.longitude,
+            };
+          } catch (locationError) {
+            console.log('❌ Error getting location:', locationError);
+            // Use default location if GPS fails
+            return {
+              latitude: 17.4375,
+              longitude: 78.4456,
+            };
           }
-
-          let location = await Location.getCurrentPositionAsync({
-            accuracy: Location.Accuracy.High,
-          });
-
-          return {
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
-          };
         })();
 
-        const restaurantsPromise = getAllRestaurants();
+        const restaurantsPromise = (async () => {
+          try {
+            const data = await getAllRestaurants();
+            console.log('🏪 Restaurant API response type:', typeof data, Array.isArray(data) ? 'array' : 'not array');
+            return data;
+          } catch (apiError) {
+            console.error('❌ Failed to fetch restaurants:', apiError);
+            return []; // Return empty array on error
+          }
+        })();
 
         // Wait for both to complete
         const [userLoc, restaurantData] = await Promise.all([locationPromise, restaurantsPromise]);
+
+        console.log('📊 API Response received:', {
+          userLocation: userLoc ? 'available' : 'null',
+          restaurantCount: Array.isArray(restaurantData) ? restaurantData.length : 'not array',
+          restaurantDataType: typeof restaurantData,
+          firstRestaurantSample: restaurantData?.[0] ? {
+            name: restaurantData[0].name,
+            latitude: restaurantData[0].latitude,
+            longitude: restaurantData[0].longitude,
+            hasCoordinates: !!(restaurantData[0].latitude && restaurantData[0].longitude)
+          } : 'no restaurants'
+        });
 
         // Set user location
         if (userLoc) {
@@ -655,6 +697,7 @@ const CustomerHomeScreen = () => {
         {/* Restaurant Markers - Simple default red pins */}
         {filteredRestaurants.map((restaurant, index) => {
           if (!restaurant || !restaurant.latitude || !restaurant.longitude) {
+            console.log('❌ Skipping marker for restaurant:', restaurant?.name || 'Unknown', '- Missing coordinates');
             return null;
           }
 
@@ -662,8 +705,11 @@ const CustomerHomeScreen = () => {
           const lng = parseFloat(restaurant.longitude);
 
           if (isNaN(lat) || isNaN(lng)) {
+            console.log('❌ Skipping marker for restaurant:', restaurant.name, '- Invalid coordinates:', lat, lng);
             return null;
           }
+
+          console.log('✅ Rendering marker for:', restaurant.name, 'at', lat, lng);
 
           return (
             <Marker
@@ -675,6 +721,7 @@ const CustomerHomeScreen = () => {
               title={restaurant.name || 'Restaurant'}
               description={restaurant.address || ''}
               onPress={() => handleMarkerPress(restaurant)}
+              pinColor="red"
             />
           );
         })}
