@@ -467,7 +467,7 @@ const CustomerHomeScreen = () => {
       // Small timeout so markers have a moment to mount – covers Android quirks
       const t = setTimeout(() => {
         tryFitToMarkers(filteredRestaurants);
-      }, 500);
+      }, 1500);
       return () => clearTimeout(t);
     }
   }, [filteredRestaurants, userLocation, mapReady]);
@@ -586,29 +586,22 @@ const CustomerHomeScreen = () => {
 
   return (
     <View style={styles.container}>
-      <MapView
-        provider={PROVIDER_GOOGLE}
-        ref={mapRef}
-        style={styles.map}
-        initialRegion={mapRegion}
-        showsUserLocation={true}
-        showsMyLocationButton={true}
-        followsUserLocation={false}
-        loadingEnabled={true}
-        onMapReady={() => {
-          console.log("🗺️ Map ready!");
-          setMapReady(true);
-          // attempt fit again in case data already available
-          if (filteredRestaurants && filteredRestaurants.length > 0) {
-            setTimeout(() => tryFitToMarkers(filteredRestaurants), 400);
-          }
-        }}
-        onLayout={onMapLayout}
-        onRegionChangeComplete={(region) => {
-          // placeholder: you had logging before
-          // console.log('🗺️ Map region changed to:', region);
-        }}
-      >
+   <MapView
+  ref={mapRef}
+  provider={PROVIDER_GOOGLE}
+  style={styles.map}
+  region={mapRegion}
+  showsUserLocation
+  showsMyLocationButton
+  loadingEnabled
+  onMapReady={() => {
+    console.log("🗺️ Map ready!");
+    setMapReady(true);
+    setTimeout(() => tryFitToMarkers(filteredRestaurants), 600);
+  }}
+  onRegionChangeComplete={(region) => setMapRegion(region)}
+>
+
         {/* User circle & marker */}
         {userLocation && (
           <Circle
