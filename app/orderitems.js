@@ -135,7 +135,7 @@ export default function orderitems() {
     try {
       if (!params?.category) {
         console.error('No category provided for getMenu');
-        return;
+       // return;
       }
 
       const menu = await getSpecificMenu(params.category);
@@ -159,7 +159,7 @@ export default function orderitems() {
 
       if (!params?.category) {
         console.error('No category provided');
-        return;
+       // return;
       }
 
       // Fetch menu items
@@ -169,7 +169,7 @@ export default function orderitems() {
       if (!menuItems || !Array.isArray(menuItems)) {
         console.error('Invalid menu items response');
         AlertService.error('Failed to load menu items');
-        return;
+       // return;
       }
 
       // Fetch order items if orderID exists
@@ -236,7 +236,7 @@ export default function orderitems() {
   const initializeComponent = useCallback(() => {
     if (!userId) {
       console.log('orderitems: waiting for userId...');
-      return;
+      //return;
     }
 
     if (!params || !params.category) {
@@ -248,7 +248,7 @@ export default function orderitems() {
           console.warn('router push failed', e);
         }
       }, 50);
-      return;
+   //   return;
     }
 
     console.log('orderitems: initializing with params:', params);
@@ -271,7 +271,7 @@ export default function orderitems() {
 
     if (!params.restaurantId) {
       AlertService.error("Restaurant not specified");
-      return;
+    //  return;
     }
 
     const sanitizedOrderItems = (selectedItems || []).map((it) => ({
