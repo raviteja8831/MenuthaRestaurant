@@ -212,7 +212,7 @@ const CustomerHomeScreen = () => {
     console.log('🔍 Filtering restaurants:', {
       totalRestaurants: restaurants.length,
       searchQuery: searchQuery,
-      selectedFilters: selectedFilters.map(f => f.name),
+      selectedFilters: selectedFilters.map(f => f?.name || 'Unknown Filter'),
       userLocation: userLocation ? 'available' : 'missing'
     });
 
@@ -253,6 +253,10 @@ const CustomerHomeScreen = () => {
 
       // Apply filters
       return selectedFilters.every((f) => {
+        if (!f || !f.name) {
+          console.warn('⚠️ Invalid filter object:', f);
+          return true; // Skip invalid filters
+        }
         const filterName = f.name;
         console.log('🔍 Applying filter:', filterName, 'to restaurant:', r.name);
 
@@ -515,11 +519,15 @@ const CustomerHomeScreen = () => {
   const handleFilterPress = () => setShowFilter(true);
 
   const handleFilterSelect = (filter) => {
+    if (!filter || !filter.name) {
+      console.warn('⚠️ Invalid filter passed to handleFilterSelect:', filter);
+      return;
+    }
     setSearchQuery("");
     setSelectedFilters((prev) => {
-      const exists = prev.find((f) => f.name === filter.name);
+      const exists = prev.find((f) => f?.name === filter.name);
       if (exists) {
-        return prev.filter((f) => f.name !== filter.name);
+        return prev.filter((f) => f?.name !== filter.name);
       } else {
         return [...prev, filter];
       }
