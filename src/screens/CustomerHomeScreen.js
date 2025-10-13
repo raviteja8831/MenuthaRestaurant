@@ -28,6 +28,7 @@ const CustomerHomeScreen = () => {
 
   const [loading, setLoading] = useState(true);
   const [geocodingProgress, setGeocodingProgress] = useState(0);
+  const [dataLoadingComplete, setDataLoadingComplete] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
   const [restaurants, setRestaurants] = useState([]);
   const [selectedFilters, setSelectedFilters] = useState([]);
@@ -219,7 +220,7 @@ const CustomerHomeScreen = () => {
         if (filterName === "Near Me") {
           if (!userLocation) return false;
           const dist = getDistanceFromLatLonInKm(userLocation.latitude, userLocation.longitude, r.latitude, r.longitude);
-          return dist <= 5;
+          return dist <= 10;
         }
         if (filterName === "Only Veg Restaurant") return r.enableVeg === true && r.enableNonveg === false;
         if (filterName === "Only Non Veg Restaurant") return r.enableNonveg === true && r.enableVeg === false;
@@ -406,6 +407,10 @@ const CustomerHomeScreen = () => {
         // Filter out obviously wrong coords (India bounds)
         const cleaned = allRestaurants.filter((r) => r.latitude > 6 && r.latitude < 37 && r.longitude > 68 && r.longitude < 98);
         setRestaurants(cleaned);
+
+        // Mark data loading as complete - this will allow markers to render
+        setDataLoadingComplete(true);
+        console.log("✅ Data loading complete - markers can now be displayed");
       } catch (error) {
         console.error("❌ Error initializing app:", error);
       } finally {
@@ -417,9 +422,9 @@ const CustomerHomeScreen = () => {
     initializeApp();
   }, []);
 
-  // Fit map when filtered restaurants or mapReady changes
+  // Fit map when filtered restaurants or mapReady changes - only after data loading is complete
   useEffect(() => {
-    if (!mapReady || !mapRef.current) return;
+    if (!mapReady || !mapRef.current || !dataLoadingComplete) return;
     if ((!filtered || filtered.length === 0) && !userLocation) return;
 
     const t = setTimeout(() => {
@@ -453,7 +458,7 @@ const CustomerHomeScreen = () => {
     }, 1200);
 
     return () => clearTimeout(t);
-  }, [mapReady, userLocation, restaurants]);
+  }, [mapReady, userLocation, restaurants, dataLoadingComplete]);
 
   const openGoogleMapsDirections = (restaurant) => {
     if (!restaurant || !restaurant.latitude || !restaurant.longitude) {
@@ -541,11 +546,12 @@ const CustomerHomeScreen = () => {
     return null;
   }
 
-  // Show map immediately with loading overlay instead of blank screen
-  const showLoadingOverlay = loading && !userLocation;
+  // Show map immediately with loading overlay while data is loading
+  const showLoadingOverlay = loading || !dataLoadingComplete;
 
   console.log("🎨 CustomerHomeScreen rendering:", {
     loading,
+    dataLoadingComplete,
     mapReady,
     userLocation: userLocation ? "available" : "null",
     restaurantsCount: restaurants.length,
@@ -565,27 +571,25 @@ const CustomerHomeScreen = () => {
         followsUserLocation={false}
         loadingEnabled={true}
         onMapReady={() => {
-          console.log("🗺️ Map ready! Current state:", {
-            restaurantsCount: restaurants.length,
-            filteredRestaurantsCount: filtered ? filtered.length : 0,
-            userLocation: userLocation ? "available" : "null",
-          });
           setMapReady(true);
         }}
         onLayout={() => {
-          setTimeout(() => {
-            if (mapRef.current && mapReady && filtered && filtered.length > 0) {
+            if (mapRef.current && mapReady && dataLoadingComplete && filtered && filtered.length > 0) {
               try {
                 const coords = filtered.map((r) => ({ latitude: Number(r.latitude), longitude: Number(r.longitude) }));
                 if (userLocation) coords.push({ latitude: userLocation.latitude, longitude: userLocation.longitude });
                 if (coords.length > 0 && typeof mapRef.current.fitToCoordinates === "function") {
                   mapRef.current.fitToCoordinates(coords, { edgePadding: { top: 100, right: 100, bottom: 150, left: 100 }, animated: true });
                 }
-              } catch (e) {}
+              } catch (e) {
+                console.log('error', 'coords error')
+              }
             }
-          }, 800);
         }}
         onRegionChangeComplete={(region) => {
+          console.log('region after complete', region)
+                    setMapReady(true);
+
           // optional debug
         }}
       >
@@ -607,8 +611,8 @@ const CustomerHomeScreen = () => {
           </Marker>
         )}
 
-        {/* Restaurant Markers */}
-        {filtered && filtered.map((restaurant, index) => {
+        {/* Restaurant Markers - Only render when data loading is complete */}
+        {dataLoadingComplete && filtered && filtered.map((restaurant, index) => {
           if (!restaurant || restaurant.latitude == null || restaurant.longitude == null) {
             console.log("❌ Skipping marker for restaurant:", restaurant?.name || "Unknown", "- Missing coordinates");
             return null;
