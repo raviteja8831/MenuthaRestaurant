@@ -242,7 +242,7 @@ const CustomerHomeScreen = () => {
             />
             <Marker coordinate={userLocation} tracksViewChanges={false}>
               <Image
-                source={require("../../assets/menuva_original.png")}
+                source={require("../../src/assets/menuva_original.png")}
                 style={{ width: 40, height: 40 }}
                 resizeMode="contain"
               />
@@ -263,7 +263,7 @@ const CustomerHomeScreen = () => {
               onPress={() => handleMarkerPress(restaurant)}
             >
               <Image
-                source={require("../src/assets/menutha_original.png")}
+                source={require("../../src/assets/menutha_original.png")}
                 style={{ width: 40, height: 40 }}
                 resizeMode="contain"
               />
