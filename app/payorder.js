@@ -307,11 +307,11 @@ export default function OrderSummaryScreen() {
           {paying ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.payText}>Submit & Pay</Text>
+            <Text style={styles.payText}>Pay</Text>
           )}
         </Pressable>
 
-        <Pressable
+        {/* <Pressable
           style={[styles.payButton, { marginTop: 12, backgroundColor: '#28a745' }]}
           onPress={handlePaymentComplete}
           disabled={loading}
@@ -321,7 +321,7 @@ export default function OrderSummaryScreen() {
           ) : (
             <Text style={styles.payText}>Complete Payment (Test)</Text>
           )}
-        </Pressable>
+        </Pressable> */}
 
         {/* Show QR code for UPI payment as backup */}
         {upiUrl ? (

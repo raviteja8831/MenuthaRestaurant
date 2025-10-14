@@ -15,6 +15,8 @@ import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useUserData } from "../services/getUserData";
 import { useCallback } from "react";
 import { createTableBooking, getAvailableTables } from "../api/tableBookingApi";
+import { getBuffetDetails } from "../api/buffetApi";
+import { createBuffetOrder } from "../api/buffetOrder";
 
 // UPI Payment imports
 import UpiService from "../services/UpiService";
@@ -37,6 +39,12 @@ const TableDiningScreen = () => {
   });
   const [selectedTables, setSelectedTables] = useState([]);
 
+  // Buffet-related states
+  const [buffetsList, setBuffetsList] = useState([]);
+  const [currentBuffetIndex, setCurrentBuffetIndex] = useState(0);
+  const [selectedBuffet, setSelectedBuffet] = useState(null);
+  const [buffetLoading, setBuffetLoading] = useState(false);
+
   // UPI Payment states
   const [paying, setPaying] = useState(false);
   const [upiUrl, setUpiUrl] = useState("");
@@ -50,6 +58,7 @@ const TableDiningScreen = () => {
       );
       if (params?.hotelId) {
         fetchTableBookings();
+        fetchBuffets();
       }
       return () => {
         console.log("Screen lost focus");
@@ -100,6 +109,86 @@ const TableDiningScreen = () => {
       setLoading(false);
     }
   };
+
+  const fetchBuffets = async () => {
+    try {
+      setBuffetLoading(true);
+      if (!params?.hotelId) {
+        console.error("No hotelId provided for buffets");
+        return;
+      }
+
+      console.log("Fetching buffets for hotelId:", params.hotelId);
+      const response = await getBuffetDetails(params.hotelId, userId);
+      console.log("Buffets API Response:", response);
+
+      if (response?.success && response?.data) {
+        setBuffetsList(response.data);
+        if (response.data.length > 0) {
+          setSelectedBuffet(response.data[0]);
+        }
+      } else {
+        console.error("Invalid buffets response format:", response);
+      }
+    } catch (error) {
+      console.error("Error in fetchBuffets:", error);
+      // Don't show alert for buffets as it's optional
+    } finally {
+      setBuffetLoading(false);
+    }
+  };
+
+  const handleOrderBuffet = async () => {
+    if (!selectedBuffet) {
+      Alert.alert("No Buffet Selected", "Please select a buffet to order.");
+      return;
+    }
+
+    try {
+      setPaying(true);
+
+      const orderData = {
+        userId,
+        restaurantId: params.hotelId,
+        buffetId: selectedBuffet.id || selectedBuffet._id,
+        buffetName: selectedBuffet.name,
+        price: selectedBuffet.price,
+        type: selectedBuffet.type,
+        orderDate: new Date().toISOString(),
+      };
+
+      console.log("Creating buffet order:", orderData);
+      const response = await createBuffetOrder(orderData);
+
+      if (response?.success) {
+        // Generate UPI URL for buffet payment
+        const upiResponse = await UpiService.initiatePayment({
+          restaurantId: params.hotelId,
+          name: `Buffet Order - ${selectedBuffet.name}`,
+          amount: selectedBuffet.price,
+          transactionRef: `BUFFET_${Date.now()}`,
+        });
+
+        if (upiResponse && upiResponse.url) {
+          setUpiUrl(upiResponse.url);
+          Alert.alert(
+            "Buffet Order Placed",
+            `Your buffet order has been placed! Please complete the payment of ₹${selectedBuffet.price}.`
+          );
+        }
+
+        console.log("Buffet order created successfully:", response);
+      } else {
+        Alert.alert("Order Failed", "Failed to place buffet order. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error in handleOrderBuffet:", error);
+      Alert.alert("Error", "Failed to place buffet order. Please try again.");
+    } finally {
+      setPaying(false);
+    }
+  };
+
   const handleBack = () => {
     router.push({
       pathname: "/HotelDetails",
@@ -173,13 +262,13 @@ const TableDiningScreen = () => {
         <Pressable style={styles.backButton} onPress={handleBack}>
           <Ionicons name="chevron-back" size={34} color="#000" />
         </Pressable>
-        <Text style={styles.headerTitle}>Table Dining</Text>
+        <Text style={styles.headerTitle}>Table Booking</Text>
         <View style={{ width: 24 }} />
       </View>
 
       {/* Table Image */}
       <Image
-        source={require("../assets/images/hotel-dining-table.png")}
+        source={require("../assets/images/book-table.png")}
         style={styles.tableImage}
       />
 
@@ -241,6 +330,88 @@ const TableDiningScreen = () => {
           />
         </Pressable>
       </View>
+
+      {/* Buffet Selection Section */}
+      {buffetsList.length > 0 && (
+        <>
+          <Text style={styles.sectionTitle}>Available Buffets</Text>
+          <View style={styles.buffetContainer}>
+            {/* Left Arrow */}
+            <Pressable
+              style={styles.buffetArrowButton}
+              onPress={() => {
+                if (currentBuffetIndex > 0) {
+                  const newIndex = currentBuffetIndex - 1;
+                  setCurrentBuffetIndex(newIndex);
+                  setSelectedBuffet(buffetsList[newIndex]);
+                }
+              }}
+              disabled={currentBuffetIndex === 0}
+            >
+              <Image
+                source={require("../assets/images/left-arrow.png")}
+                style={[
+                  styles.buffetArrowImage,
+                  currentBuffetIndex === 0 && styles.disabledArrow
+                ]}
+              />
+            </Pressable>
+
+            {/* Buffet Card */}
+            <View style={styles.buffetCard}>
+              {buffetLoading ? (
+                <ActivityIndicator size="large" color="#5A4FCF" />
+              ) : selectedBuffet ? (
+                <>
+                  <Text style={styles.buffetName}>{selectedBuffet.name || 'Buffet'}</Text>
+                  <Text style={styles.buffetPrice}>₹{selectedBuffet.price || 0}</Text>
+                  <Text style={styles.buffetDescription}>
+                    {selectedBuffet.description || 'Delicious buffet meal'}
+                  </Text>
+                  <Text style={styles.buffetType}>
+                    Type: {selectedBuffet.type || 'Standard'}
+                  </Text>
+                </>
+              ) : (
+                <Text style={styles.noBuffetText}>No buffet selected</Text>
+              )}
+            </View>
+
+            {/* Right Arrow */}
+            <Pressable
+              style={styles.buffetArrowButton}
+              onPress={() => {
+                if (currentBuffetIndex < buffetsList.length - 1) {
+                  const newIndex = currentBuffetIndex + 1;
+                  setCurrentBuffetIndex(newIndex);
+                  setSelectedBuffet(buffetsList[newIndex]);
+                }
+              }}
+              disabled={currentBuffetIndex === buffetsList.length - 1}
+            >
+              <Image
+                source={require("../assets/images/left-arrow.png")}
+                style={[
+                  styles.buffetArrowImage,
+                  styles.rightArrow,
+                  currentBuffetIndex === buffetsList.length - 1 && styles.disabledArrow
+                ]}
+              />
+            </Pressable>
+          </View>
+
+          {/* Order Buffet Button */}
+          <Pressable
+            style={styles.orderBuffetButton}
+            onPress={handleOrderBuffet}
+            disabled={!selectedBuffet || buffetLoading}
+          >
+            <Text style={styles.orderBuffetButtonText}>
+              Order Buffet - ₹{selectedBuffet?.price || 0}
+            </Text>
+          </Pressable>
+        </>
+      )}
 
       {/* Card Section */}
       <View style={styles.card}>
@@ -317,23 +488,27 @@ const TableDiningScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#D8D8F6",
+    backgroundColor: "#BBBAEF",
     paddingHorizontal: width * 0.05,
   },
   card: {
-    backgroundColor: "#E8E7FF", // light purple shade
-    borderRadius: 15,
-    padding: 16,
-    width: "90%",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 20,
+    marginHorizontal: width * 0.08,
+    marginBottom: height * 0.03,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 4,
-
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 6,
     alignItems: "flex-start",
-    width: "70%",
-    marginLeft: "15%",
+  },
+  text: {
+    fontSize: 16,
+    color: "#333",
+    marginBottom: 8,
+    lineHeight: 22,
   },
 
   header: {
@@ -391,24 +566,26 @@ const styles = StyleSheet.create({
   counterContainer: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "space-between",
     marginBottom: height * 0.04,
-    backgroundColor: "#D8D8F6", // same lavender bg
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingHorizontal: width * 0.15,
+    paddingVertical: 20,
   },
 
   counterButton: {
-    width: width * 0.12,
-    height: width * 0.12,
+    width: 50,
+    height: 50,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.1)",
+    borderRadius: 25,
   },
 
   arrowImage: {
-    width: 30,
-    height: 30,
+    width: 24,
+    height: 24,
     resizeMode: "contain",
+    tintColor: "#000",
   },
 
   rightArrow: {
@@ -417,19 +594,19 @@ const styles = StyleSheet.create({
 
   counterTextContainer: {
     alignItems: "center",
-    width: width * 0.3,
+    flex: 1,
   },
 
   counterNumber: {
-    fontSize: Math.min(width * 0.08, 36),
+    fontSize: 48,
     fontWeight: "bold",
     color: "#000",
   },
 
   tableText: {
-    fontSize: 16,
+    fontSize: 18,
     color: "#000",
-    marginTop: 4,
+    marginTop: 8,
   },
 
   bottomContainer: {
@@ -438,44 +615,52 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     padding: width * 0.05,
-    paddingBottom: height * 0.03,
+    paddingBottom: height * 0.04,
+    backgroundColor: "#BBBAEF",
   },
   bottomTextContainer: {
-    marginBottom: height * 0.02,
+    marginBottom: height * 0.03,
+    alignItems: "center",
   },
   reservationText: {
-    fontSize: Math.min(width * 0.055, 24),
-    fontWeight: "700",
+    fontSize: 22,
+    fontWeight: "800",
     color: "#000",
-    textAlign: "center",
-    marginBottom: height * 0.015,
-  },
-  disclaimerText: {
-    fontSize: Math.min(width * 0.035, 14),
-    color: "red",
     textAlign: "center",
     marginBottom: height * 0.01,
   },
+  disclaimerText: {
+    fontSize: 14,
+    color: "#FF4444",
+    textAlign: "center",
+    marginBottom: height * 0.008,
+  },
   autoCancelText: {
-    fontSize: Math.min(width * 0.035, 14),
+    fontSize: 14,
     color: "#000",
     textAlign: "center",
-    marginBottom: height * 0.015,
+    marginBottom: height * 0.02,
   },
   payButton: {
     width: width * 0.9,
-    height: height * 0.07,
-    backgroundColor: "#6C63FF",
-    borderRadius: width * 0.025,
+    height: 56,
+    backgroundColor: "#5A4FCF",
+    borderRadius: 28,
     justifyContent: "center",
     alignItems: "center",
     alignSelf: "center",
     marginBottom: height * 0.02,
+    shadowColor: "#5A4FCF",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   payButtonText: {
-    color: "#FFF",
-    fontSize: Math.min(width * 0.045, 18),
-    fontWeight: "600",
+    color: "#FFFFFF",
+    fontSize: 20,
+    fontWeight: "700",
+    letterSpacing: 0.5,
   },
   disabledButton: {
     backgroundColor: "#9994cc", // lighter version of #6C63FF
@@ -506,6 +691,108 @@ const styles = StyleSheet.create({
     marginTop: 10,
     textAlign: "center",
     fontWeight: "600",
+  },
+
+  // Buffet Styles
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#000",
+    textAlign: "center",
+    marginBottom: height * 0.02,
+    marginTop: height * 0.01,
+  },
+  buffetContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: height * 0.02,
+    paddingHorizontal: width * 0.05,
+  },
+  buffetArrowButton: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.1)",
+    borderRadius: 20,
+  },
+  buffetArrowImage: {
+    width: 20,
+    height: 20,
+    resizeMode: "contain",
+    tintColor: "#000",
+  },
+  disabledArrow: {
+    opacity: 0.3,
+  },
+  buffetCard: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 15,
+    padding: 16,
+    marginHorizontal: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+    alignItems: "center",
+    minHeight: 120,
+    justifyContent: "center",
+  },
+  buffetName: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#333",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  buffetPrice: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#5A4FCF",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  buffetDescription: {
+    fontSize: 14,
+    color: "#666",
+    textAlign: "center",
+    marginBottom: 8,
+    lineHeight: 18,
+  },
+  buffetType: {
+    fontSize: 12,
+    color: "#888",
+    textAlign: "center",
+    fontStyle: "italic",
+  },
+  noBuffetText: {
+    fontSize: 16,
+    color: "#666",
+    textAlign: "center",
+  },
+  orderBuffetButton: {
+    width: width * 0.8,
+    height: 50,
+    backgroundColor: "#FF6B35",
+    borderRadius: 25,
+    justifyContent: "center",
+    alignItems: "center",
+    alignSelf: "center",
+    marginBottom: height * 0.02,
+    shadowColor: "#FF6B35",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  orderBuffetButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: 0.5,
   },
 });
 

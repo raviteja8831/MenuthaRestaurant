@@ -16,6 +16,7 @@ import {
 import { useRouter, useLocalSearchParams } from "expo-router";
 import CommentModal from "../src/Modals/menueditModal"; // 👈 new component
 import { orderitemsstyle, responsiveStyles } from "../src/styles/responsive";
+import { StyleSheet } from "react-native";
 import { AlertService } from "../src/services/alert.service";
 import { getitemsbasedonmenu, getSpecificMenu } from "../src/api/menuApi";
 import {
@@ -311,6 +312,40 @@ export default function ItemsListScreen() {
     router.push(obj);
   };
 
+  // Group items by type (Veg, Egg, Chicken, Mutton, Seafood)
+  const groupItemsByType = () => {
+    const grouped = {
+      'Veg': [],
+      'Egg': [],
+      'Chicken': [],
+      'Mutton': [],
+      'Seafood': []
+    };
+
+    items.forEach((item) => {
+      const itemType = item.type || item.foodType || 'Veg'; // Default to Veg if no type
+
+      // Normalize the type to match our categories
+      const normalizedType = itemType.toLowerCase();
+      if (normalizedType.includes('veg') || normalizedType.includes('vegetarian')) {
+        grouped['Veg'].push(item);
+      } else if (normalizedType.includes('egg')) {
+        grouped['Egg'].push(item);
+      } else if (normalizedType.includes('chicken')) {
+        grouped['Chicken'].push(item);
+      } else if (normalizedType.includes('mutton') || normalizedType.includes('lamb') || normalizedType.includes('goat')) {
+        grouped['Mutton'].push(item);
+      } else if (normalizedType.includes('seafood') || normalizedType.includes('fish') || normalizedType.includes('prawn') || normalizedType.includes('crab')) {
+        grouped['Seafood'].push(item);
+      } else {
+        // Default to Veg for unknown types
+        grouped['Veg'].push(item);
+      }
+    });
+
+    return grouped;
+  };
+
   return (
     <SafeAreaView style={orderitemsstyle.container}>
       <ImageBackground
@@ -343,92 +378,100 @@ export default function ItemsListScreen() {
         </View>
       </View>
 
-      {/* Menu Items */}
+      {/* Menu Items Grouped by Type */}
       <ScrollView
-        style={orderitemsstyle.scrollView}
+        style={newOrderItemsStyles.scrollView}
         showsVerticalScrollIndicator={false}
       >
-        {items.map((item) => (
-          <View key={item.id} style={orderitemsstyle.itemRow}>
-            {params.ishotel == "false" && (
-              <TouchableOpacity
-                style={orderitemsstyle.checkboxContainer}
-                onPress={() => handleItemSelect(item.id)}
-              >
-                <View
-                  style={[
-                    orderitemsstyle.checkbox,
-                    item.selected && orderitemsstyle.checkboxSelected,
-                  ]}
-                >
-                  {item.selected && (
-                    <MaterialIcons name="check" size={16} color="#fff" />
+        {Object.entries(groupItemsByType()).map(([type, typeItems]) => {
+          if (typeItems.length === 0) return null;
+
+          return (
+            <View key={type} style={newOrderItemsStyles.typeSection}>
+              {/* Type Header */}
+              <Text style={newOrderItemsStyles.typeHeader}>{type}</Text>
+
+              {/* Items in this type */}
+              {typeItems.map((item) => (
+                <View key={item.id} style={newOrderItemsStyles.itemRow}>
+                  {params.ishotel == "false" && (
+                    <TouchableOpacity
+                      style={newOrderItemsStyles.checkboxContainer}
+                      onPress={() => handleItemSelect(item.id)}
+                    >
+                      <View
+                        style={[
+                          newOrderItemsStyles.checkbox,
+                          item.selected && newOrderItemsStyles.checkboxSelected,
+                        ]}
+                      >
+                        {item.selected && (
+                          <MaterialIcons name="check" size={16} color="#fff" />
+                        )}
+                      </View>
+                    </TouchableOpacity>
                   )}
-                </View>
-              </TouchableOpacity>
-            )}
 
-            {/* Item Info */}
-            <View style={orderitemsstyle.itemInfo}>
-              <Text style={orderitemsstyle.itemName}>{item.name}</Text>
-              <View style={orderitemsstyle.dottedLine} />
-              <Text style={orderitemsstyle.itemPrice}>{item.price}</Text>
-            </View>
-
-            {params.ishotel == "false" &&
-              (item.selected ? (
-                <View style={{ flexDirection: "row", alignItems: "center" }}>
-                  <View style={orderitemsstyle.quantityContainer}>
-                    <TouchableOpacity
-                      style={orderitemsstyle.quantityButton}
-                      onPress={() => handleQuantityChange(item.id, -1)}
-                    >
-                      <Text style={orderitemsstyle.quantityButtonText}>-</Text>
-                    </TouchableOpacity>
-                    <Text style={orderitemsstyle.quantityText}>
-                      {item.quantity}
-                    </Text>
-                    <TouchableOpacity
-                      style={orderitemsstyle.quantityButton}
-                      onPress={() => handleQuantityChange(item.id, 1)}
-                    >
-                      <Text style={orderitemsstyle.quantityButtonText}>+</Text>
-                    </TouchableOpacity>
+                  {/* Item Info */}
+                  <View style={newOrderItemsStyles.itemInfo}>
+                    <Text style={newOrderItemsStyles.itemName}>{item.name}</Text>
+                    <View style={newOrderItemsStyles.dottedLine} />
+                    <Text style={newOrderItemsStyles.itemPrice}>₹{item.price}</Text>
                   </View>
 
-                  <TouchableOpacity
-                    onPress={() => handleEdit(item)}
-                    style={{ marginHorizontal: 6 }}
-                  >
-                    <Feather name="edit-2" size={24} color="#000" />
-                  </TouchableOpacity>
+                  {params.ishotel == "false" &&
+                    (item.selected ? (
+                      <View style={newOrderItemsStyles.quantityEditContainer}>
+                        <View style={newOrderItemsStyles.quantityContainer}>
+                          <TouchableOpacity
+                            style={newOrderItemsStyles.quantityButton}
+                            onPress={() => handleQuantityChange(item.id, -1)}
+                          >
+                            <Text style={newOrderItemsStyles.quantityButtonText}>-</Text>
+                          </TouchableOpacity>
+                          <Text style={newOrderItemsStyles.quantityText}>
+                            {item.quantity}
+                          </Text>
+                          <TouchableOpacity
+                            style={newOrderItemsStyles.quantityButton}
+                            onPress={() => handleQuantityChange(item.id, 1)}
+                          >
+                            <Text style={newOrderItemsStyles.quantityButtonText}>+</Text>
+                          </TouchableOpacity>
+                        </View>
+
+                        <TouchableOpacity
+                          onPress={() => handleEdit(item)}
+                          style={newOrderItemsStyles.editButton}
+                        >
+                          <Feather name="edit-2" size={20} color="#000" />
+                        </TouchableOpacity>
+                      </View>
+                    ) : null)}
                 </View>
-              ) : (
-                ""
               ))}
-          </View>
-        ))}
+            </View>
+          );
+        })}
         {/*  </View>
         ))} */}
         {params.ishotel == "false" && (
-          <View style={orderitemsstyle.orderSummary}>
-            <Text style={orderitemsstyle.summaryText}>
-              No of item Selected: {selectedItems.length}
+          <View style={newOrderItemsStyles.orderSummaryContainer}>
+            <Text style={newOrderItemsStyles.summaryText}>
+              No of item Selected: {selectedItems.length.toString().padStart(2, '0')}
             </Text>
-            <Text style={orderitemsstyle.summaryText}>
-              Total Cost of Selection = ₹{totalCost}
+            <Text style={newOrderItemsStyles.totalCostText}>
+              Total Cost of Selection = {totalCost}
             </Text>
             <TouchableOpacity
               style={[
-                orderitemsstyle.placeOrderButton,
-                responsiveStyles.bg1,
-                selectedItems.length === 0 &&
-                  orderitemsstyle.placeOrderButtonDisabled,
+                newOrderItemsStyles.placeOrderButton,
+                selectedItems.length === 0 && newOrderItemsStyles.placeOrderButtonDisabled,
               ]}
               onPress={() => createOrder_data(true)}
               disabled={selectedItems.length === 0}
             >
-              <Text style={orderitemsstyle.placeOrderButtonText}>
+              <Text style={newOrderItemsStyles.placeOrderButtonText}>
                 Place Order
               </Text>
             </TouchableOpacity>
@@ -450,3 +493,152 @@ export default function ItemsListScreen() {
     </SafeAreaView>
   );
 }
+
+// New styles matching the screenshot design
+const newOrderItemsStyles = StyleSheet.create({
+  scrollView: {
+    flex: 1,
+    backgroundColor: '#BEBFFF', // Light purple background matching screenshot
+  },
+  typeSection: {
+    marginBottom: 20,
+  },
+  typeHeader: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000',
+    marginBottom: 12,
+    marginTop: 8,
+    marginLeft: 20,
+  },
+  itemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    marginBottom: 4,
+  },
+  checkboxContainer: {
+    marginRight: 12,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#666',
+    backgroundColor: '#FFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxSelected: {
+    backgroundColor: '#4CAF50',
+    borderColor: '#4CAF50',
+  },
+  itemInfo: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  itemName: {
+    fontSize: 16,
+    color: '#000',
+    fontWeight: '500',
+    flex: 1,
+  },
+  dottedLine: {
+    flex: 1,
+    height: 1,
+    borderBottomWidth: 1,
+    borderBottomColor: '#000',
+    borderStyle: 'dotted',
+    marginHorizontal: 8,
+  },
+  itemPrice: {
+    fontSize: 16,
+    color: '#000',
+    fontWeight: '600',
+    minWidth: 60,
+    textAlign: 'right',
+  },
+  quantityEditContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 12,
+  },
+  quantityContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+  },
+  quantityButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#E0E0E0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quantityButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#000',
+  },
+  quantityText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000',
+    marginHorizontal: 12,
+    minWidth: 20,
+    textAlign: 'center',
+  },
+  editButton: {
+    marginLeft: 8,
+    padding: 4,
+  },
+  orderSummaryContainer: {
+    backgroundColor: '#FFF',
+    margin: 20,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  summaryText: {
+    fontSize: 16,
+    color: '#000',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  totalCostText: {
+    fontSize: 16,
+    color: '#000',
+    marginBottom: 16,
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  placeOrderButton: {
+    backgroundColor: '#8B7FD6', // Purple color matching screenshot
+    paddingHorizontal: 40,
+    paddingVertical: 15,
+    borderRadius: 25,
+    minWidth: 200,
+    alignItems: 'center',
+  },
+  placeOrderButtonDisabled: {
+    backgroundColor: '#CCC',
+  },
+  placeOrderButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});

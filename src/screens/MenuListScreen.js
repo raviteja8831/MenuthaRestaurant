@@ -279,18 +279,18 @@ export default function MenuListScreen() {
               Object.keys(orderSummary).length > 0 &&
               orderSummary.totalItems > 0 && (
                 <View style={enhancedStyles.orderSummaryContainer}>
-                  <Text style={enhancedStyles.itemCountText}>
+                  {/* <Text style={enhancedStyles.itemCountText}>
                     No of item Selected: {orderSummary.totalItems}
-                  </Text>
+                  </Text> */}
                   <Text style={enhancedStyles.totalCostText}>
-                    Total Cost of Selection = {orderSummary.totalCost}
+                    Total Amount = {orderSummary.totalCost}
                   </Text>
                   <Pressable
                     style={enhancedStyles.placeOrderButton}
                     onPress={handleFinalOrder}
                   >
                     <Text style={enhancedStyles.placeOrderButtonText}>
-                      Place Order
+                      Final Order
                     </Text>
                   </Pressable>
                 </View>

@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
+import { LinearGradient } from 'expo-linear-gradient';
 import { buffetsimescreenstyles } from "../styles/responsive";
 import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 
@@ -115,6 +116,102 @@ Object.assign(buffetsimescreenstyles, {
     color: "#666",
     marginTop: 5,
     textAlign: "center",
+  },
+  // Table Booking Styles
+  gradientContainer: {
+    flex: 1,
+  },
+  tableIllustration: {
+    width: 200,
+    height: 150,
+    marginVertical: 20,
+  },
+  tableSelectionContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginVertical: 20,
+    paddingHorizontal: 20,
+  },
+  arrowButton: {
+    padding: 10,
+  },
+  tableNumberContainer: {
+    backgroundColor: "#000",
+    borderRadius: 25,
+    width: 50,
+    height: 50,
+    justifyContent: "center",
+    alignItems: "center",
+    marginHorizontal: 40,
+  },
+  tableNumber: {
+    color: "#fff",
+    fontSize: 24,
+    fontWeight: "bold",
+  },
+  tableLabel: {
+    textAlign: "center",
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#000",
+    marginBottom: 30,
+  },
+  statsContainer: {
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    borderRadius: 15,
+    padding: 20,
+    marginHorizontal: 20,
+    marginBottom: 30,
+  },
+  statsText: {
+    fontSize: 14,
+    color: "#000",
+    marginBottom: 8,
+    lineHeight: 20,
+  },
+  statsNumber: {
+    fontWeight: "bold",
+  },
+  reservationCost: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#000",
+    textAlign: "center",
+    marginBottom: 10,
+  },
+  refundPolicy: {
+    fontSize: 14,
+    color: "#ff0000",
+    textAlign: "center",
+    marginBottom: 5,
+  },
+  autoCancel: {
+    fontSize: 14,
+    color: "#000",
+    textAlign: "center",
+    marginBottom: 30,
+  },
+  tableBookingPayButton: {
+    backgroundColor: "transparent",
+    borderRadius: 25,
+    paddingVertical: 15,
+    paddingHorizontal: 40,
+    marginHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 30,
+  },
+  tableBookingPayButtonGradient: {
+    paddingVertical: 15,
+    paddingHorizontal: 40,
+    borderRadius: 25,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  tableBookingPayText: {
+    color: "#fff",
+    fontSize: 20,
+    fontWeight: "bold",
   },
 });
 // import { buffetData } from "./Mock/CustomerHome";
@@ -257,15 +354,19 @@ const BuffetTimeScreen = () => {
 
   return (
     <SafeAreaView style={buffetsimescreenstyles.container}>
-      <Pressable
-        style={buffetsimescreenstyles.backButton}
-        onPress={handleBack}
+      <LinearGradient
+        colors={['#BBBAEF', '#BBBAEF', '#BBBAEF']}
+        style={buffetsimescreenstyles.gradientContainer}
       >
-        <MaterialCommunityIcons name="arrow-left" size={24} color="#000" />
-      </Pressable>
-      <ScrollView
-        contentContainerStyle={buffetsimescreenstyles.scrollContainer}
-      >
+        <Pressable
+          style={buffetsimescreenstyles.backButton}
+          onPress={handleBack}
+        >
+          <MaterialCommunityIcons name="arrow-left" size={24} color="#000" />
+        </Pressable>
+        <ScrollView
+          contentContainerStyle={buffetsimescreenstyles.scrollContainer}
+        >
         {/* Header */}
 
         <Text style={buffetsimescreenstyles.header}>Buffet Time</Text>
@@ -273,7 +374,7 @@ const BuffetTimeScreen = () => {
         {/* Clock Image */}
         <View style={buffetsimescreenstyles.centerContent}>
           <Image
-            source={require("../assets/images/hotel-buffet-time.png")} // replace with your clock image
+            source={require("../assets/images/hotel-buffet-time.png")} // clock image
             style={buffetsimescreenstyles.clock}
             resizeMode="contain"
           />
@@ -281,7 +382,7 @@ const BuffetTimeScreen = () => {
 
         {/* Buffet Table Image */}
         <Image
-          source={require("../assets/images/hotel-buffet-table.png")} // replace with your buffet image
+          source={require("../assets/images/hotel-buffet-table.png")} // buffet table image
           style={buffetsimescreenstyles.buffet}
           resizeMode="contain"
         />
@@ -289,7 +390,7 @@ const BuffetTimeScreen = () => {
         {/* Buffet Info */}
         <View style={buffetsimescreenstyles.buffetInfo}>
           <Text style={buffetsimescreenstyles.buffetTitle}>
-            Available Buffet Items
+            Breakfast Buffet
           </Text>
 
           {/* Buffet Cards */}
@@ -371,8 +472,9 @@ const BuffetTimeScreen = () => {
               <Text style={buffetsimescreenstyles.personButtonText}>+</Text>
             </Pressable>
           </View>
+
           <Text style={buffetsimescreenstyles.buffetItems}>
-            {currentBuffet.buffetitems}
+            Poori, All types of Dosa, Chow Chow Bath, Rice Bath
           </Text>
         </View>
 
@@ -419,7 +521,8 @@ const BuffetTimeScreen = () => {
             </Text>
           </View>
         ) : null}
-      </ScrollView>
+        </ScrollView>
+      </LinearGradient>
     </SafeAreaView>
   );
 };
