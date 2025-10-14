@@ -597,8 +597,80 @@ const CustomerHomeScreen = () => {
     openGoogleMapsDirections(restaurant);
   };
 
+  const handleRestaurantSelect = (restaurant) => {
+    setShowNavModal(false);
+    handleMarkerPress(restaurant);
+  };
+
   const handlePersonTabPress = () => router.push("/user-profile");
   const handleScanPress = () => router.push("/qr-scanner");
+
+  // Refresh map and data
+  const handleRefreshPress = async () => {
+    console.log("🔄 Refreshing map and restaurant data...");
+    setLoading(true);
+    setDataLoadingComplete(false);
+
+    try {
+      // Re-fetch restaurants
+      const data = await getAllRestaurants();
+      console.log("🔄 Refreshed restaurant data:", data.length);
+
+      // Process restaurants like in initialization
+      const cache = await getGeocodingCache();
+      const restaurantsWithCoords = [];
+
+      if (Array.isArray(data)) {
+        data.forEach((restaurant) => {
+          if (!restaurant || typeof restaurant !== "object") return;
+
+          // Same processing as initialization
+          if (typeof restaurant.enableBuffet === "number") restaurant.enableBuffet = restaurant.enableBuffet === 1;
+          if (typeof restaurant.enableVeg === "number") restaurant.enableVeg = restaurant.enableVeg === 1;
+          if (typeof restaurant.enableNonveg === "number") restaurant.enableNonveg = restaurant.enableNonveg === 1;
+          if (typeof restaurant.enableTableService === "number") restaurant.enableTableService = restaurant.enableTableService === 1;
+          if (typeof restaurant.enableSelfService === "number") restaurant.enableSelfService = restaurant.enableSelfService === 1;
+
+          let lat = restaurant.latitude;
+          let lng = restaurant.longitude;
+
+          if (!lat && restaurant.logoImage && !isNaN(parseFloat(restaurant.logoImage))) {
+            lat = parseFloat(restaurant.logoImage);
+          }
+
+          if (typeof lat === "string") lat = parseFloat(lat);
+          if (typeof lng === "string") lng = parseFloat(lng);
+
+          if (restaurant.restaurantType && restaurant.restaurantType.includes("2025")) {
+            restaurant.restaurantType = "Restaurant";
+          }
+
+          if (lat && lng && typeof lat === "number" && typeof lng === "number" && !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+            restaurant.latitude = lat;
+            restaurant.longitude = lng;
+            restaurantsWithCoords.push(restaurant);
+          }
+        });
+      }
+
+      // Filter valid coordinates
+      const cleaned = restaurantsWithCoords.filter((r) => r.latitude > 6 && r.latitude < 37 && r.longitude > 68 && r.longitude < 98);
+      setRestaurants(cleaned);
+      setDataLoadingComplete(true);
+
+      // Refresh map region if needed
+      if (mapRef.current && userLocation) {
+        const region = calculateOptimalRegion(userLocation, cleaned);
+        mapRef.current.animateToRegion(region, 1000);
+      }
+
+      console.log("✅ Map refresh completed with", cleaned.length, "restaurants");
+    } catch (error) {
+      console.error("❌ Error refreshing data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (Platform.OS === "web") {
     return null;
@@ -617,6 +689,7 @@ const CustomerHomeScreen = () => {
     markersCount: markers ? markers.length : 0,
     mapRegion,
     mapRefExists: !!mapRef.current,
+    showingFallbackMarkers: (!markers || markers.length === 0) && restaurants && restaurants.length > 0,
   });
 
   return (
@@ -685,7 +758,8 @@ const CustomerHomeScreen = () => {
     </>
   )}
 
-  {markers.map((marker) => (
+  {/* Restaurant Markers */}
+  {markers && markers.length > 0 && markers.map((marker) => (
     <Marker
       key={marker.id}
       coordinate={marker.coordinate}
@@ -701,13 +775,44 @@ const CustomerHomeScreen = () => {
           resizeMode="contain"
         />
         <Image
-          source={require("../assets/menutha.png")}
+          source={require("../assets/menutha_original.png")}
           style={styles.markerLogo}
           resizeMode="contain"
         />
       </View>
     </Marker>
   ))}
+
+  {/* Fallback markers when no restaurant data is loaded yet */}
+  {(!markers || markers.length === 0) && restaurants && restaurants.length > 0 && restaurants.slice(0, 10).map((restaurant, index) => {
+    if (!restaurant.latitude || !restaurant.longitude) return null;
+    return (
+      <Marker
+        key={`fallback-${restaurant.id || index}`}
+        coordinate={{
+          latitude: Number(restaurant.latitude),
+          longitude: Number(restaurant.longitude),
+        }}
+        title={restaurant.name || "Restaurant"}
+        description={restaurant.address || ""}
+        onPress={() => handleMarkerPress(restaurant)}
+        tracksViewChanges={false}
+      >
+        <View style={styles.markerContainer}>
+          <Image
+            source={require("../assets/images/marker-bg.png")}
+            style={styles.markerBackground}
+            resizeMode="contain"
+          />
+          <Image
+            source={require("../assets/menutha_original.png")}
+            style={styles.markerLogo}
+            resizeMode="contain"
+          />
+        </View>
+      </Marker>
+    );
+  })}
 </MapView>
 
 
@@ -731,9 +836,15 @@ const CustomerHomeScreen = () => {
 
       {/* Top Controls */}
       <View style={styles.topControls}>
-        <Pressable style={styles.filterButton} onPress={handleFilterPress}>
-          <Image source={require("../assets/images/filter-image.png")} style={styles.filterImage} />
-        </Pressable>
+        <View style={styles.leftControls}>
+          <Pressable style={styles.filterButton} onPress={handleFilterPress}>
+            <Image source={require("../assets/images/filter-image.png")} style={styles.filterImage} />
+          </Pressable>
+
+          <Pressable style={styles.refreshButton} onPress={handleRefreshPress}>
+            <MaterialIcons name="refresh" size={24} color="#6B4EFF" />
+          </Pressable>
+        </View>
 
         {/* Search Bar */}
         <View style={styles.searchContainer}>
@@ -817,10 +928,34 @@ const CustomerHomeScreen = () => {
               data={navOptions}
               keyExtractor={(item) => item.id?.toString() || item.name}
               renderItem={({ item }) => (
-                <Pressable onPress={() => handleNavSelect(item)} style={styles.modalItem}>
-                  <Text style={styles.modalItemName}>{item.name}</Text>
-                  <Text style={styles.modalItemAddress}>{item.address}</Text>
-                </Pressable>
+                <View style={styles.modalItem}>
+                  <View style={styles.modalItemInfo}>
+                    <Text style={styles.modalItemName}>{item.name}</Text>
+                    <Text style={styles.modalItemAddress}>{item.address}</Text>
+                    {item.rating && (
+                      <View style={styles.modalRating}>
+                        <MaterialIcons name="star" size={16} color="#FFD700" />
+                        <Text style={styles.modalRatingText}>{item.rating}</Text>
+                      </View>
+                    )}
+                  </View>
+                  <View style={styles.modalActions}>
+                    <Pressable
+                      onPress={() => handleRestaurantSelect(item)}
+                      style={styles.modalActionButton}
+                    >
+                      <MaterialIcons name="info" size={24} color="#6B4EFF" />
+                      <Text style={styles.modalActionText}>Details</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => handleNavSelect(item)}
+                      style={styles.modalActionButton}
+                    >
+                      <MaterialIcons name="navigation" size={24} color="#6B4EFF" />
+                      <Text style={styles.modalActionText}>Navigate</Text>
+                    </Pressable>
+                  </View>
+                </View>
               )}
             />
             <Pressable onPress={() => setShowNavModal(false)} style={styles.modalCancel}>
@@ -855,7 +990,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     zIndex: 1,
   },
+  leftControls: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
   filterButton: {
+    backgroundColor: "white",
+    borderRadius: 20,
+    padding: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  refreshButton: {
     backgroundColor: "white",
     borderRadius: 20,
     padding: 8,
@@ -995,16 +1145,53 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   modalItem: {
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderColor: '#eee',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  modalItemInfo: {
+    flex: 1,
+    marginRight: 12,
   },
   modalItemName: {
     fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 2,
   },
   modalItemAddress: {
     fontSize: 13,
     color: '#888',
+    marginBottom: 4,
+  },
+  modalRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  modalRatingText: {
+    fontSize: 12,
+    color: '#666',
+    marginLeft: 2,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  modalActionButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+    minWidth: 60,
+  },
+  modalActionText: {
+    fontSize: 10,
+    color: '#6B4EFF',
+    marginTop: 2,
+    fontWeight: '500',
   },
   modalCancel: {
     marginTop: 16,
@@ -1061,21 +1248,33 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   markerContainer: {
-    width: 50,
-    height: 50,
+    width: 60,
+    height: 60,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'transparent',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
   },
   markerBackground: {
-    width: 50,
-    height: 50,
+    width: 60,
+    height: 60,
     position: 'absolute',
+    top: 0,
+    left: 0,
   },
   markerLogo: {
-    width: 24,
-    height: 24,
+    width: 28,
+    height: 28,
     position: 'absolute',
-    top: 8,
+    top: 10,
+    zIndex: 2,
+    borderRadius: 14,
+    backgroundColor: '#fff',
+    padding: 2,
   },
 });
 
