@@ -31,6 +31,7 @@ const CustomerHomeScreen = () => {
   const [dataLoadingComplete, setDataLoadingComplete] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
   const [restaurants, setRestaurants] = useState([]);
+  const [markers, setMarkers] = useState([]);
   const [selectedFilters, setSelectedFilters] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilter, setShowFilter] = useState(false);
@@ -424,19 +425,17 @@ const CustomerHomeScreen = () => {
     initializeApp();
   }, []);
 
-  // Fit map when filtered restaurants or mapReady changes - only after data loading is complete
+  // Fit map when markers or mapReady changes - only after data loading is complete
   useEffect(() => {
     if (!mapReady || !mapRef.current || !dataLoadingComplete) return;
-    if ((!filtered || filtered.length === 0) && !userLocation) return;
+    if ((!markers || markers.length === 0) && !userLocation) return;
 
     const t = setTimeout(() => {
       try {
         const coords = [];
-        if (filtered && filtered.length > 0) {
-          filtered.forEach((r) => {
-            if (r && r.latitude != null && r.longitude != null) {
-              coords.push({ latitude: Number(r.latitude), longitude: Number(r.longitude) });
-            }
+        if (markers && markers.length > 0) {
+          markers.forEach((marker) => {
+            coords.push(marker.coordinate);
           });
         }
 
@@ -451,7 +450,7 @@ const CustomerHomeScreen = () => {
           });
           console.log("🗺️ fitToCoordinates called with", coords.length, "points");
         } else if (typeof mapRef.current.animateToRegion === "function") {
-          const region = calculateOptimalRegion(userLocation || { latitude: 17.4375, longitude: 78.4456 }, filtered);
+          const region = calculateOptimalRegion(userLocation || { latitude: 17.4375, longitude: 78.4456 }, markers.map(m => m.restaurant));
           mapRef.current.animateToRegion(region, 1000);
         }
       } catch (err) {
@@ -460,7 +459,38 @@ const CustomerHomeScreen = () => {
     }, 1200);
 
     return () => clearTimeout(t);
-  }, [mapReady, userLocation, restaurants, dataLoadingComplete]);
+  }, [mapReady, userLocation, markers, dataLoadingComplete]);
+
+  // Update markers when filtered restaurants change
+  useEffect(() => {
+    if (!dataLoadingComplete || !Array.isArray(filtered)) {
+      setMarkers([]);
+      return;
+    }
+
+    const newMarkers = filtered
+      .filter((restaurant) => {
+        if (!restaurant || restaurant.latitude == null || restaurant.longitude == null) {
+          return false;
+        }
+        const lat = Number(restaurant.latitude);
+        const lng = Number(restaurant.longitude);
+        return !isNaN(lat) && !isNaN(lng);
+      })
+      .map((restaurant, index) => ({
+        id: restaurant.id || `restaurant-${index}`,
+        coordinate: {
+          latitude: Number(restaurant.latitude),
+          longitude: Number(restaurant.longitude),
+        },
+        title: restaurant.name || "Restaurant",
+        description: restaurant.address || "",
+        restaurant: restaurant,
+      }));
+
+    setMarkers(newMarkers);
+    console.log("✅ Updated markers:", newMarkers.length);
+  }, [filtered, dataLoadingComplete]);
 
   const openGoogleMapsDirections = (restaurant) => {
     if (!restaurant || !restaurant.latitude || !restaurant.longitude) {
@@ -575,12 +605,9 @@ const CustomerHomeScreen = () => {
   onMapReady={() => setMapReady(true)}
   onLayout={() => {
     setTimeout(() => {
-      if (mapRef.current && mapReady && filtered && filtered.length > 0) {
+      if (mapRef.current && mapReady && markers && markers.length > 0) {
         try {
-          const coords = filtered.map(r => ({
-            latitude: Number(r.latitude),
-            longitude: Number(r.longitude),
-          }));
+          const coords = markers.map(marker => marker.coordinate);
           if (userLocation) coords.push(userLocation);
           mapRef.current.fitToCoordinates(coords, {
             edgePadding: { top: 100, right: 100, bottom: 150, left: 100 },
@@ -617,33 +644,29 @@ const CustomerHomeScreen = () => {
     </>
   )}
 
-  {filtered.map((r, i) => {
-    if (!r.latitude || !r.longitude) return null;
-    const lat = Number(r.latitude);
-    const lng = Number(r.longitude);
-    if (isNaN(lat) || isNaN(lng)) return null;
-    return (
-      <Marker
-        key={`restaurant-${r.id || i}`}
-        coordinate={{ latitude: lat, longitude: lng }}
-        onPress={() => handleMarkerPress(r)}
-        tracksViewChanges={false}
-      >
-        <View style={styles.markerContainer}>
-          <Image
-            source={require("../assets/images/marker-bg.png")}
-            style={styles.markerBackground}
-            resizeMode="contain"
-          />
-          <Image
-            source={require("../assets/menutha.png")}
-            style={styles.markerLogo}
-            resizeMode="contain"
-          />
-        </View>
-      </Marker>
-    );
-  })}
+  {markers.map((marker) => (
+    <Marker
+      key={marker.id}
+      coordinate={marker.coordinate}
+      title={marker.title}
+      description={marker.description}
+      onPress={() => handleMarkerPress(marker.restaurant)}
+      tracksViewChanges={false}
+    >
+      <View style={styles.markerContainer}>
+        <Image
+          source={require("../assets/images/marker-bg.png")}
+          style={styles.markerBackground}
+          resizeMode="contain"
+        />
+        <Image
+          source={require("../assets/menutha.png")}
+          style={styles.markerLogo}
+          resizeMode="contain"
+        />
+      </View>
+    </Marker>
+  ))}
 </MapView>
 
 
