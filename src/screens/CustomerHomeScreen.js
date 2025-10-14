@@ -42,9 +42,11 @@ const CustomerHomeScreen = () => {
   const [mapRegion, setMapRegion] = useState({
     latitude: 17.4375,
     longitude: 78.4456,
-    latitudeDelta: 0.1,
-    longitudeDelta: 0.1,
+    latitudeDelta: 0.02,
+    longitudeDelta: 0.02,
   });
+  const [circleCenter, setCircleCenter] = useState(null);
+  const [showCircle, setShowCircle] = useState(true);
 
   // Geocoding cache functions
   const GEOCODE_CACHE_KEY = "restaurant_geocode_cache";
@@ -125,14 +127,46 @@ const CustomerHomeScreen = () => {
     return R * c;
   };
 
+  // Check if search results are within user radius
+  const areSearchResultsInRadius = (searchResults, userLoc, radiusKm = 5) => {
+    if (!userLoc || !Array.isArray(searchResults) || searchResults.length === 0) return false;
+
+    return searchResults.every(restaurant => {
+      if (!restaurant.latitude || !restaurant.longitude) return false;
+      const distance = getDistanceFromLatLonInKm(
+        userLoc.latitude,
+        userLoc.longitude,
+        restaurant.latitude,
+        restaurant.longitude
+      );
+      return distance <= radiusKm;
+    });
+  };
+
+  // Calculate center point of search results
+  const getSearchResultsCenter = (searchResults) => {
+    if (!Array.isArray(searchResults) || searchResults.length === 0) return null;
+
+    const validResults = searchResults.filter(r => r.latitude && r.longitude);
+    if (validResults.length === 0) return null;
+
+    const avgLat = validResults.reduce((sum, r) => sum + Number(r.latitude), 0) / validResults.length;
+    const avgLng = validResults.reduce((sum, r) => sum + Number(r.longitude), 0) / validResults.length;
+
+    return {
+      latitude: avgLat,
+      longitude: avgLng
+    };
+  };
+
   // Calculate optimal region to fit user and restaurants
   const calculateOptimalRegion = (userLoc, restaurantList) => {
     if (!userLoc) {
       return {
         latitude: 17.4375,
         longitude: 78.4456,
-        latitudeDelta: 0.1,
-        longitudeDelta: 0.1,
+        latitudeDelta: 0.02,
+        longitudeDelta: 0.02,
       };
     }
 
@@ -140,8 +174,8 @@ const CustomerHomeScreen = () => {
       return {
         latitude: userLoc.latitude,
         longitude: userLoc.longitude,
-        latitudeDelta: 0.05,
-        longitudeDelta: 0.05,
+        latitudeDelta: 0.02,
+        longitudeDelta: 0.02,
       };
     }
 
@@ -303,16 +337,17 @@ const CustomerHomeScreen = () => {
 
         if (userLoc) {
           setUserLocation(userLoc);
+          setCircleCenter(userLoc); // Set initial circle center
           const userRegion = {
             latitude: userLoc.latitude,
             longitude: userLoc.longitude,
-            latitudeDelta: 0.05,
-            longitudeDelta: 0.05,
+            latitudeDelta: 0.02, // Tighter zoom for better visibility
+            longitudeDelta: 0.02,
           };
           setMapRegion(userRegion);
           if (mapRef.current) {
             try {
-              mapRef.current.animateToRegion(userRegion, 1000);
+              mapRef.current.animateToRegion(userRegion, 1500);
             } catch (e) {}
           }
         }
@@ -509,6 +544,52 @@ const CustomerHomeScreen = () => {
     }
   }, [filtered, dataLoadingComplete]);
 
+  // Handle smart circle logic for search results
+  useEffect(() => {
+    if (!userLocation) {
+      setCircleCenter(null);
+      setShowCircle(false);
+      return;
+    }
+
+    // If no search query or filters are active, show circle at user location
+    if (!searchQuery.trim() && selectedFilters.length === 0) {
+      setCircleCenter(userLocation);
+      setShowCircle(true);
+      return;
+    }
+
+    // If search/filter is active, check if results are within radius
+    if (filtered && filtered.length > 0) {
+      const resultsInRadius = areSearchResultsInRadius(filtered, userLocation, 5);
+
+      if (resultsInRadius) {
+        // Results are within user radius, keep circle at user location
+        setCircleCenter(userLocation);
+        setShowCircle(true);
+      } else {
+        // Results are outside radius, animate to search results center
+        const searchCenter = getSearchResultsCenter(filtered);
+        if (searchCenter) {
+          setCircleCenter(searchCenter);
+          setShowCircle(true);
+
+          // Animate map to search results region
+          if (mapRef.current) {
+            const region = calculateOptimalRegion(searchCenter, filtered);
+            mapRef.current.animateToRegion(region, 1000);
+          }
+        } else {
+          // No valid search center, just highlight results without circle
+          setShowCircle(false);
+        }
+      }
+    } else {
+      // No search results, hide circle
+      setShowCircle(false);
+    }
+  }, [searchQuery, selectedFilters, filtered, userLocation]);
+
   const openGoogleMapsDirections = (restaurant) => {
     if (!restaurant || !restaurant.latitude || !restaurant.longitude) {
       Alert.alert("Error", "Restaurant location not available");
@@ -568,6 +649,17 @@ const CustomerHomeScreen = () => {
   const handleCloseSearch = () => {
     setSearchOpen(false);
     setSearchQuery("");
+
+    // Return to user location when closing search
+    if (userLocation && mapRef.current) {
+      const userRegion = {
+        latitude: userLocation.latitude,
+        longitude: userLocation.longitude,
+        latitudeDelta: 0.02,
+        longitudeDelta: 0.02,
+      };
+      mapRef.current.animateToRegion(userRegion, 1000);
+    }
   };
 
   const handleNavigationPress = () => {
@@ -670,18 +762,18 @@ const CustomerHomeScreen = () => {
   // Show map immediately with loading overlay while data is loading
   const showLoadingOverlay = loading || (!dataLoadingComplete && restaurants.length === 0);
 
-  console.log("🎨 CustomerHomeScreen rendering:", {
-    loading,
-    dataLoadingComplete,
-    mapReady,
-    userLocation: userLocation ? "available" : "null",
-    restaurantsCount: restaurants.length,
-    filteredRestaurantsCount: filtered ? filtered.length : 0,
-    markersCount: markers ? markers.length : 0,
-    mapRegion,
-    mapRefExists: !!mapRef.current,
-    showingFallbackMarkers: (!markers || markers.length === 0) && restaurants && restaurants.length > 0,
-  });
+  // console.log("🎨 CustomerHomeScreen rendering:", {
+  //   loading,
+  //   dataLoadingComplete,
+  //   mapReady,
+  //   userLocation: userLocation ? "available" : "null",
+  //   restaurantsCount: restaurants.length,
+  //   filteredRestaurantsCount: filtered ? filtered.length : 0,
+  //   markersCount: markers ? markers.length : 0,
+  //   mapRegion,
+  //   mapRefExists: !!mapRef.current,
+  //   showingFallbackMarkers: (!markers || markers.length === 0) && restaurants && restaurants.length > 0,
+  // });
 
   return (
     <View style={styles.container}>
@@ -727,13 +819,6 @@ const CustomerHomeScreen = () => {
 >
   {userLocation && (
     <>
-      <Circle
-        center={userLocation}
-        radius={5000}
-        strokeColor="#3838FB"
-        fillColor="#3838FB22"
-        strokeWidth={2}
-      />
       <Marker
         key="user-location"
         coordinate={userLocation}
@@ -749,6 +834,17 @@ const CustomerHomeScreen = () => {
     </>
   )}
 
+  {/* Smart Circle Logic */}
+  {showCircle && circleCenter && !showFilter && (
+    <Circle
+      center={circleCenter}
+      radius={5000}
+      strokeColor="#BBBAEF"
+      fillColor="#BBBAEF22"
+      strokeWidth={2}
+    />
+  )}
+
   {/* Restaurant Markers */}
   {mapReady && dataLoadingComplete && markers && markers.length > 0 && markers.map((marker) => (
     <Marker
@@ -761,13 +857,13 @@ const CustomerHomeScreen = () => {
     >
       <View style={styles.markerContainer}>
         <Image
-          source={require("../assets/images/marker-bg.png")}
-          style={styles.markerBackground}
+          source={require("../assets/menutha_original.png")}
+          style={styles.markerLogo}
           resizeMode="contain"
         />
         <Image
-          source={require("../assets/menutha_original.png")}
-          style={styles.markerLogo}
+          source={require("../assets/images/marker-bg.png")}
+          style={styles.markerBackground}
           resizeMode="contain"
         />
       </View>
@@ -791,13 +887,13 @@ const CustomerHomeScreen = () => {
       >
         <View style={styles.markerContainer}>
           <Image
-            source={require("../assets/images/marker-bg.png")}
-            style={styles.markerBackground}
+            source={require("../assets/menutha_original.png")}
+            style={styles.markerLogo}
             resizeMode="contain"
           />
           <Image
-            source={require("../assets/menutha_original.png")}
-            style={styles.markerLogo}
+            source={require("../assets/images/marker-bg.png")}
+            style={styles.markerBackground}
             resizeMode="contain"
           />
         </View>
@@ -808,7 +904,7 @@ const CustomerHomeScreen = () => {
 
 
       {/* Loading Overlay */}
-      {showLoadingOverlay && (
+      {/* {showLoadingOverlay && (
         <View style={styles.loadingOverlay}>
           <View style={styles.loadingContent}>
             <ActivityIndicator size="large" color="#6B4EFF" />
@@ -823,7 +919,7 @@ const CustomerHomeScreen = () => {
             )}
           </View>
         </View>
-      )}
+      )} */}
 
       {/* Top Controls */}
       <View style={styles.topControls}>
@@ -1089,28 +1185,28 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   navButton: {
-    backgroundColor: '#3838FB',
+    backgroundColor: '#BBBAEF',
     borderRadius: 16,
     width: 48,
     height: 48,
     alignItems: 'center',
     justifyContent: 'center',
     marginHorizontal: 8,
-    shadowColor: '#3838FB',
+    shadowColor: '#BBBAEF',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 6,
     elevation: 6,
   },
   navButtonCenter: {
-    backgroundColor: '#3838FB',
+    backgroundColor: '#BBBAEF',
     borderRadius: 18,
     width: 64,
     height: 64,
     alignItems: 'center',
     justifyContent: 'center',
     marginHorizontal: 8,
-    shadowColor: '#3838FB',
+    shadowColor: '#BBBAEF',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 10,
@@ -1235,7 +1331,7 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#6B4EFF',
+    backgroundColor: '#BBBAEF',
     borderRadius: 4,
   },
   markerContainer: {
@@ -1256,13 +1352,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     left: 0,
+    zIndex: 3,
   },
   markerLogo: {
     width: 28,
     height: 28,
     position: 'absolute',
     top: 10,
-    zIndex: 2,
+    zIndex: 1,
     borderRadius: 14,
     backgroundColor: '#fff',
     padding: 2,

@@ -54,7 +54,7 @@ export default function ItemsListScreen() {
     "mc": require("../src/assets/images/main-course.png"),
     "salads": require("../src/assets/images/salads.png"),
     "iced": require("../src/assets/images/ice-cream-desserts.png"),
-    "liquor": require("../src/assets/images/liquor.jpg"),
+    "liquor": require("../src/assets/images/liquor.png"),
   };
   if (error) {
     return (

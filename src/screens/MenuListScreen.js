@@ -37,7 +37,7 @@ import { useUserData } from "../services/getUserData";
     "mc": require("../../src/assets/images/main-course.png"),
     "salads": require("../../src/assets/images/salads.png"),
     "iced": require("../../src/assets/images/ice-cream-desserts.png"),
-    "liquor": require("../../src/assets/images/liquor.jpg"),
+    "liquor": require("../../src/assets/images/liquor.png"),
   };
 const { width, height } = Dimensions.get("window");
 
@@ -259,7 +259,7 @@ export default function MenuListScreen() {
                   style={[menuliststyles.buffetButton, responsiveStyles.bg1]}
                   onPress={() => {
                     router.push({
-                      pathname: "/BuffetTime",
+                      pathname: "/buffetTime",
                       params: {
                         hotelName: params.hotelName || restaurant.name,
                         hotelId: params.hotelId || restaurant.id,
@@ -306,7 +306,6 @@ export default function MenuListScreen() {
 // Enhanced styles to match the screenshot design
 const enhancedStyles = StyleSheet.create({
   orderSummaryContainer: {
-    backgroundColor: '#F5F5F5',
     padding: 20,
     margin: 20,
     borderRadius: 12,
@@ -314,8 +313,6 @@ const enhancedStyles = StyleSheet.create({
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
   itemCountText: {
     fontSize: 16,
@@ -330,7 +327,7 @@ const enhancedStyles = StyleSheet.create({
     marginBottom: 20,
   },
   placeOrderButton: {
-    backgroundColor: '#8B7FD6',
+    backgroundColor: '##6854FF',
     paddingHorizontal: 40,
     paddingVertical: 15,
     borderRadius: 25,
