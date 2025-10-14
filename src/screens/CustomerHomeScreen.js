@@ -425,10 +425,20 @@ const CustomerHomeScreen = () => {
     initializeApp();
   }, []);
 
-  // Fit map when markers or mapReady changes - only after data loading is complete
+  // Fit map when markers are updated and map is available - works even without mapReady
   useEffect(() => {
-    if (!mapReady || !mapRef.current || !dataLoadingComplete) return;
-    if ((!markers || markers.length === 0) && !userLocation) return;
+    if (!mapRef.current || !dataLoadingComplete) {
+      console.log("🗺️ Skipping fitToCoordinates - map not ready or data not loaded", {
+        mapRefExists: !!mapRef.current,
+        dataLoadingComplete
+      });
+      return;
+    }
+
+    if ((!markers || markers.length === 0) && !userLocation) {
+      console.log("🗺️ Skipping fitToCoordinates - no markers or user location");
+      return;
+    }
 
     const t = setTimeout(() => {
       try {
@@ -441,25 +451,34 @@ const CustomerHomeScreen = () => {
 
         if (userLocation) coords.push({ latitude: userLocation.latitude, longitude: userLocation.longitude });
 
-        if (coords.length === 0) return;
+        if (coords.length === 0) {
+          console.log("🗺️ No coordinates to fit");
+          return;
+        }
+
+        console.log("🗺️ Attempting fitToCoordinates with", coords.length, "points, mapReady:", mapReady);
 
         if (typeof mapRef.current.fitToCoordinates === "function") {
           mapRef.current.fitToCoordinates(coords, {
             edgePadding: { top: 100, right: 100, bottom: 150, left: 100 },
             animated: true,
           });
-          console.log("🗺️ fitToCoordinates called with", coords.length, "points");
+          console.log("✅ fitToCoordinates called successfully with", coords.length, "points");
         } else if (typeof mapRef.current.animateToRegion === "function") {
+          console.log("🗺️ Using animateToRegion fallback");
           const region = calculateOptimalRegion(userLocation || { latitude: 17.4375, longitude: 78.4456 }, markers.map(m => m.restaurant));
           mapRef.current.animateToRegion(region, 1000);
+          console.log("✅ animateToRegion called successfully");
+        } else {
+          console.log("❌ Neither fitToCoordinates nor animateToRegion available");
         }
       } catch (err) {
-        console.warn("fitToCoordinates error", err);
+        console.warn("❌ Map coordination error:", err);
       }
     }, 1200);
 
     return () => clearTimeout(t);
-  }, [mapReady, userLocation, markers, dataLoadingComplete]);
+  }, [userLocation, markers, dataLoadingComplete]); // Removed mapReady dependency
 
   // Update markers when filtered restaurants change
   useEffect(() => {
@@ -489,7 +508,14 @@ const CustomerHomeScreen = () => {
       }));
 
     setMarkers(newMarkers);
-    console.log("✅ Updated markers:", newMarkers.length);
+    console.log("✅ Updated markers:", newMarkers.length, "from", filtered.length, "filtered restaurants");
+    if (newMarkers.length > 0) {
+      console.log("🎯 First few marker coordinates:", newMarkers.slice(0, 3).map(m => ({
+        id: m.id,
+        lat: m.coordinate.latitude,
+        lng: m.coordinate.longitude
+      })));
+    }
   }, [filtered, dataLoadingComplete]);
 
   const openGoogleMapsDirections = (restaurant) => {
@@ -588,7 +614,9 @@ const CustomerHomeScreen = () => {
     userLocation: userLocation ? "available" : "null",
     restaurantsCount: restaurants.length,
     filteredRestaurantsCount: filtered ? filtered.length : 0,
+    markersCount: markers ? markers.length : 0,
     mapRegion,
+    mapRefExists: !!mapRef.current,
   });
 
   return (
@@ -602,22 +630,35 @@ const CustomerHomeScreen = () => {
   showsMyLocationButton={true}
   followsUserLocation={false}
   loadingEnabled={true}
-  onMapReady={() => setMapReady(true)}
-  onLayout={() => {
+  onMapReady={() => {
+    console.log("🗺️ Map onMapReady callback triggered!");
+    setMapReady(true);
+
+    // Try to fit coordinates immediately when map is ready
     setTimeout(() => {
-      if (mapRef.current && mapReady && markers && markers.length > 0) {
+      if (mapRef.current && markers && markers.length > 0) {
         try {
+          console.log("🗺️ onMapReady - Attempting to fit coordinates with", markers.length, "markers");
           const coords = markers.map(marker => marker.coordinate);
           if (userLocation) coords.push(userLocation);
-          mapRef.current.fitToCoordinates(coords, {
-            edgePadding: { top: 100, right: 100, bottom: 150, left: 100 },
-            animated: true,
-          });
+          if (coords.length > 0) {
+            mapRef.current.fitToCoordinates(coords, {
+              edgePadding: { top: 100, right: 100, bottom: 150, left: 100 },
+              animated: true,
+            });
+            console.log("✅ onMapReady - fitToCoordinates called successfully");
+          }
         } catch (e) {
-          console.log("coords error", e);
+          console.log("❌ onMapReady - fitToCoordinates error", e);
         }
       }
-    }, 800);
+    }, 500);
+  }}
+  onLayout={(event) => {
+    console.log("🗺️ Map layout triggered", event.nativeEvent.layout);
+  }}
+  onRegionChangeComplete={(region) => {
+    console.log("🗺️ Map region changed:", region);
   }}
 >
   {userLocation && (

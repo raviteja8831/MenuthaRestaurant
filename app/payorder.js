@@ -167,7 +167,6 @@ export default function OrderSummaryScreen() {
   const handlePaymentComplete = async () => {
     if (!params.orderID) {
       AlertService.error("No order ID available to complete payment.");
-      return;
     }
     try {
       setLoading(true);
