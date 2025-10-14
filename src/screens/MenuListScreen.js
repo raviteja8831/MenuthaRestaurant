@@ -274,27 +274,25 @@ export default function MenuListScreen() {
                 </Pressable>
               </View>
             )}
-            {/* Total Amount */}
+            {/* Order Summary Bottom Section - Enhanced */}
             {ishotel == "false" &&
               Object.keys(orderSummary).length > 0 &&
               orderSummary.totalItems > 0 && (
-                <View style={menuliststyles.buffetSection}>
-                  <View style={menuliststyles.totalContainer}>
-                    <Text style={menuliststyles.totalText}>
-                      Total Amount = ₹{orderSummary.totalCost}/-
+                <View style={enhancedStyles.orderSummaryContainer}>
+                  <Text style={enhancedStyles.itemCountText}>
+                    No of item Selected: {orderSummary.totalItems}
+                  </Text>
+                  <Text style={enhancedStyles.totalCostText}>
+                    Total Cost of Selection = {orderSummary.totalCost}
+                  </Text>
+                  <Pressable
+                    style={enhancedStyles.placeOrderButton}
+                    onPress={handleFinalOrder}
+                  >
+                    <Text style={enhancedStyles.placeOrderButtonText}>
+                      Place Order
                     </Text>
-                    <Pressable
-                      style={[
-                        menuliststyles.finalOrderButton,
-                        responsiveStyles.bg1,
-                      ]}
-                      onPress={handleFinalOrder}
-                    >
-                      <Text style={menuliststyles.finalOrderButtonText}>
-                        Final Order
-                      </Text>
-                    </Pressable>
-                  </View>
+                  </Pressable>
                 </View>
               )}
           </ScrollView>
@@ -304,3 +302,50 @@ export default function MenuListScreen() {
     // </LinearGradient>
   );
 }
+
+// Enhanced styles to match the screenshot design
+const enhancedStyles = StyleSheet.create({
+  orderSummaryContainer: {
+    backgroundColor: '#F5F5F5',
+    padding: 20,
+    margin: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  itemCountText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+    marginBottom: 8,
+  },
+  totalCostText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 20,
+  },
+  placeOrderButton: {
+    backgroundColor: '#8B7FD6',
+    paddingHorizontal: 40,
+    paddingVertical: 15,
+    borderRadius: 25,
+    minWidth: 200,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  placeOrderButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+});

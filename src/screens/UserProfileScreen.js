@@ -46,6 +46,19 @@ export default function UserProfileScreen() {
   });
   const router = useRouter();
   const { userId, error } = useUserData();
+
+  // Handle payment for ready orders
+  const handlePayOrder = (order) => {
+    router.push({
+      pathname: "/payorder",
+      params: {
+        orderID: order.id,
+        restaurantId: order.restaurantId,
+        ishotel: "false", // Assuming restaurant orders
+      },
+    });
+  };
+
   if (error) {
     return (
       <View style={[styles.container, styles.centerContent]}>
@@ -180,6 +193,25 @@ export default function UserProfileScreen() {
         <Text style={styles.hotelName}>{item.restaurantName}</Text>
         <Text style={styles.members}>{item.members}</Text>
         <Text style={styles.totalAmount}>₹{item.totalAmount}/-</Text>
+
+        {/* Order Status Badge */}
+        <View style={[
+          styles.statusBadge,
+          {
+            backgroundColor:
+              item.status === 'PLACED' ? '#F4962A' :
+              item.status === 'READY' ? '#2AF441' :
+              item.status === 'PAID' ? '#2196F3' :
+              item.status === 'COMPLETED' ? '#4CAF50' : '#9E9E9E'
+          }
+        ]}>
+          <Text style={styles.statusText}>
+            {item.status === 'PLACED' ? 'Placed' :
+             item.status === 'READY' ? 'Ready to Serve' :
+             item.status === 'PAID' ? 'Paid' :
+             item.status === 'COMPLETED' ? 'Cleared' : 'Unknown'}
+          </Text>
+        </View>
       </View>
 
       <View style={styles.ordersSection}>
@@ -191,6 +223,16 @@ export default function UserProfileScreen() {
             {item.totalAmount}
           </Text>
         </View>
+
+        {/* Pay Button - Show if order is ready to serve */}
+        {item.status === 'READY' && (
+          <Pressable
+            style={styles.payButton}
+            onPress={() => handlePayOrder(item)}
+          >
+            <Text style={styles.payButtonText}>Pay Now</Text>
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -790,5 +832,37 @@ const styles = StyleSheet.create({
   currencyIcon: {
     fontSize: 28,
     fontWeight: "bold",
+  },
+
+  // New styles for order status and pay button
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginTop: 4,
+  },
+  statusText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  payButton: {
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    alignSelf: 'center',
+    marginTop: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  payButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
