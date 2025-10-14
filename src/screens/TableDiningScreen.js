@@ -257,22 +257,23 @@ const TableDiningScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={handleBack}>
-          <Ionicons name="chevron-back" size={34} color="#000" />
-        </Pressable>
-        <Text style={styles.headerTitle}>Table Booking</Text>
-        <View style={{ width: 24 }} />
-      </View>
+      <View style={styles.scrollContent}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Pressable style={styles.backButton} onPress={handleBack}>
+            <Ionicons name="chevron-back" size={34} color="#000" />
+          </Pressable>
+          <Text style={styles.headerTitle}>Table Booking</Text>
+          <View style={{ width: 24 }} />
+        </View>
 
-      {/* Table Image */}
-      <Image
-        source={require("../assets/images/book-table.png")}
-        style={styles.tableImage}
-      />
+        {/* Table Image */}
+        <Image
+          source={require("../assets/images/book-table.png")}
+          style={styles.tableImage}
+        />
 
-      <View style={styles.counterContainer}>
+        <View style={styles.counterContainer}>
         {/* Left Arrow */}
         <Pressable
           style={styles.counterButton}
@@ -437,6 +438,7 @@ const TableDiningScreen = () => {
             : "None"}
         </Text>
       </View>
+      </View>
 
       {/* Bottom Info Container */}
       <View style={styles.bottomContainer}>
@@ -489,19 +491,24 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#BBBAEF",
+  },
+  scrollContent: {
+    flex: 1,
     paddingHorizontal: width * 0.05,
+    paddingBottom: height * 0.28, // Add bottom padding to prevent overlap
   },
   card: {
     backgroundColor: "#FFFFFF",
     borderRadius: 20,
-    padding: 20,
-    marginHorizontal: width * 0.08,
-    marginBottom: height * 0.03,
+    padding: 18,
+    marginHorizontal: width * 0.06,
+    marginTop: height * 0.02,
+    marginBottom: height * 0.05,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 8,
     alignItems: "flex-start",
   },
   text: {
@@ -515,9 +522,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: height * 0.02,
-    marginTop: height * 0.02,
-    paddingTop: height * 0.02,
+    marginBottom: height * 0.015,
+    marginTop: height * 0.01,
+    paddingTop: height * 0.015,
+    paddingHorizontal: width * 0.02,
   },
   backButton: {
     padding: width * 0.02,
@@ -530,11 +538,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   tableImage: {
-    width: width * 0.75,
-    height: height * 0.28,
+    width: width * 0.65,
+    height: height * 0.25,
     resizeMode: "contain",
     alignSelf: "center",
-    // marginTop: height * 0.02,
+    marginTop: height * 0.01,
+    marginBottom: height * 0.02,
   },
   // counterContainer: {
   //   flexDirection: "row",
@@ -567,9 +576,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: height * 0.04,
-    paddingHorizontal: width * 0.15,
-    paddingVertical: 20,
+    marginBottom: height * 0.03,
+    marginTop: height * 0.01,
+    paddingHorizontal: width * 0.12,
+    paddingVertical: 16,
   },
 
   counterButton: {
@@ -614,53 +624,59 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    padding: width * 0.05,
-    paddingBottom: height * 0.04,
+    paddingHorizontal: width * 0.05,
+    paddingTop: height * 0.025,
+    paddingBottom: height * 0.05,
     backgroundColor: "#BBBAEF",
+    minHeight: height * 0.26,
+    justifyContent: "space-between",
   },
   bottomTextContainer: {
-    marginBottom: height * 0.03,
     alignItems: "center",
+    marginBottom: height * 0.02,
   },
   reservationText: {
-    fontSize: 22,
+    fontSize: 28,
     fontWeight: "800",
     color: "#000",
     textAlign: "center",
-    marginBottom: height * 0.01,
+    marginBottom: height * 0.015,
+    lineHeight: 36,
   },
   disclaimerText: {
-    fontSize: 14,
+    fontSize: 16,
     color: "#FF4444",
     textAlign: "center",
-    marginBottom: height * 0.008,
+    marginBottom: height * 0.01,
+    fontWeight: "600",
   },
   autoCancelText: {
-    fontSize: 14,
+    fontSize: 16,
     color: "#000",
     textAlign: "center",
     marginBottom: height * 0.02,
+    fontWeight: "500",
   },
   payButton: {
-    width: width * 0.9,
-    height: 56,
+    width: width * 0.85,
+    height: 60,
     backgroundColor: "#5A4FCF",
-    borderRadius: 28,
+    borderRadius: 30,
     justifyContent: "center",
     alignItems: "center",
     alignSelf: "center",
-    marginBottom: height * 0.02,
+    marginBottom: height * 0.01,
     shadowColor: "#5A4FCF",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 10,
   },
   payButtonText: {
     color: "#FFFFFF",
-    fontSize: 20,
-    fontWeight: "700",
-    letterSpacing: 0.5,
+    fontSize: 24,
+    fontWeight: "800",
+    letterSpacing: 1,
   },
   disabledButton: {
     backgroundColor: "#9994cc", // lighter version of #6C63FF
