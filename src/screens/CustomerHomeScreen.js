@@ -38,7 +38,7 @@ const CustomerHomeScreen = () => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [showNavModal, setShowNavModal] = useState(false);
   const [navOptions, setNavOptions] = useState([]);
-  const [mapReady, setMapReady] = useState(false);
+  const [mapReady, setMapReady] = useState(true);
   const [mapRegion, setMapRegion] = useState({
     latitude: 17.4375,
     longitude: 78.4456,
@@ -685,7 +685,6 @@ const CustomerHomeScreen = () => {
   return (
     <View style={styles.container}>
       <MapView
-  provider={PROVIDER_GOOGLE}
   ref={mapRef}
   style={styles.map}
   region={mapRegion}
