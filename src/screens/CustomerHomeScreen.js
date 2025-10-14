@@ -38,7 +38,7 @@ const CustomerHomeScreen = () => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [showNavModal, setShowNavModal] = useState(false);
   const [navOptions, setNavOptions] = useState([]);
-  const [mapReady, setMapReady] = useState(true);
+  const [mapReady, setMapReady] = useState(false);
   const [mapRegion, setMapRegion] = useState({
     latitude: 17.4375,
     longitude: 78.4456,
@@ -353,6 +353,7 @@ const CustomerHomeScreen = () => {
 
             if (typeof lat === "string") lat = parseFloat(lat);
             if (typeof lng === "string") lng = parseFloat(lng);
+
 
             if (lat && lng && typeof lat === "number" && typeof lng === "number" && !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
               restaurant.latitude = lat;
@@ -685,6 +686,7 @@ const CustomerHomeScreen = () => {
   return (
     <View style={styles.container}>
       <MapView
+  provider={PROVIDER_GOOGLE}
   ref={mapRef}
   style={styles.map}
   region={mapRegion}
