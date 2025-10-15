@@ -12,9 +12,10 @@ import {
   Platform,
   Alert,
   StyleSheet,
+  BackHandler,
 } from "react-native";
 import { MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import * as Location from "expo-location";
 import MapView, { Marker, Circle, PROVIDER_GOOGLE } from "react-native-maps";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -688,6 +689,21 @@ const CustomerHomeScreen = () => {
   const handlePersonTabPress = () => router.push("/user-profile");
   const handleScanPress = () => router.push("/qr-scanner");
 
+  // Handle hardware back button to prevent going back to login/index
+  useFocusEffect(
+    React.useCallback(() => {
+      const onBackPress = () => {
+        // Return true to prevent default back behavior (going back)
+        // This keeps user on customer-home
+        return true;
+      };
+
+      BackHandler.addEventListener('hardwareBackPress', onBackPress);
+
+      return () => BackHandler.removeEventListener('hardwareBackPress', onBackPress);
+    }, [])
+  );
+
   // Refresh map and data
   // const handleRefreshPress = async () => {
   //   console.log("🔄 Refreshing map and restaurant data...");
@@ -1352,16 +1368,15 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     left: 0,
-    zIndex: 3,
+    zIndex: 1,
   },
   markerLogo: {
     width: 28,
     height: 28,
     position: 'absolute',
     top: 10,
-    zIndex: 1,
+    zIndex: 3,
     borderRadius: 14,
-    padding: 2,
   },
 });
 

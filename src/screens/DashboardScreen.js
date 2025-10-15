@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { Picker } from '@react-native-picker/picker';
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { fetchManagerDashboard } from "../api/managerApi";
 import { updateRestaurantUpi } from "../api/updateRestaurantUpi";
+import { getPaidOrders, updateOrderStatus } from "../api/orderApi";
 import axios from "axios";
+import { logout } from "../services/authService";
 
 import { HEADINGS } from "../constants/headings";
 import ProfileModal from "../components/ProfileModal";
@@ -21,6 +23,7 @@ import {
   Dimensions,
   Image,
   Switch,
+  BackHandler,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Appbar, Surface } from "react-native-paper";
@@ -41,6 +44,9 @@ export default function ManagerDashboardScreenNew() {
   const [upi, setUpi] = useState("");
   const [upiEdit, setUpiEdit] = useState(false);
   const [upiLoading, setUpiLoading] = useState(false);
+  const [paidOrders, setPaidOrders] = useState([]);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [completingOrder, setCompletingOrder] = useState(false);
 
   // State for API data
   // const [dashboard, setDashboard] = useState(null);
@@ -154,14 +160,65 @@ export default function ManagerDashboardScreenNew() {
 
   const handleLogout = async () => {
     try {
-      await AsyncStorage.removeItem("auth_token");
-      await AsyncStorage.removeItem("user_profile");
-      router.replace("/login");
+      await logout();
     } catch (e) {
-      // Optionally handle error
       console.log(e, "error in logout");
     }
   };
+
+  const fetchPaidOrders = async () => {
+    try {
+      const userStr = await AsyncStorage.getItem("user_profile");
+      const user = userStr ? JSON.parse(userStr) : {};
+      const restaurantId = user?.restaurant?.id;
+      if (restaurantId) {
+        const response = await getPaidOrders(restaurantId);
+        setPaidOrders(response.data || []);
+      }
+    } catch (error) {
+      console.error("Error fetching paid orders:", error);
+    }
+  };
+
+  const handleMarkAsCompleted = async (orderId) => {
+    try {
+      setCompletingOrder(true);
+      await updateOrderStatus(orderId, {
+        totalAmount: selectedOrder?.totalAmount || 0,
+        updatedItems: [],
+        removedItems: [],
+        status: "COMPLETED",
+      });
+      // Refresh paid orders list
+      await fetchPaidOrders();
+      setSelectedOrder(null);
+    } catch (error) {
+      console.error("Error marking order as completed:", error);
+    } finally {
+      setCompletingOrder(false);
+    }
+  };
+
+  useEffect(() => {
+    if (showPayModal) {
+      fetchPaidOrders();
+    }
+  }, [showPayModal]);
+
+  // Handle hardware back button to prevent going back to login/index
+  useFocusEffect(
+    React.useCallback(() => {
+      const onBackPress = () => {
+        // Return true to prevent default back behavior (going back)
+        // This keeps user on dashboard
+        return true;
+      };
+
+      BackHandler.addEventListener('hardwareBackPress', onBackPress);
+
+      return () => BackHandler.removeEventListener('hardwareBackPress', onBackPress);
+    }, [])
+  );
 
   return (
     <View style={styles.container}>
@@ -195,82 +252,114 @@ export default function ManagerDashboardScreenNew() {
             visible={showPayModal}
             transparent
             animationType="fade"
-            onRequestClose={() => setShowPayModal(false)}
+            onRequestClose={() => {
+              setShowPayModal(false);
+              setSelectedOrder(null);
+            }}
           >
             <View style={styles.modalOverlay}>
-              <View style={[styles.profileCard, { alignItems: "center" }]}> 
+              <View style={[styles.paidOrdersCard, { width: "90%", maxHeight: "80%" }]}>
                 <Pressable
                   style={{ position: "absolute", top: 10, right: 10, zIndex: 20 }}
-                  onPress={() => setShowPayModal(false)}
+                  onPress={() => {
+                    setShowPayModal(false);
+                    setSelectedOrder(null);
+                  }}
                 >
                   <MaterialCommunityIcons name="close" size={28} color="#222" />
                 </Pressable>
-                <Text style={{ fontWeight: "bold", fontSize: 18, marginBottom: 12, color: "#6c63b5" }}>
-                  Payment
+                <Text style={{ fontWeight: "bold", fontSize: 20, marginBottom: 16, color: "#6c63b5", textAlign: "center" }}>
+                  Paid Orders
                 </Text>
-                {/* Editable UPI field */}
-                {upiEdit ? (
-                  <TextInput
-                    value={upi}
-                    onChangeText={setUpi}
-                    style={{
-                      borderWidth: 1,
-                      borderColor: "#ccc",
-                      borderRadius: 8,
-                      padding: 8,
-                      fontSize: 16,
-                      color: "#222",
-                      marginBottom: 8,
-                      width: 220,
-                      backgroundColor: "#fff",
-                    }}
-                    placeholder="Enter UPI ID"
-                    editable={!upiLoading}
-                  />
+
+                {selectedOrder ? (
+                  // Order Detail View
+                  <ScrollView style={{ width: "100%" }}>
+                    <Text style={{ fontSize: 16, fontWeight: "bold", color: "#222", marginBottom: 8 }}>
+                      Order #{selectedOrder.id}
+                    </Text>
+                    <Text style={{ fontSize: 14, color: "#333", marginBottom: 4 }}>
+                      Customer: {selectedOrder.customerName}
+                    </Text>
+                    <Text style={{ fontSize: 14, color: "#333", marginBottom: 4 }}>
+                      Phone: {selectedOrder.customerPhone}
+                    </Text>
+                    <Text style={{ fontSize: 14, color: "#333", marginBottom: 4 }}>
+                      Table: {selectedOrder.tableId || "N/A"}
+                    </Text>
+                    <Text style={{ fontSize: 14, color: "#333", marginBottom: 8 }}>
+                      Time: {selectedOrder.time}
+                    </Text>
+
+                    <View style={{ backgroundColor: "#fff", borderRadius: 8, padding: 12, marginBottom: 12 }}>
+                      <Text style={{ fontWeight: "bold", marginBottom: 8, color: "#6c63b5" }}>Items:</Text>
+                      {selectedOrder.items.map((item, idx) => (
+                        <View key={idx} style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
+                          <Text style={{ flex: 1, color: "#222" }}>{item.name}</Text>
+                          <Text style={{ color: "#222", marginRight: 8 }}>x{item.quantity}</Text>
+                          <Text style={{ fontWeight: "bold", color: "#6c63b5" }}>₹{item.total}</Text>
+                        </View>
+                      ))}
+                      <View style={{ borderTopWidth: 1, borderTopColor: "#ddd", marginTop: 8, paddingTop: 8, flexDirection: "row", justifyContent: "space-between" }}>
+                        <Text style={{ fontWeight: "bold", color: "#222" }}>Total:</Text>
+                        <Text style={{ fontWeight: "bold", color: "#6c63b5", fontSize: 16 }}>₹{selectedOrder.totalAmount}</Text>
+                      </View>
+                    </View>
+
+                    <View style={{ flexDirection: "row", gap: 12, justifyContent: "center", marginTop: 16 }}>
+                      <Pressable
+                        style={[styles.profileCloseBtn, { backgroundColor: "#6c63b5" }]}
+                        disabled={completingOrder}
+                        onPress={() => handleMarkAsCompleted(selectedOrder.id)}
+                      >
+                        <Text style={{ color: "#fff", fontWeight: "bold" }}>
+                          {completingOrder ? "Processing..." : "Mark as Completed"}
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        style={styles.profileCloseBtn}
+                        onPress={() => setSelectedOrder(null)}
+                      >
+                        <Text style={styles.logoutText}>Back</Text>
+                      </Pressable>
+                    </View>
+                  </ScrollView>
                 ) : (
-                  <Text style={{ fontSize: 16, color: "#222", marginBottom: 8 }}>
-                    UPI ID : {upi || "Not set"}
-                  </Text>
+                  // Orders List View
+                  <ScrollView style={{ width: "100%" }} showsVerticalScrollIndicator={false}>
+                    {paidOrders.length === 0 ? (
+                      <Text style={{ textAlign: "center", color: "#666", marginTop: 20 }}>
+                        No paid orders at the moment
+                      </Text>
+                    ) : (
+                      paidOrders.map((order) => (
+                        <Pressable
+                          key={order.id}
+                          style={styles.paidOrderItem}
+                          onPress={() => setSelectedOrder(order)}
+                        >
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ fontWeight: "bold", fontSize: 15, color: "#222", marginBottom: 4 }}>
+                              Order #{order.id}
+                            </Text>
+                            <Text style={{ fontSize: 13, color: "#333", marginBottom: 2 }}>
+                              {order.customerName}
+                            </Text>
+                            <Text style={{ fontSize: 12, color: "#666" }}>
+                              Table {order.tableId || "N/A"} • {order.time}
+                            </Text>
+                          </View>
+                          <View style={{ alignItems: "flex-end" }}>
+                            <Text style={{ fontWeight: "bold", fontSize: 16, color: "#6c63b5", marginBottom: 4 }}>
+                              ₹{order.totalAmount}
+                            </Text>
+                            <MaterialCommunityIcons name="chevron-right" size={24} color="#6c63b5" />
+                          </View>
+                        </Pressable>
+                      ))
+                    )}
+                  </ScrollView>
                 )}
-                <View style={{ flexDirection: "row", gap: 12 }}>
-                  {upiEdit ? (
-                    <Pressable
-                      style={styles.profileCloseBtn}
-                      disabled={upiLoading}
-                      onPress={async () => {
-                        setUpiLoading(true);
-                        try {
-                          const userStr = await AsyncStorage.getItem("user_profile");
-                          const user = userStr ? JSON.parse(userStr) : {};
-                          const restaurantId = user?.restaurant?.id;
-                          await updateRestaurantUpi(restaurantId, upi);
-                          setUpiEdit(false);
-                        } catch (_err) {
-                          // Optionally show error
-                        }
-                        setUpiLoading(false);
-                      }}
-                    >
-                      <Text style={styles.logoutText}>{upiLoading ? "Saving..." : "Save"}</Text>
-                    </Pressable>
-                  ) : (
-                    <Pressable
-                      style={styles.profileCloseBtn}
-                      onPress={() => setUpiEdit(true)}
-                    >
-                      <Text style={styles.logoutText}>Edit</Text>
-                    </Pressable>
-                  )}
-                  <Pressable
-                    style={styles.profileCloseBtn}
-                    onPress={() => {
-                      setShowPayModal(false);
-                      setUpiEdit(false);
-                    }}
-                  >
-                    <Text style={styles.logoutText}>Close</Text>
-                  </Pressable>
-                </View>
               </View>
             </View>
           </Modal>
@@ -1436,6 +1525,29 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.3)",
     justifyContent: "center",
     alignItems: "center",
+  },
+  paidOrdersCard: {
+    backgroundColor: "#ece9fa",
+    borderRadius: 20,
+    padding: 24,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  paidOrderItem: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
 
   // Users Tab Styles

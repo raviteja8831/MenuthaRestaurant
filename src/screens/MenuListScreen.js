@@ -89,6 +89,20 @@ export default function MenuListScreen() {
     try {
       setLoading(true);
       var restId = params.restaurantId || params.hotelId;
+
+      // Check if coming from QR scan (has tableId from QR)
+      // If coming from QR scan, don't fetch existing order - start fresh
+      if (params.tableId && params.refUrl) {
+        console.log("Coming from QR scan - starting new order");
+        setOrderSummary({
+          totalItems: 0,
+          totalCost: 0,
+          orderId: null,
+        });
+        return;
+      }
+
+      // Only fetch pending orders if NOT coming from QR scan
       const response = await getOrderItemCount(restId, userId);
       console.log("Fetched order item count:", response);
       setOrderSummary((prev) => ({
@@ -160,6 +174,12 @@ export default function MenuListScreen() {
 
   const handleFinalOrder = async () => {
     try {
+      if (!orderSummary.orderId) {
+        AlertService.error("No order found. Please add items first.");
+        return;
+      }
+
+      // Update order products status to PLACED (status=1)
       const response = await updateOrderProductStatusList(
         orderSummary.orderId,
         {
@@ -174,7 +194,6 @@ export default function MenuListScreen() {
             orderID: orderSummary.orderId,
             restaurantId: params.restaurantId || params.hotelId,
             ishotel: ishotel,
-            // userId: params.userId || 1,
           },
         });
       }

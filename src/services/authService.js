@@ -233,13 +233,14 @@ export const logout = async () => {
     // Import router dynamically to avoid circular dependency
     const { router } = await import('expo-router');
 
-    // Redirect to appropriate login screen
+    // Redirect to appropriate login screen based on user type
     if (userType === USER_TYPES.CUSTOMER) {
       router.replace('/Customer-Login');
-    } else if (userType === USER_TYPES.RESTAURANT) {
-      router.replace('/chef-login');
+    } else if (userType === USER_TYPES.MANAGER || userType === USER_TYPES.CHEF) {
+      router.replace('/login');
     } else {
-      router.replace('/Customer-Login');
+      // Default to manager/chef login page
+      router.replace('/login');
     }
 
     return true;

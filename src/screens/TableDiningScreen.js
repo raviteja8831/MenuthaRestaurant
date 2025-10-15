@@ -495,31 +495,32 @@ const styles = StyleSheet.create({
   scrollContent: {
     flex: 1,
     paddingHorizontal: width * 0.05,
-    paddingBottom: height * 0.32, // Increased bottom padding to prevent overlap
+    paddingBottom: height * 0.35, // Increased to ensure card is fully visible
   },
   card: {
     backgroundColor: "#E2E2FF",
     borderRadius: 20,
     padding: 20,
-    marginHorizontal: width * 0.06,
+    marginHorizontal: width * 0.02,
     marginTop: height * 0.02,
-    marginBottom: height * 0.05,
+    marginBottom: height * 0.02,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 10,
     elevation: 8,
     alignItems: "flex-start",
-    minHeight: height * 0.15,
-    justifyContent: "space-around",
+    minHeight: height * 0.18,
+    justifyContent: "flex-start",
   },
   text: {
-    fontSize: 16,
+    fontSize: 15,
     color: "#333",
-    marginBottom: 10,
-    lineHeight: 24,
+    marginBottom: 8,
+    lineHeight: 22,
     fontWeight: "500",
     width: "100%",
+    flexWrap: "wrap",
   },
 
   header: {

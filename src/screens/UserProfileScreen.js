@@ -21,7 +21,7 @@ import {
   getUserProfile as getApiUserProfile,
   getUserTransactions,
 } from "../api/profileApi";
-import { getUserProfile } from "../services/authService";
+import { getUserProfile, logout } from "../services/authService";
 import { AlertService } from "../services/alert.service";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useUserData } from "../services/getUserData";
@@ -245,16 +245,20 @@ export default function UserProfileScreen() {
           {
             backgroundColor:
               item.status === 'PLACED' ? '#F4962A' :
-              item.status === 'READY' ? '#2AF441' :
+              item.status === 'PREPARING' ? '#FF9800' :
+              item.status === 'PREPARED' ? '#2AF441' :
+              item.status === 'SERVED' ? '#00BCD4' :
               item.status === 'PAID' ? '#2196F3' :
               item.status === 'COMPLETED' ? '#4CAF50' : '#9E9E9E'
           }
         ]}>
           <Text style={styles.statusText}>
             {item.status === 'PLACED' ? 'Placed' :
-             item.status === 'READY' ? 'Ready to Serve' :
+             item.status === 'PREPARING' ? 'Preparing' :
+             item.status === 'PREPARED' ? 'Prepared' :
+             item.status === 'SERVED' ? 'Served' :
              item.status === 'PAID' ? 'Paid' :
-             item.status === 'COMPLETED' ? 'Cleared' : 'Unknown'}
+             item.status === 'COMPLETED' ? 'Completed' : 'Unknown'}
           </Text>
         </View>
       </View>
@@ -269,8 +273,8 @@ export default function UserProfileScreen() {
           </Text>
         </View>
 
-        {/* Pay Button - Show if order is ready to serve */}
-        {item.status === 'READY' && (
+        {/* Pay Button - Show if order is PLACED, PREPARING, PREPARED, or SERVED */}
+        {(item.status === 'PLACED' || item.status === 'PREPARING' || item.status === 'PREPARED' || item.status === 'SERVED') && (
           <Pressable
             style={styles.payButton}
             onPress={() => handlePayOrder(item)}
@@ -502,8 +506,7 @@ export default function UserProfileScreen() {
         <Pressable
           style={styles.logoutButton}
           onPress={async () => {
-            await AsyncStorage.clear();
-            router.push("/Customer-Login");
+            await logout();
           }}
         >
           <MaterialCommunityIcons name="power" size={28} color="#000" />

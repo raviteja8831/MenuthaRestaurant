@@ -91,3 +91,15 @@ export const updateOrderProductStatusList = async (orderId, data) => {
     throw error;
   }
 };
+
+export const getPaidOrders = async (restaurantId) => {
+  try {
+    const res = await api.get(
+      `${API_BASE_URL}/orders/paid/${restaurantId}`
+    );
+    return res.data;
+  } catch (error) {
+    showApiError(error);
+    throw error;
+  }
+};

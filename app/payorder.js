@@ -163,26 +163,59 @@ export default function OrderSummaryScreen() {
     console.log("UPI Payment Result:", response);
   };
 
-  // Simulate or handle payment completion: call server to mark order completed
-  const handlePaymentComplete = async () => {
+  // Handle payment: Generate QR and mark order as PAID
+  const handlePayment = async () => {
     if (!params.orderID) {
       AlertService.error("No order ID available to complete payment.");
+      return;
     }
+
+    if (totalAmount <= 0) {
+      AlertService.error("Total amount must be greater than 0 to pay.", "Invalid amount");
+      return;
+    }
+
     try {
       setLoading(true);
-      // Build updatedItems payload expected by server: { id: orderProductId, quantity }
+
+      let payAmount = totalAmount;
+      if (payAmount <= 30) {
+        payAmount += 1; // Minimum order amount is 30
+      } else if (payAmount > 30) {
+        payAmount += 3;
+      }
+
+      // Generate UPI URL for QR code
+      const response = await UpiService.initiatePayment({
+        restaurantId: params.restaurantId,
+        name: "Menutha Payment",
+        amount: payAmount,
+        transactionRef: "",
+      });
+
+      if (response && response.url) {
+        setUpiUrl(response.url);
+        AlertService.info("Scan QR code to pay with any UPI app");
+      }
+
+      // Update order status to PAID
       const updatedItems = orderItems.map((it) => ({ id: it.id, quantity: it.quantity }));
-      const removedItems = []; // you can collect items with quantity 0 if needed
+      const removedItems = [];
       const payload = {
         totalAmount: totalAmount,
         updatedItems,
         removedItems,
+        status: "PAID",
       };
+
       const res = await updateOrderStatus(params.orderID, payload);
       console.log("Order update response:", res);
-      AlertService.success("Payment recorded and order completed.");
-      // After successful payment, navigate back to menu list
-      router.push({ pathname: "/menu-list", params: { restaurantId: params.restaurantId || "", ishotel: params.ishotel } });
+      AlertService.success("Payment completed successfully! Order marked as PAID.");
+
+      // After successful payment, navigate back to customer home
+      setTimeout(() => {
+        router.push({ pathname: "/customer-home" });
+      }, 2000);
     } catch (err) {
       console.error("Failed to complete payment:", err);
       AlertService.error("Failed to complete payment. Please try again.");
@@ -301,27 +334,15 @@ export default function OrderSummaryScreen() {
 
         <Pressable
           style={[styles.payButton]}
-          onPress={handleSubmitAndPay}
-          disabled={paying}
+          onPress={handlePayment}
+          disabled={loading || paying}
         >
-          {paying ? (
+          {loading || paying ? (
             <ActivityIndicator color="#fff" />
           ) : (
             <Text style={styles.payText}>Pay</Text>
           )}
         </Pressable>
-
-        {/* <Pressable
-          style={[styles.payButton, { marginTop: 12, backgroundColor: '#28a745' }]}
-          onPress={handlePaymentComplete}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.payText}>Complete Payment (Test)</Text>
-          )}
-        </Pressable> */}
 
         {/* Show QR code for UPI payment as backup */}
         {upiUrl ? (

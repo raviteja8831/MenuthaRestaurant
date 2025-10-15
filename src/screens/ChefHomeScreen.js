@@ -7,10 +7,11 @@ import {
   Pressable,
   Modal,
   ActivityIndicator,
+  BackHandler,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import OrderMostImg from "../assets/images/order_most.png";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import {
   chefLogout,
   fetchChefMessages,
@@ -19,6 +20,7 @@ import {
 } from "../api/chefApi";
 import { setApiAuthToken } from "../api/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { logout } from "../services/authService";
 
 export default function ChefHomeScreen() {
   const [showMsgModal, setShowMsgModal] = useState(false);
@@ -66,27 +68,43 @@ export default function ChefHomeScreen() {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      const userStr = await AsyncStorage.getItem("user_profile");
+      let user = null;
+      if (userStr) {
+        user = JSON.parse(userStr);
+      }
+      // Call chef logout API
+      await chefLogout(user ? user.id : null);
+      // Use centralized logout
+      await logout();
+    } catch (e) {
+      console.log(e, "error in logout");
+    }
+  };
+
+  // Handle hardware back button to prevent going back to login/index
+  useFocusEffect(
+    React.useCallback(() => {
+      const onBackPress = () => {
+        // Return true to prevent default back behavior (going back)
+        // This keeps user on chef-home
+        return true;
+      };
+
+      BackHandler.addEventListener('hardwareBackPress', onBackPress);
+
+      return () => BackHandler.removeEventListener('hardwareBackPress', onBackPress);
+    }, [])
+  );
+
   return (
     <View style={styles.container}>
       {/* Absolute icons at corners */}
       <Pressable
         style={styles.powerIcon}
-        onPress={async () => {
-          let user = null;
-          const userStr = await AsyncStorage.getItem("user_profile");
-          if (userStr) {
-            user = JSON.parse(userStr);
-            setChefName(user.firstname+ "" + user.lastname );
-            setLoginAt(user.loginAT || "");
-          }
-           const logout = await chefLogout(user ? user.id : null);
-           console.log("Logout:", logout);
-          AsyncStorage.removeItem("auth_token");
-          AsyncStorage.removeItem("user_profile");
-          AsyncStorage.removeItem("user_type");
-
-          router.replace("/login");
-        }}
+        onPress={handleLogout}
       >
         <MaterialCommunityIcons name="power" size={28} color="#222" />
       </Pressable>
