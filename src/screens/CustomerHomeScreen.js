@@ -15,7 +15,7 @@ import {
   BackHandler,
 } from "react-native";
 import { MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { useRouter, useFocusEffect } from "expo-router";
+import { useRouter } from "expo-router";
 import * as Location from "expo-location";
 import MapView, { Marker, Circle, PROVIDER_GOOGLE } from "react-native-maps";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -690,19 +690,19 @@ const CustomerHomeScreen = () => {
   const handleScanPress = () => router.push("/qr-scanner");
 
   // Handle hardware back button to prevent going back to login/index
-  useFocusEffect(
-    React.useCallback(() => {
-      const onBackPress = () => {
-        // Return true to prevent default back behavior (going back)
-        // This keeps user on customer-home
-        return true;
-      };
+  // useFocusEffect(
+  //   React.useCallback(() => {
+  //     const onBackPress = () => {
+  //       // Return true to prevent default back behavior (going back)
+  //       // This keeps user on customer-home
+  //       return true;
+  //     };
 
-      BackHandler.addEventListener('hardwareBackPress', onBackPress);
+  //     BackHandler.addEventListener('hardwareBackPress', onBackPress);
 
-      return () => BackHandler.removeEventListener('hardwareBackPress', onBackPress);
-    }, [])
-  );
+  //     return () => BackHandler.removeEventListener('hardwareBackPress', onBackPress);
+  //   }, [])
+  // );
 
   // Refresh map and data
   // const handleRefreshPress = async () => {
