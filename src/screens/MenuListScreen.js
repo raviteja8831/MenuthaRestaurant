@@ -131,7 +131,7 @@ export default function MenuListScreen() {
         categoryName: category.name,
         restaurantId: params.restaurantId || params.hotelId,
     //    tableId: params.tableId || 1,
-        tableId: 12,
+        tableId: params.tableId || 12,
         orderID: orderSummary.orderId || null,
         ishotel: ishotel,
       },

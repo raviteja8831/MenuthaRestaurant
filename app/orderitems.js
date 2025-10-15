@@ -327,19 +327,12 @@ export default function ItemsListScreen() {
 
       // Normalize the type to match our categories
       const normalizedType = itemType.toLowerCase();
-      if (normalizedType.includes('veg') || normalizedType.includes('vegetarian')) {
-        grouped['Veg'].push(item);
-      } else if (normalizedType.includes('egg')) {
-        grouped['Egg'].push(item);
-      } else if (normalizedType.includes('chicken')) {
-        grouped['Chicken'].push(item);
-      } else if (normalizedType.includes('mutton') || normalizedType.includes('lamb') || normalizedType.includes('goat')) {
-        grouped['Mutton'].push(item);
-      } else if (normalizedType.includes('seafood') || normalizedType.includes('fish') || normalizedType.includes('prawn') || normalizedType.includes('crab')) {
-        grouped['Seafood'].push(item);
+      if (normalizedType){
+                grouped[normalizedType].push(item);
+
       } else {
         // Default to Veg for unknown types
-        grouped['Veg'].push(item);
+        grouped['Ungrouped'].push(item);
       }
     });
 
