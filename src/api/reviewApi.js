@@ -2,7 +2,7 @@ import axiosService from "./axiosService";
 import { API_BASE_URL } from "../constants/api.constants";
 import api from "./api";
 
-const REVIEWS_API = `${API_BASE_URL}/reviews`;
+const REVIEWS_API = `/reviews`;
 
 export const getUserReviews = async (userId) => {
   try {
@@ -16,7 +16,7 @@ export const getUserReviews = async (userId) => {
 export const addReview = async (reviewData) => {
   try {
     const response = await api.post(
-      `${REVIEWS_API}/create`,
+      '/create',
       reviewData
     );
     return response.data;

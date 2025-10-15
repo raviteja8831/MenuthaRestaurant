@@ -1,9 +1,9 @@
 // API endpoint constants for favorites
 export const FAVORITES_API = {
-  LIST: '/api/favorites',
-  ADD: '/api/favorites/add',
-  REMOVE: '/api/favorites/remove',
-  CHECK: '/api/favorites/check',
+  LIST: '/favorites',
+  ADD: '/favorites/add',
+  REMOVE: '/favorites/remove',
+  CHECK: '/favorites/check',
 };
 
 // Request/Response interfaces
