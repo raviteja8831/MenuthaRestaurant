@@ -14,6 +14,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { getRestaurantById } from "../src/api/restaurantApi";
 import { IMG_BASE_URL } from "../src/constants/api.constants";
+import { getUserProfile } from "../src/services/authService";
+import { addFavorite, removeFavorite, checkFavorite } from "../src/api/favoritesApi";
 
 const { width } = Dimensions.get('window');
 
@@ -21,6 +23,9 @@ const HotelDetails = () => {
   const router = useRouter();
   const params = useLocalSearchParams();
   const [hotelData, setHotelData] = useState(null);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [userProfile, setUserProfile] = useState(null);
+  const [isLoadingFavorite, setIsLoadingFavorite] = useState(false);
 
   const handleBackPress = () => {
     router.push({ pathname: "/customer-home" });
@@ -43,12 +48,27 @@ const HotelDetails = () => {
   ];
 
   useEffect(() => {
-    const fetchRestaurantData = async () => {
+    const fetchInitialData = async () => {
       try {
+        // Get user profile
+        const profile = await getUserProfile();
+        setUserProfile(profile);
+
         if (params.id) {
+          // Fetch restaurant data
           const data = await getRestaurantById(params.id);
           console.log("Fetched restaurant data:", data);
           setHotelData(data);
+
+          // Check if restaurant is in favorites
+          if (profile && profile.id) {
+            try {
+              const favoriteStatus = await checkFavorite(profile.id, params.id);
+              setIsFavorite(favoriteStatus.isFavorite);
+            } catch (error) {
+              console.error("Error checking favorite status:", error);
+            }
+          }
         }
       } catch (error) {
         console.error("Error fetching restaurant details:", error);
@@ -56,8 +76,43 @@ const HotelDetails = () => {
       }
     };
 
-    fetchRestaurantData();
+    fetchInitialData();
   }, [params.id]);
+
+  const handleFavoritePress = async () => {
+    if (!userProfile || !userProfile.id || !hotelData || !hotelData.id) {
+      AlertService.info("Please wait while data is loading", "Please wait");
+      return;
+    }
+
+    if (isLoadingFavorite) return;
+
+    setIsLoadingFavorite(true);
+    try {
+      if (isFavorite) {
+        // Remove from favorites
+        await removeFavorite({
+          userId: userProfile.id,
+          restaurantId: hotelData.id,
+        });
+        setIsFavorite(false);
+        AlertService.success("Removed from favorites", "Success");
+      } else {
+        // Add to favorites
+        await addFavorite({
+          userId: userProfile.id,
+          restaurantId: hotelData.id,
+        });
+        setIsFavorite(true);
+        AlertService.success("Added to favorites", "Success");
+      }
+    } catch (error) {
+      console.error("Error updating favorite status:", error);
+      AlertService.error("Failed to update favorites", "Error");
+    } finally {
+      setIsLoadingFavorite(false);
+    }
+  };
 
   const handleOptionPress = (optionType) => {
     if (!hotelData || !hotelData.id) {
@@ -111,8 +166,16 @@ const HotelDetails = () => {
           </Pressable>
 
           {/* Heart icon */}
-          <Pressable style={styles.heartButton}>
-            <Ionicons name="heart-outline" size={24} color="#000" />
+          <Pressable
+            style={[styles.heartButton, isLoadingFavorite && { opacity: 0.6 }]}
+            onPress={handleFavoritePress}
+            disabled={isLoadingFavorite}
+          >
+            <Ionicons
+              name={isFavorite ? "heart" : "heart-outline"}
+              size={24}
+              color={isFavorite ? "#FF0000" : "#000"}
+            />
           </Pressable>
         </View>
 

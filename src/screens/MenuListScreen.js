@@ -327,7 +327,7 @@ const enhancedStyles = StyleSheet.create({
     marginBottom: 20,
   },
   placeOrderButton: {
-    backgroundColor: '##6854FF',
+    backgroundColor: '#6854FF',
     paddingHorizontal: 40,
     paddingVertical: 15,
     borderRadius: 25,

@@ -495,12 +495,12 @@ const styles = StyleSheet.create({
   scrollContent: {
     flex: 1,
     paddingHorizontal: width * 0.05,
-    paddingBottom: height * 0.28, // Add bottom padding to prevent overlap
+    paddingBottom: height * 0.32, // Increased bottom padding to prevent overlap
   },
   card: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#E2E2FF",
     borderRadius: 20,
-    padding: 18,
+    padding: 20,
     marginHorizontal: width * 0.06,
     marginTop: height * 0.02,
     marginBottom: height * 0.05,
@@ -510,12 +510,16 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 8,
     alignItems: "flex-start",
+    minHeight: height * 0.15,
+    justifyContent: "space-around",
   },
   text: {
     fontSize: 16,
     color: "#333",
-    marginBottom: 8,
-    lineHeight: 22,
+    marginBottom: 10,
+    lineHeight: 24,
+    fontWeight: "500",
+    width: "100%",
   },
 
   header: {
@@ -577,7 +581,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: height * 0.03,
-    marginTop: height * 0.01,
     paddingHorizontal: width * 0.12,
     paddingVertical: 16,
   },

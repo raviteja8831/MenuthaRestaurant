@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import {
@@ -15,12 +16,12 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 // import { userData } from "../Mock/CustomerHome";
-import { getUserReviews } from "../api/reviewApi";
+import { getUserReviews, getUserFavorites } from "../api/favoritesApi";
 import {
-  getUserProfile,
-  getUserFavorites,
+  getUserProfile as getApiUserProfile,
   getUserTransactions,
 } from "../api/profileApi";
+import { getUserProfile } from "../services/authService";
 import { AlertService } from "../services/alert.service";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useUserData } from "../services/getUserData";
@@ -31,7 +32,7 @@ const { width } = Dimensions.get("window");
  * UserProfileScreen component with sub-tabs for history, favorites, and transactions
  */
 export default function UserProfileScreen() {
-  const [activeTab, setActiveTab] = useState("orders");
+  const [activeTab, setActiveTab] = useState("recent");
   const [loading, setLoading] = useState(false);
   const [reviews, setReviews] = useState([]);
   const [favoritesData, setFavoritesData] = useState([]);
@@ -40,9 +41,10 @@ export default function UserProfileScreen() {
   const [tableOrders, setTableOrders] = useState([]);
   // const [userId, setUserId] = useState(null);
   const [userData, setUserData] = useState({
-    orders: [],
-    favorites: [],
-    transactions: [],
+    firstName: "",
+    lastName: "",
+    phoneNumber: "",
+    profileImage: null
   });
   const router = useRouter();
   const { userId, error } = useUserData();
@@ -86,17 +88,60 @@ export default function UserProfileScreen() {
       }
       console.log("Fetching profile data for user:", id); // Debug log
       setLoading(true);
-      const response = await getUserProfile(id);
-      console.log("Profile response:", response); // Debug log
-      setUserData(response.data.user || {});
-      setFavoritesData(response.data.favorites || []);
-      setTransactionsData(response.data.orders || []);
-      setBufferOrders(response.data.bufferOrders || []);
-      setTableOrders(response.data.tableOrders || []);
-      setReviews(response.data.orders || []);
+
+      // Fetch user profile from auth service (already stored locally)
+      const profile = await getUserProfile();
+      if (profile) {
+        setUserData({
+          firstName: profile.firstname || "",
+          lastName: profile.lastname || "",
+          phoneNumber: profile.phone || "",
+          profileImage: profile.profileImage || null
+        });
+      }
+
+      // Fetch user reviews
+      const reviewsResponse = await getUserReviews(id);
+      if (reviewsResponse && reviewsResponse.data) {
+        setReviews(reviewsResponse.data.map(review => ({
+          id: review.id,
+          restaurantName: review.restaurant?.name || "Unknown Restaurant",
+          restaurantAddress: review.restaurant?.address || "",
+          review: review.review || "",
+          rating: review.rating || 0,
+          createdAt: review.createdAt
+        })));
+      }
+
+      // Fetch user favorites
+      const favoritesResponse = await getUserFavorites(id);
+      if (favoritesResponse && favoritesResponse.data) {
+        setFavoritesData(favoritesResponse.data.map(favorite => ({
+          id: favorite.id,
+          restaurantName: favorite.restaurant?.name || "Unknown Restaurant",
+          restaurantId: favorite.restaurantId,
+          review: "", // Favorites don't have reviews
+          rating: 5, // Default rating for favorites display
+          addedAt: favorite.createdAt
+        })));
+      }
+
+      // Keep existing profile API calls for orders data
+      try {
+        const response = await getApiUserProfile(id);
+        console.log("Profile response:", response); // Debug log
+        setTransactionsData(response.data.orders || []);
+        setBufferOrders(response.data.bufferOrders || []);
+        setTableOrders(response.data.tableOrders || []);
+      } catch (profileError) {
+        console.log("Profile API not available, using empty data");
+        setTransactionsData([]);
+        setBufferOrders([]);
+        setTableOrders([]);
+      }
     } catch (error) {
       console.error("Error fetching profile:", error);
-      AlertService.error(error);
+      AlertService.error("Error fetching profile data");
     } finally {
       setLoading(false);
     }

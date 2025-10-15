@@ -47,7 +47,9 @@
       "Bash(npx eslint:*)",
       "Read(//c/Users/ravit/Siddhu'sWorld/updated/restaurant/server/app/controllers/**)",
       "Read(//c/Users/ravit/Siddhu'sWorld/updated/restaurant/server/app/models/**)",
-      "Read(//c/Users/ravit/Siddhu'sWorld/updated/restaurant/server/app/routes/**)"
+      "Read(//c/Users/ravit/Siddhu'sWorld/updated/restaurant/server/app/routes/**)",
+      "Read(//c/Users/ravit/AppData/Roaming/Code/User/workspaceStorage/vscode-chat-images/**)",
+      "Read(//c/Users/ravit/Siddhu'sWorld/updated/restaurant/server/**)"
     ],
     "deny": [],
     "ask": []

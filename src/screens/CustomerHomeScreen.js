@@ -689,71 +689,71 @@ const CustomerHomeScreen = () => {
   const handleScanPress = () => router.push("/qr-scanner");
 
   // Refresh map and data
-  const handleRefreshPress = async () => {
-    console.log("🔄 Refreshing map and restaurant data...");
-    setLoading(true);
-    setDataLoadingComplete(false);
+  // const handleRefreshPress = async () => {
+  //   console.log("🔄 Refreshing map and restaurant data...");
+  //   setLoading(true);
+  //   setDataLoadingComplete(false);
 
-    try {
-      // Re-fetch restaurants
-      const data = await getAllRestaurants();
-      console.log("🔄 Refreshed restaurant data:", data.length);
+  //   try {
+  //     // Re-fetch restaurants
+  //     const data = await getAllRestaurants();
+  //     console.log("🔄 Refreshed restaurant data:", data.length);
 
-      // Process restaurants like in initialization
-      const cache = await getGeocodingCache();
-      const restaurantsWithCoords = [];
+  //     // Process restaurants like in initialization
+  //     const cache = await getGeocodingCache();
+  //     const restaurantsWithCoords = [];
 
-      if (Array.isArray(data)) {
-        data.forEach((restaurant) => {
-          if (!restaurant || typeof restaurant !== "object") return;
+  //     if (Array.isArray(data)) {
+  //       data.forEach((restaurant) => {
+  //         if (!restaurant || typeof restaurant !== "object") return;
 
-          // Same processing as initialization
-          if (typeof restaurant.enableBuffet === "number") restaurant.enableBuffet = restaurant.enableBuffet === 1;
-          if (typeof restaurant.enableVeg === "number") restaurant.enableVeg = restaurant.enableVeg === 1;
-          if (typeof restaurant.enableNonveg === "number") restaurant.enableNonveg = restaurant.enableNonveg === 1;
-          if (typeof restaurant.enableTableService === "number") restaurant.enableTableService = restaurant.enableTableService === 1;
-          if (typeof restaurant.enableSelfService === "number") restaurant.enableSelfService = restaurant.enableSelfService === 1;
+  //         // Same processing as initialization
+  //         if (typeof restaurant.enableBuffet === "number") restaurant.enableBuffet = restaurant.enableBuffet === 1;
+  //         if (typeof restaurant.enableVeg === "number") restaurant.enableVeg = restaurant.enableVeg === 1;
+  //         if (typeof restaurant.enableNonveg === "number") restaurant.enableNonveg = restaurant.enableNonveg === 1;
+  //         if (typeof restaurant.enableTableService === "number") restaurant.enableTableService = restaurant.enableTableService === 1;
+  //         if (typeof restaurant.enableSelfService === "number") restaurant.enableSelfService = restaurant.enableSelfService === 1;
 
-          let lat = restaurant.latitude;
-          let lng = restaurant.longitude;
+  //         let lat = restaurant.latitude;
+  //         let lng = restaurant.longitude;
 
-          if (!lat && restaurant.logoImage && !isNaN(parseFloat(restaurant.logoImage))) {
-            lat = parseFloat(restaurant.logoImage);
-          }
+  //         if (!lat && restaurant.logoImage && !isNaN(parseFloat(restaurant.logoImage))) {
+  //           lat = parseFloat(restaurant.logoImage);
+  //         }
 
-          if (typeof lat === "string") lat = parseFloat(lat);
-          if (typeof lng === "string") lng = parseFloat(lng);
+  //         if (typeof lat === "string") lat = parseFloat(lat);
+  //         if (typeof lng === "string") lng = parseFloat(lng);
 
-          if (restaurant.restaurantType && restaurant.restaurantType.includes("2025")) {
-            restaurant.restaurantType = "Restaurant";
-          }
+  //         if (restaurant.restaurantType && restaurant.restaurantType.includes("2025")) {
+  //           restaurant.restaurantType = "Restaurant";
+  //         }
 
-          if (lat && lng && typeof lat === "number" && typeof lng === "number" && !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
-            restaurant.latitude = lat;
-            restaurant.longitude = lng;
-            restaurantsWithCoords.push(restaurant);
-          }
-        });
-      }
+  //         if (lat && lng && typeof lat === "number" && typeof lng === "number" && !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+  //           restaurant.latitude = lat;
+  //           restaurant.longitude = lng;
+  //           restaurantsWithCoords.push(restaurant);
+  //         }
+  //       });
+  //     }
 
-      // Filter valid coordinates
-      const cleaned = restaurantsWithCoords.filter((r) => r.latitude > 6 && r.latitude < 37 && r.longitude > 68 && r.longitude < 98);
-      setRestaurants(cleaned);
-      setDataLoadingComplete(true);
+  //     // Filter valid coordinates
+  //     const cleaned = restaurantsWithCoords.filter((r) => r.latitude > 6 && r.latitude < 37 && r.longitude > 68 && r.longitude < 98);
+  //     setRestaurants(cleaned);
+  //     setDataLoadingComplete(true);
 
-      // Refresh map region if needed
-      if (mapRef.current && userLocation) {
-        const region = calculateOptimalRegion(userLocation, cleaned);
-        mapRef.current.animateToRegion(region, 1000);
-      }
+  //     // Refresh map region if needed
+  //     if (mapRef.current && userLocation) {
+  //       const region = calculateOptimalRegion(userLocation, cleaned);
+  //       mapRef.current.animateToRegion(region, 1000);
+  //     }
 
-      console.log("✅ Map refresh completed with", cleaned.length, "restaurants");
-    } catch (error) {
-      console.error("❌ Error refreshing data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  //     console.log("✅ Map refresh completed with", cleaned.length, "restaurants");
+  //   } catch (error) {
+  //     console.error("❌ Error refreshing data:", error);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   if (Platform.OS === "web") {
     return null;
@@ -928,9 +928,9 @@ const CustomerHomeScreen = () => {
             <Image source={require("../assets/images/filter-image.png")} style={styles.filterImage} />
           </Pressable>
 
-          <Pressable style={styles.refreshButton} onPress={handleRefreshPress}>
+          {/* <Pressable style={styles.refreshButton} onPress={handleRefreshPress}>
             <MaterialIcons name="refresh" size={24} color="#6B4EFF" />
-          </Pressable>
+          </Pressable> */}
         </View>
 
         {/* Search Bar */}
@@ -1361,7 +1361,6 @@ const styles = StyleSheet.create({
     top: 10,
     zIndex: 1,
     borderRadius: 14,
-    backgroundColor: '#fff',
     padding: 2,
   },
 });
