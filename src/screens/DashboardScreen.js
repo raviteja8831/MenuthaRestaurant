@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Picker } from '@react-native-picker/picker';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useFocusEffect } from "expo-router";
-import { fetchManagerDashboard } from "../api/managerApi";
+import { fetchManagerDashboard, fetchChefActivityReport } from "../api/managerApi";
 import { updateRestaurantUpi } from "../api/updateRestaurantUpi";
 import { getPaidOrders, getPaymentPendingOrders, updateOrderStatus } from "../api/orderApi";
 import axios from "axios";

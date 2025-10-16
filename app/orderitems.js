@@ -322,17 +322,27 @@ export default function ItemsListScreen() {
       'Seafood': []
     };
 
+    // Map lowercase types to the proper grouped keys
+    const typeMapping = {
+      'veg': 'Veg',
+      'egg': 'Egg',
+      'chicken': 'Chicken',
+      'mutton': 'Mutton',
+      'seafood': 'Seafood'
+    };
+
     items.forEach((item) => {
-      const itemType = item.type || item.foodType || 'Veg'; // Default to Veg if no type
+      const itemType = item.type || item.foodType || 'veg'; // Default to veg if no type
 
       // Normalize the type to match our categories
       const normalizedType = itemType.toLowerCase();
-      if (normalizedType){
-                grouped[normalizedType].push(item);
+      const groupKey = typeMapping[normalizedType];
 
+      if (groupKey && grouped[groupKey]) {
+        grouped[groupKey].push(item);
       } else {
         // Default to Veg for unknown types
-        grouped['Ungrouped'].push(item);
+        grouped['Veg'].push(item);
       }
     });
 

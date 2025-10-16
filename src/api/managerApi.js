@@ -80,3 +80,19 @@ export const deleteUserByManager = async (userId) => {
     throw error;
   }
 };
+
+// Get chef activity report (login/logout tracking)
+export const fetchChefActivityReport = async (restaurantId, startDate = null, endDate = null, chefId = null) => {
+  try {
+    const params = {};
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
+    if (chefId) params.chefId = chefId;
+
+    const res = await api.get(`/manager/chef-activity/${restaurantId}`, { params });
+    return res.data;
+  } catch (error) {
+    showApiError(error);
+    throw error;
+  }
+};

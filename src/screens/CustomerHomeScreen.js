@@ -160,55 +160,25 @@ const CustomerHomeScreen = () => {
     };
   };
 
-  // Calculate optimal region to fit user and restaurants
+  // Calculate optimal region - centered on user with city-wide view
   const calculateOptimalRegion = (userLoc, restaurantList) => {
     if (!userLoc) {
       return {
         latitude: 17.4375,
         longitude: 78.4456,
-        latitudeDelta: 0.02,
-        longitudeDelta: 0.02,
+        latitudeDelta: 0.5,
+        longitudeDelta: 0.5,
       };
     }
 
-    if (!restaurantList || restaurantList.length === 0) {
-      return {
-        latitude: userLoc.latitude,
-        longitude: userLoc.longitude,
-        latitudeDelta: 0.02,
-        longitudeDelta: 0.02,
-      };
-    }
-
-    const validRestaurants = restaurantList.filter(
-      (r) => r && r.latitude != null && r.longitude != null && !isNaN(Number(r.latitude)) && !isNaN(Number(r.longitude))
-    );
-
-    if (validRestaurants.length === 0) {
-      return {
-        latitude: userLoc.latitude,
-        longitude: userLoc.longitude,
-        latitudeDelta: 0.05,
-        longitudeDelta: 0.05,
-      };
-    }
-
-    const allLatitudes = [userLoc.latitude, ...validRestaurants.map((r) => Number(r.latitude))];
-    const allLongitudes = [userLoc.longitude, ...validRestaurants.map((r) => Number(r.longitude))];
-
-    const minLat = Math.min(...allLatitudes);
-    const maxLat = Math.max(...allLatitudes);
-    const minLng = Math.min(...allLongitudes);
-    const maxLng = Math.max(...allLongitudes);
-
-    const latDelta = (maxLat - minLat) * 1.4;
-    const lngDelta = (maxLng - minLng) * 1.4;
-
+    // Always center on user location with city-wide coverage
+    // latitudeDelta: 0.5 ≈ 55km total (covers entire city area)
+    // This ensures all city restaurants are visible while keeping user centered
     return {
-      latitude: (minLat + maxLat) / 2,
-      longitude: (minLng + maxLng) / 2,
-      latitudeDelta: Math.max(latDelta, 0.01),
-      longitudeDelta: Math.max(lngDelta, 0.01),
+      latitude: userLoc.latitude,
+      longitude: userLoc.longitude,
+      latitudeDelta: 0.5,
+      longitudeDelta: 0.5,
     };
   };
 
@@ -342,8 +312,8 @@ const CustomerHomeScreen = () => {
           const userRegion = {
             latitude: userLoc.latitude,
             longitude: userLoc.longitude,
-            latitudeDelta: 0.02, // Tighter zoom for better visibility
-            longitudeDelta: 0.02,
+            latitudeDelta: 0.5, // City-wide view to see all restaurants
+            longitudeDelta: 0.5,
           };
           setMapRegion(userRegion);
           if (mapRef.current) {
@@ -452,52 +422,25 @@ const CustomerHomeScreen = () => {
     initializeApp();
   }, []);
 
-  // Fit map when markers are updated and map is available - works even without mapReady
+  // Keep map centered on user location when markers update
   useEffect(() => {
-    if (!mapRef.current || !dataLoadingComplete) {
-      console.log("🗺️ Skipping fitToCoordinates - map not ready or data not loaded", {
+    if (!mapRef.current || !dataLoadingComplete || !userLocation) {
+      console.log("🗺️ Skipping map update - map not ready or data not loaded", {
         mapRefExists: !!mapRef.current,
-        dataLoadingComplete
+        dataLoadingComplete,
+        userLocation: !!userLocation
       });
-      return;
-    }
-
-    if ((!markers || markers.length === 0) && !userLocation) {
-      console.log("🗺️ Skipping fitToCoordinates - no markers or user location");
       return;
     }
 
     const t = setTimeout(() => {
       try {
-        const coords = [];
-        if (markers && markers.length > 0) {
-          markers.forEach((marker) => {
-            coords.push(marker.coordinate);
-          });
-        }
+        // Always center on user location with 15km radius
+        const region = calculateOptimalRegion(userLocation, markers.map(m => m?.restaurant).filter(Boolean));
 
-        if (userLocation) coords.push({ latitude: userLocation.latitude, longitude: userLocation.longitude });
-
-        if (coords.length === 0) {
-          console.log("🗺️ No coordinates to fit");
-          return;
-        }
-
-        console.log("🗺️ Attempting fitToCoordinates with", coords.length, "points, mapReady:", mapReady);
-
-        if (typeof mapRef.current.fitToCoordinates === "function") {
-          mapRef.current.fitToCoordinates(coords, {
-            edgePadding: { top: 100, right: 100, bottom: 150, left: 100 },
-            animated: true,
-          });
-          console.log("✅ fitToCoordinates called successfully with", coords.length, "points");
-        } else if (typeof mapRef.current.animateToRegion === "function") {
-          console.log("🗺️ Using animateToRegion fallback");
-          const region = calculateOptimalRegion(userLocation || { latitude: 17.4375, longitude: 78.4456 }, markers.map(m => m.restaurant));
+        if (typeof mapRef.current.animateToRegion === "function") {
           mapRef.current.animateToRegion(region, 1000);
-          console.log("✅ animateToRegion called successfully");
-        } else {
-          console.log("❌ Neither fitToCoordinates nor animateToRegion available");
+          console.log("✅ Map centered on user location with 15km radius");
         }
       } catch (err) {
         console.warn("❌ Map coordination error:", err);
@@ -505,7 +448,7 @@ const CustomerHomeScreen = () => {
     }, 1200);
 
     return () => clearTimeout(t);
-  }, [userLocation, markers, dataLoadingComplete]); // Removed mapReady dependency
+  }, [userLocation, markers, dataLoadingComplete]);
 
   // Update markers when filtered restaurants change
   useEffect(() => {
@@ -545,7 +488,7 @@ const CustomerHomeScreen = () => {
     }
   }, [filtered, dataLoadingComplete]);
 
-  // Handle smart circle logic for search results
+  // Always show circle at user location
   useEffect(() => {
     if (!userLocation) {
       setCircleCenter(null);
@@ -553,43 +496,10 @@ const CustomerHomeScreen = () => {
       return;
     }
 
-    // If no search query or filters are active, show circle at user location
-    if (!searchQuery.trim() && selectedFilters.length === 0) {
-      setCircleCenter(userLocation);
-      setShowCircle(true);
-      return;
-    }
-
-    // If search/filter is active, check if results are within radius
-    if (filtered && filtered.length > 0) {
-      const resultsInRadius = areSearchResultsInRadius(filtered, userLocation, 5);
-
-      if (resultsInRadius) {
-        // Results are within user radius, keep circle at user location
-        setCircleCenter(userLocation);
-        setShowCircle(true);
-      } else {
-        // Results are outside radius, animate to search results center
-        const searchCenter = getSearchResultsCenter(filtered);
-        if (searchCenter) {
-          setCircleCenter(searchCenter);
-          setShowCircle(true);
-
-          // Animate map to search results region
-          if (mapRef.current) {
-            const region = calculateOptimalRegion(searchCenter, filtered);
-            mapRef.current.animateToRegion(region, 1000);
-          }
-        } else {
-          // No valid search center, just highlight results without circle
-          setShowCircle(false);
-        }
-      }
-    } else {
-      // No search results, hide circle
-      setShowCircle(false);
-    }
-  }, [searchQuery, selectedFilters, filtered, userLocation]);
+    // Always keep circle centered at user location
+    setCircleCenter(userLocation);
+    setShowCircle(true);
+  }, [userLocation]);
 
   const openGoogleMapsDirections = (restaurant) => {
     if (!restaurant || !restaurant.latitude || !restaurant.longitude) {
@@ -806,22 +716,15 @@ const CustomerHomeScreen = () => {
     console.log("🗺️ Map onMapReady callback triggered!");
     setMapReady(true);
 
-    // Try to fit coordinates immediately when map is ready
+    // Center on user location when map is ready
     setTimeout(() => {
-      if (mapRef.current && markers && markers.length > 0) {
+      if (mapRef.current && userLocation) {
         try {
-          console.log("🗺️ onMapReady - Attempting to fit coordinates with", markers.length, "markers");
-          const coords = markers.map(marker => marker.coordinate);
-          if (userLocation) coords.push(userLocation);
-          if (coords.length > 0) {
-            mapRef.current.fitToCoordinates(coords, {
-              edgePadding: { top: 100, right: 100, bottom: 150, left: 100 },
-              animated: true,
-            });
-            console.log("✅ onMapReady - fitToCoordinates called successfully");
-          }
+          const region = calculateOptimalRegion(userLocation, markers.map(m => m?.restaurant).filter(Boolean));
+          mapRef.current.animateToRegion(region, 1000);
+          console.log("✅ onMapReady - Map centered on user location");
         } catch (e) {
-          console.log("❌ onMapReady - fitToCoordinates error", e);
+          console.log("❌ onMapReady - animateToRegion error", e);
         }
       }
     }, 500);
@@ -850,11 +753,11 @@ const CustomerHomeScreen = () => {
     </>
   )}
 
-  {/* Smart Circle Logic */}
+  {/* User Location Circle - 15km radius */}
   {showCircle && circleCenter && !showFilter && (
     <Circle
       center={circleCenter}
-      radius={5000}
+      radius={15000}
       strokeColor="#BBBAEF"
       fillColor="#BBBAEF22"
       strokeWidth={2}
