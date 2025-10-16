@@ -17,10 +17,6 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 // import { userData } from "../Mock/CustomerHome";
 import { getUserReviews, getUserFavorites } from "../api/favoritesApi";
-import {
-  getUserProfile as getApiUserProfile,
-  getUserTransactions,
-} from "../api/profileApi";
 import { getUserProfile, logout } from "../services/authService";
 import { AlertService } from "../services/alert.service";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -126,19 +122,10 @@ export default function UserProfileScreen() {
         })));
       }
 
-      // Keep existing profile API calls for orders data
-      try {
-        const response = await getApiUserProfile(id);
-        console.log("Profile response:", response); // Debug log
-        setTransactionsData(response.data.orders || []);
-        setBufferOrders(response.data.bufferOrders || []);
-        setTableOrders(response.data.tableOrders || []);
-      } catch (profileError) {
-        console.log("Profile API not available, using empty data");
-        setTransactionsData([]);
-        setBufferOrders([]);
-        setTableOrders([]);
-      }
+      // Initialize empty data for transactions
+      setTransactionsData([]);
+      setBufferOrders([]);
+      setTableOrders([]);
     } catch (error) {
       console.error("Error fetching profile:", error);
       AlertService.error("Error fetching profile data");

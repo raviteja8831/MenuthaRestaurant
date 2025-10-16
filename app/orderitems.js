@@ -501,7 +501,7 @@ export default function ItemsListScreen() {
 const newOrderItemsStyles = StyleSheet.create({
   scrollView: {
     flex: 1,
-    backgroundColor: '#BEBFFF', // Light purple background matching screenshot
+    backgroundColor: 'transparent', // Transparent to show gradient background
   },
   typeSection: {
     marginBottom: 20,
