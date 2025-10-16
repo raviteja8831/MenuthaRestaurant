@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Picker } from '@react-native-picker/picker';
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { router, useFocusEffect } from "expo-router";
+import { router } from "expo-router";
 import { fetchManagerDashboard, fetchChefActivityReport } from "../api/managerApi";
 import { updateRestaurantUpi } from "../api/updateRestaurantUpi";
 import { getPaidOrders, getPaymentPendingOrders, updateOrderStatus } from "../api/orderApi";
@@ -95,6 +95,7 @@ export default function ManagerDashboardScreenNew() {
             phone: user.phone || "",
             restaurant: user.restaurant || null,
           });
+          setUpi(user.restaurant.upi);
         }
         const restaurantId = user?.restaurant.id;
         const dash = await fetchManagerDashboard(restaurantId, token, salesDateFilter);
@@ -244,19 +245,19 @@ export default function ManagerDashboardScreenNew() {
   }, [showPayModal]);
 
   // Handle hardware back button to prevent going back to login/index
-  useFocusEffect(
-    React.useCallback(() => {
-      const onBackPress = () => {
-        // Return true to prevent default back behavior (going back)
-        // This keeps user on dashboard
-        return true;
-      };
+  // useFocusEffect(
+  //   React.useCallback(() => {
+  //     const onBackPress = () => {
+  //       // Return true to prevent default back behavior (going back)
+  //       // This keeps user on dashboard
+  //       return true;
+  //     };
 
-      BackHandler.addEventListener('hardwareBackPress', onBackPress);
+  //     BackHandler.addEventListener('hardwareBackPress', onBackPress);
 
-      return () => BackHandler.removeEventListener('hardwareBackPress', onBackPress);
-    }, [])
-  );
+  //     return () => BackHandler.removeEventListener('hardwareBackPress', onBackPress);
+  //   }, [])
+  // );
 
   return (
     <View style={styles.container}>
