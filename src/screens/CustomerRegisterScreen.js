@@ -22,6 +22,7 @@ import { router, useNavigation, useRouter } from "expo-router";
 const { width, height } = Dimensions.get("window");
 
 export default function CustomerRegisterScreen() {
+  const router = useRouter(); // Move router hook to component level
   const [firstname, setFirstname] = useState("");
   const [lastname, setLastname] = useState("");
   const [phone, setPhone] = useState("");
@@ -94,12 +95,27 @@ export default function CustomerRegisterScreen() {
         profileImage: profileImageUrl,
       });
 
-      if (response) {
-        Alert.alert("Success", MESSAGES.registrationSuccess);
-        useRouter().push("/Customer-Login");
-      }
+      // Registration successful
+      Alert.alert("Success", MESSAGES.registrationSuccess, [
+        {
+          text: "OK",
+          onPress: () => router.push("/Customer-Login")
+        }
+      ]);
     } catch (error) {
-      AlertService.error(error);
+      console.error("Registration error:", error);
+      // Improved error handling
+      let errorMessage = "Something went wrong. Please try again.";
+
+      if (error?.message) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      } else if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+
+      AlertService.error({ message: errorMessage });
     } finally {
       setLoading(false);
     }

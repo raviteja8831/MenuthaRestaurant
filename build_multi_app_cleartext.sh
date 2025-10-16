@@ -188,17 +188,46 @@ build_app() {
   print_success "$APP_TYPE build complete."
 }
 
+# --- Create adaptive icon with padding ---
+create_adaptive_icon() {
+  local SOURCE_LOGO=$1
+  local OUTPUT_NAME=$2
+
+  print_status "Creating adaptive icon with safe zone padding for $OUTPUT_NAME..."
+
+  # Create a padded version for adaptive icon (66% of original size, centered)
+  # This ensures the logo doesn't get cut off by the circular/rounded mask
+  local ADAPTIVE_ICON="./src/assets/${OUTPUT_NAME}_adaptive.png"
+
+  if command -v convert &>/dev/null; then
+    # Using ImageMagick to create padded icon
+    # Resize logo to 66% and center it on 1024x1024 canvas with white background
+    convert "$SOURCE_LOGO" -resize 66% -gravity center -background white -extent 1024x1024 "$ADAPTIVE_ICON"
+    print_success "Adaptive icon created: $ADAPTIVE_ICON"
+  else
+    # Fallback: just copy the original (will still work but may be cut off)
+    cp "$SOURCE_LOGO" "$ADAPTIVE_ICON"
+    print_status "Warning: ImageMagick not found, using original logo (may be cut off)"
+  fi
+
+  echo "$ADAPTIVE_ICON"
+}
+
 # --- app.json update ---
 update_app_json() {
   local NAME=$1; local PKG=$2; local LOGO=$3
   [ -f app.json ] && cp app.json app.json.backup
+
+  # Create adaptive icon with padding
+  local ADAPTIVE_ICON=$(create_adaptive_icon "$LOGO" "${NAME,,}")
+
   if command -v jq &>/dev/null; then
-    jq ".expo.name=\"$NAME\" | .expo.android.package=\"$PKG\" | .expo.ios.bundleIdentifier=\"$PKG\" | .expo.icon=\"$LOGO\" | .expo.android.adaptiveIcon.foregroundImage=\"$LOGO\" | .expo.android.adaptiveIcon.backgroundColor=\"#FFFFFF\" | .expo.plugins=[\"expo-router\"]" app.json > app.json.tmp && mv app.json.tmp app.json
+    jq ".expo.name=\"$NAME\" | .expo.android.package=\"$PKG\" | .expo.ios.bundleIdentifier=\"$PKG\" | .expo.icon=\"$LOGO\" | .expo.android.adaptiveIcon.foregroundImage=\"$ADAPTIVE_ICON\" | .expo.android.adaptiveIcon.backgroundColor=\"#FFFFFF\" | .expo.plugins=[\"expo-router\"]" app.json > app.json.tmp && mv app.json.tmp app.json
   else
     sed -i "s/\"name\": \".*\"/\"name\": \"$NAME\"/" app.json
     sed -i "s/\"package\": \".*\"/\"package\": \"$PKG\"/" app.json
     sed -i "s|\"icon\": \".*\"|\"icon\": \"$LOGO\"|" app.json
-    sed -i "s|\"foregroundImage\": \".*\"|\"foregroundImage\": \"$LOGO\"|" app.json
+    sed -i "s|\"foregroundImage\": \".*\"|\"foregroundImage\": \"$ADAPTIVE_ICON\"|" app.json
     sed -i "s|\"backgroundColor\": \".*\"|\"backgroundColor\": \"#FFFFFF\"|" app.json
   fi
 }
@@ -317,6 +346,17 @@ main() {
       build_app "RESTAURANT APP (MENUVA)" "menuva-release"
 
       restore_app_json
+
+      # Create zip archive of all builds
+      print_status "Creating zip archive of all builds..."
+      zip -r builds-archive.zip builds/
+      print_success "Build archive created: builds-archive.zip"
+
+      # Remove individual build files from builds directory
+      print_status "Cleaning up individual build files..."
+      rm -rf builds/
+      print_success "Individual build files removed, only builds-archive.zip remains"
+
       print_header "✅ All builds completed successfully with AWS Remote + Camera + Cleartext"
       ;;
 

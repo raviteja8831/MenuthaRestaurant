@@ -20,7 +20,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "\u001b[0;34m[INFO]\u001b[0m Creating adaptive icon with safe zone padding for menutha...\n\u001b[0;32m[SUCCESS]\u001b[0m Adaptive icon created: ./src/assets/menutha_adaptive.png\n./src/assets/menutha_adaptive.png",
+        "foregroundImage": "./src/assets/menutha.png",
         "backgroundColor": "#FFFFFF"
       },
       "config": {
