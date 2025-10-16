@@ -215,7 +215,7 @@ export default function OrderSummaryScreen() {
 
       // After successful payment initiation, navigate back to customer home
       setTimeout(() => {
-        router.push({ pathname: "/customer-home" });
+        router.push({ pathname: "/user-profile" });
       }, 2000);
     } catch (err) {
       console.error("Failed to complete payment:", err);

@@ -45,7 +45,7 @@ export const checkFavorite = async (userId, restaurantId) => {
 // Also add getUserReviews API function
 export const getUserReviews = async (userId) => {
   try {
-    const res = await api.get(`/api/reviews/user?userId=${userId}`);
+    const res = await api.get(`/reviews/user?userId=${userId}`);
     return res.data;
   } catch (error) {
     showApiError(error);

@@ -234,12 +234,68 @@ export default function UserProfileScreen() {
 
   const renderTransactionCard = (item) => (
     <View style={styles.transactionCard}>
-      <View style={styles.cardHeader}>
-        <Text style={styles.hotelName}>{item.restaurantName}</Text>
-        <Text style={styles.members}>{item.members}</Text>
-        <Text style={styles.totalAmount}>₹{item.totalAmount}/-</Text>
+      {/* Hotel Header with location pin and details */}
+      <View style={styles.hotelHeaderSection}>
+        <View style={styles.locationContainer}>
+          <MaterialIcons name="location-on" size={20} color="#333" />
+        </View>
+        <View style={styles.hotelDetailsContainer}>
+          <Text style={styles.hotelName}>{item.restaurantName}</Text>
+          <Text style={styles.hotelLocation}>{item.restaurantAddress || "Restaurant Location"}</Text>
+          <Text style={styles.orderDate}>
+            (on {item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB')})
+          </Text>
+        </View>
+        <View style={styles.timeContainer}>
+          <Text style={styles.orderTime}>
+            {item.createdAt ? new Date(item.createdAt).toLocaleTimeString('en-US', {
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true
+            }) : '9:30 PM'}
+          </Text>
+        </View>
+      </View>
 
-        {/* Order Status Badge */}
+      {/* Type Differentiator */}
+      <View style={styles.orderTypeContainer}>
+        <Text style={styles.orderTypeText}>🍽️ {item.orderType || 'Food Order'}</Text>
+      </View>
+
+      {/* Members and Total Section */}
+      <View style={styles.membersTotalSection}>
+        <Text style={styles.members}>{item.members || "Members not specified"}</Text>
+        <Text style={styles.totalAmount}>₹{item.totalAmount}/-</Text>
+      </View>
+
+      {/* Orders Section */}
+      <View style={styles.ordersSection}>
+        <Text style={styles.ordersTitle}>Orders</Text>
+
+        {item.items && item.items.length > 0 ? (
+          <>
+            {item.items.map((order, idx) => (
+              <View key={idx} style={styles.orderRow}>
+                <Text style={styles.itemName}>{order.name}</Text>
+                <Text style={styles.itemQuantity}>{order.quantity}</Text>
+                <Text style={styles.itemPrice}>{order.price}</Text>
+                <Text style={styles.itemTotal}>{order.total}</Text>
+              </View>
+            ))}
+
+            {/* Total Row */}
+            <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>Total</Text>
+              <Text style={styles.finalTotal}>{item.totalAmount}</Text>
+            </View>
+          </>
+        ) : (
+          <Text style={styles.noOrders}>No Orders</Text>
+        )}
+      </View>
+
+      {/* Order Status Badge */}
+      {item.status && (
         <View style={[
           styles.statusBadge,
           {
@@ -248,7 +304,7 @@ export default function UserProfileScreen() {
               item.status === 'PREPARING' ? '#FF9800' :
               item.status === 'PREPARED' ? '#2AF441' :
               item.status === 'SERVED' ? '#00BCD4' :
-              item.status === 'PAID' ? '#2196F3' :
+              item.status === 'PAYMENT PENDING' ? '#2196F3' :
               item.status === 'COMPLETED' ? '#4CAF50' : '#9E9E9E'
           }
         ]}>
@@ -257,78 +313,130 @@ export default function UserProfileScreen() {
              item.status === 'PREPARING' ? 'Preparing' :
              item.status === 'PREPARED' ? 'Prepared' :
              item.status === 'SERVED' ? 'Served' :
-             item.status === 'PAID' ? 'Paid' :
+             item.status === 'PAYMENT PENDING' ? 'Payment pending' :
              item.status === 'COMPLETED' ? 'Completed' : 'Unknown'}
           </Text>
         </View>
-      </View>
+      )}
 
-      <View style={styles.ordersSection}>
-        {renderTransactionItems(item.items)}
-
-        <View style={styles.tableFooter}>
-          <Text style={[styles.cell, styles.orderColumn]}>Total</Text>
-          <Text style={[styles.cell, styles.totalColumn]}>
-            {item.totalAmount}
-          </Text>
-        </View>
-
-        {/* Pay Button - Show if order is PLACED, PREPARING, PREPARED, or SERVED */}
-        {(item.status === 'PLACED' || item.status === 'PREPARING' || item.status === 'PREPARED' || item.status === 'SERVED') && (
-          <Pressable
-            style={styles.payButton}
-            onPress={() => handlePayOrder(item)}
-          >
-            <Text style={styles.payButtonText}>Pay Now</Text>
-          </Pressable>
-        )}
-      </View>
+      {/* Pay Button - Show if order is PLACED, PREPARING, PREPARED, or SERVED */}
+      {item.status && (item.status === 'PLACED' || item.status === 'PREPARING' || item.status === 'PREPARED' || item.status === 'SERVED') && (
+        <Pressable
+          style={styles.payButton}
+          onPress={() => handlePayOrder(item)}
+        >
+          <Text style={styles.payButtonText}>Pay Now</Text>
+        </Pressable>
+      )}
     </View>
   );
-  const renderBuffetData = (item) => (
+  const renderBuffetBookingCard = (item) => (
     <View style={styles.transactionCard}>
-      <View style={styles.cardHeader}>
-        <Text style={styles.hotelName}>{item?.restaurant?.name}</Text>
-
-        <Text style={styles.members}>{item?.buffet?.name}</Text>
-        <Text style={styles.members}>Persons: {item?.persons}</Text>
-        <Text style={styles.totalAmount}>
-          {" "}
-          Per Person : ₹{item?.buffet?.price}/-
-        </Text>
-      </View>
-
-      <View style={styles.ordersSection}>
-        {/* {renderTransactionItems(item.items)} */}
-
-        <View style={styles.tableFooter}>
-          <Text style={[styles.cell, styles.orderColumn]}>Total</Text>
-          <Text style={[styles.cell, styles.totalColumn]}>
-            {item?.buffet?.price * item?.persons}
+      {/* Hotel Header with location pin and details */}
+      <View style={styles.hotelHeaderSection}>
+        <View style={styles.locationContainer}>
+          <MaterialIcons name="location-on" size={20} color="#333" />
+        </View>
+        <View style={styles.hotelDetailsContainer}>
+          <Text style={styles.hotelName}>{item?.restaurant?.name}</Text>
+          <Text style={styles.hotelLocation}>{item?.restaurant?.address || "Restaurant Location"}</Text>
+          <Text style={styles.orderDate}>
+            (on {item?.createdAt ? new Date(item.createdAt).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB')})
+          </Text>
+        </View>
+        <View style={styles.timeContainer}>
+          <Text style={styles.orderTime}>
+            {item?.createdAt ? new Date(item.createdAt).toLocaleTimeString('en-US', {
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true
+            }) : '10:00 AM'}
           </Text>
         </View>
       </View>
+
+      {/* Type Differentiator */}
+      <View style={styles.orderTypeContainer}>
+        <Text style={styles.orderTypeText}>🍽️ Buffet Booking</Text>
+      </View>
+
+      {/* Members and Total Section */}
+      <View style={styles.membersTotalSection}>
+        <Text style={styles.members}>{item?.buffet?.name} - {item?.persons} Persons</Text>
+        <Text style={styles.totalAmount}>₹{item?.buffet?.price * item?.persons}/-</Text>
+      </View>
+
+      {/* Orders Section */}
+      <View style={styles.ordersSection}>
+        <Text style={styles.ordersTitle}>Orders</Text>
+
+        <View style={styles.orderRow}>
+          <Text style={styles.itemName}>{item?.buffet?.name}</Text>
+          <Text style={styles.itemQuantity}>{item?.persons}</Text>
+          <Text style={styles.itemPrice}>{item?.buffet?.price}</Text>
+          <Text style={styles.itemTotal}>{item?.buffet?.price * item?.persons}</Text>
+        </View>
+
+        {/* Total Row */}
+        <View style={styles.totalRow}>
+          <Text style={styles.totalLabel}>Total</Text>
+          <Text style={styles.finalTotal}>{item?.buffet?.price * item?.persons}</Text>
+        </View>
+      </View>
     </View>
   );
-  const renderTableData = (item) => (
-    <View style={styles.transactionCard}>
-      <View style={styles.cardHeader}>
-        <Text style={styles.hotelName}>{item?.restaurant?.name}</Text>
 
+  const renderTableBookingCard = (item) => (
+    <View style={styles.transactionCard}>
+      {/* Hotel Header with location pin and details */}
+      <View style={styles.hotelHeaderSection}>
+        <View style={styles.locationContainer}>
+          <MaterialIcons name="location-on" size={20} color="#333" />
+        </View>
+        <View style={styles.hotelDetailsContainer}>
+          <Text style={styles.hotelName}>{item?.restaurant?.name}</Text>
+          <Text style={styles.hotelLocation}>{item?.restaurant?.address || "Restaurant Location"}</Text>
+          <Text style={styles.orderDate}>
+            (on {item?.starttime ? new Date(item.starttime).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB')})
+          </Text>
+        </View>
+        <View style={styles.timeContainer}>
+          <Text style={styles.orderTime}>
+            {item?.starttime ? new Date(item.starttime).toLocaleTimeString('en-US', {
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true
+            }) : '2:15 PM'}
+          </Text>
+        </View>
+      </View>
+
+      {/* Type Differentiator */}
+      <View style={styles.orderTypeContainer}>
+        <Text style={styles.orderTypeText}>🪑 Table Booking</Text>
+      </View>
+
+      {/* Members and Total Section */}
+      <View style={styles.membersTotalSection}>
         <Text style={styles.members}>{item?.table?.name}</Text>
-        <Text style={styles.members}>
-          Date: {new Date(item?.starttime).toLocaleDateString()}
-        </Text>
-        <Text style={styles.members}>
-          Time: {new Date(item?.starttime).toLocaleTimeString()}
-        </Text>
-        <Text style={styles.totalAmount}> Per Table : ₹{item?.amount}/-</Text>
+        <Text style={styles.totalAmount}>₹{item?.amount}/-</Text>
       </View>
 
+      {/* Orders Section */}
       <View style={styles.ordersSection}>
-        <View style={styles.tableFooter}>
-          <Text style={[styles.cell, styles.orderColumn]}>Total</Text>
-          <Text style={[styles.cell, styles.totalColumn]}>{item?.amount}</Text>
+        <Text style={styles.ordersTitle}>Orders</Text>
+
+        <View style={styles.orderRow}>
+          <Text style={styles.itemName}>{item?.table?.name}</Text>
+          <Text style={styles.itemQuantity}>1</Text>
+          <Text style={styles.itemPrice}>{item?.amount}</Text>
+          <Text style={styles.itemTotal}>{item?.amount}</Text>
+        </View>
+
+        {/* Total Row */}
+        <View style={styles.totalRow}>
+          <Text style={styles.totalLabel}>Total</Text>
+          <Text style={styles.finalTotal}>{item?.amount}</Text>
         </View>
       </View>
     </View>
@@ -336,113 +444,35 @@ export default function UserProfileScreen() {
 
   const renderTransactionsTab = () => (
     <ScrollView style={styles.tabContent}>
-      {/* Regular Orders Accordion */}
-      <AccordionHeader
-        title="Orders"
-        isExpanded={expandedSection === "orders"}
-        onPress={() =>
-          setExpandedSection(expandedSection === "orders" ? "" : "orders")
-        }
-      />
-      {expandedSection === "orders" && (
-        <View style={styles.accordionContent}>
-          {transactionsData.map((item, index) => (
-            <View key={item.id} style={styles.transactionCard}>
-              {/* Header */}
-              <View style={styles.cardHeader}>
-                <Text style={styles.hotelName}>{item.restaurantName}</Text>
-                <Text style={styles.members}>{item.members}</Text>
-                <Text style={styles.totalAmount}>₹{item.totalAmount}/-</Text>
-              </View>
-
-              {/* Orders Section */}
-              <View style={styles.ordersSection}>
-                <Text style={styles.ordersTitle}>Orders</Text>
-
-                {item.items && item.items.length > 0 ? (
-                  <>
-                    {item.items.map((order, idx) => (
-                      <View key={idx} style={styles.tableRow}>
-                        <Text style={[styles.cell, styles.orderColumn]}>
-                          {order.name}
-                        </Text>
-                        <Text style={[styles.cell, styles.qtyColumn]}>
-                          {order.quantity}
-                        </Text>
-                        <Text style={[styles.cell, styles.priceColumn]}>
-                          {order.price}
-                        </Text>
-                        <Text style={[styles.cell, styles.totalColumn]}>
-                          {order.total}
-                        </Text>
-                      </View>
-                    ))}
-
-                    {/* Footer Total */}
-                    <View style={styles.tableFooter}>
-                      <Text style={[styles.cell, styles.orderColumn]}>
-                        Total
-                      </Text>
-                      <Text style={[styles.cell, styles.totalColumn]}>
-                        {item.totalAmount}
-                      </Text>
-                    </View>
-                  </>
-                ) : (
-                  <Text style={styles.noOrders}>No Orders</Text>
-                )}
-              </View>
-
-              {/* Separator */}
-              {index < transactionsData.length - 1 && (
-                <View style={styles.separator} />
-              )}
-            </View>
-          ))}
+      {/* Regular Orders */}
+      {transactionsData.map((item, index) => (
+        <View key={`order-${item.id}`}>
+          {renderTransactionCard({...item, orderType: 'Regular Order'})}
+          {(index < transactionsData.length - 1 || tableOrders.length > 0 || bufferOrders.length > 0) && (
+            <View style={styles.separator} />
+          )}
         </View>
-      )}
+      ))}
 
-      {/* Table Bookings Accordion */}
-      <AccordionHeader
-        title="Table Bookings"
-        isExpanded={expandedSection === "tables"}
-        onPress={() =>
-          setExpandedSection(expandedSection === "tables" ? "" : "tables")
-        }
-      />
-      {expandedSection === "tables" && (
-        <View style={styles.accordionContent}>
-          {tableOrders.map((item, index) => (
-            <View key={item.id}>
-              {renderTableData(item)}
-              {index < tableOrders.length - 1 && (
-                <View style={styles.separator} />
-              )}
-            </View>
-          ))}
+      {/* Table Bookings */}
+      {tableOrders.map((item, index) => (
+        <View key={`table-${item.id}`}>
+          {renderTableBookingCard(item)}
+          {(index < tableOrders.length - 1 || bufferOrders.length > 0) && (
+            <View style={styles.separator} />
+          )}
         </View>
-      )}
+      ))}
 
-      {/* Buffet Bookings Accordion */}
-      <AccordionHeader
-        title="Buffet Bookings"
-        isExpanded={expandedSection === "buffet"}
-        onPress={() =>
-          setExpandedSection(expandedSection === "buffet" ? "" : "buffet")
-        }
-      />
-      {expandedSection === "buffet" && (
-        <View style={styles.accordionContent}>
-          {bufferOrders.map((item, index) => (
-            <View key={item.id}>
-              {renderBuffetData(item)}
-              {index < bufferOrders.length - 1 && (
-                <View style={styles.separator} />
-              )}
-            </View>
-          ))}
+      {/* Buffet Bookings */}
+      {bufferOrders.map((item, index) => (
+        <View key={`buffet-${item.id}`}>
+          {renderBuffetBookingCard(item)}
+          {index < bufferOrders.length - 1 && (
+            <View style={styles.separator} />
+          )}
         </View>
-      )}
+      ))}
     </ScrollView>
   );
 
@@ -703,12 +733,12 @@ const styles = StyleSheet.create({
   profileImage: {
     width: 145,
     height: 145,
-    borderRadius: 67,
+    borderRadius: 72.5, // Perfect circle (width/2)
   },
   profileImagePlaceholder: {
     width: 145,
     height: 145,
-    borderRadius: 40,
+    borderRadius: 72.5, // Perfect circle to match the profile image
     backgroundColor: "#D0D0D0",
     justifyContent: "center",
     alignItems: "center",
@@ -882,12 +912,117 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
 
-  // New styles for order status and pay button
+  // New styles for updated design
+  transactionCard: {
+    backgroundColor: '#CCCCFF',
+    borderRadius: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#333',
+    overflow: 'hidden',
+  },
+  hotelHeaderSection: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: 12,
+    backgroundColor: '#CCCCFF',
+  },
+  locationContainer: {
+    marginRight: 8,
+    marginTop: 2,
+  },
+  hotelDetailsContainer: {
+    flex: 1,
+  },
+  hotelLocation: {
+    fontSize: 12,
+    color: '#333',
+    marginBottom: 2,
+  },
+  orderDate: {
+    fontSize: 12,
+    color: '#333',
+  },
+  timeContainer: {
+    alignItems: 'flex-end',
+  },
+  orderTime: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  orderTypeContainer: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    backgroundColor: '#BBBAEF',
+  },
+  orderTypeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  membersTotalSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#CCCCFF',
+  },
+  orderRow: {
+    flexDirection: 'row',
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+  },
+  itemName: {
+    flex: 2,
+    fontSize: 14,
+    color: '#333',
+  },
+  itemQuantity: {
+    flex: 1,
+    fontSize: 14,
+    color: '#333',
+    textAlign: 'center',
+  },
+  itemPrice: {
+    flex: 1,
+    fontSize: 14,
+    color: '#333',
+    textAlign: 'center',
+  },
+  itemTotal: {
+    flex: 1,
+    fontSize: 14,
+    color: '#333',
+    textAlign: 'center',
+  },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#333',
+    backgroundColor: '#BBBAEF',
+  },
+  totalLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#333',
+  },
+  finalTotal: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#333',
+  },
   statusBadge: {
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
     marginTop: 4,
+    alignSelf: 'flex-start',
+    marginHorizontal: 12,
   },
   statusText: {
     color: '#FFFFFF',
@@ -902,6 +1037,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignSelf: 'center',
     marginTop: 10,
+    marginBottom: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
