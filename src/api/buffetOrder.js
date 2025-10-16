@@ -30,3 +30,25 @@ export const createBuffetOrder = async (orderData) => {
     throw error;
   }
 };
+
+export const getPendingBuffetOrders = async (restaurantId) => {
+  try {
+    const url = BUFFET_API.GET_PENDING_ORDERS.replace(":restaurantId", restaurantId);
+    const res = await api.get(url);
+    return res.data;
+  } catch (error) {
+    showApiError(error);
+    throw error;
+  }
+};
+
+export const verifyBuffetPayment = async (orderId) => {
+  try {
+    const url = BUFFET_API.VERIFY_PAYMENT.replace(":id", orderId);
+    const res = await api.put(url);
+    return res.data;
+  } catch (error) {
+    showApiError(error);
+    throw error;
+  }
+};

@@ -7,4 +7,6 @@ export const TABLE_BOOKING_API = {
   DELETE: "/tablebookings/:id", // DELETE
   GET_RESTAURANT_SUMMARY: "/tablebookings/restaurant/:restaurantId/summary", // GET
   GET_AVAILABLE_TABLES: "/tablebookings/available/:restaurantId/:userId", // GET
+  GET_PENDING_BOOKINGS: "/tablebookings/pending/:restaurantId", // GET
+  VERIFY_PAYMENT: "/tablebookings/:id/verify-payment", // PUT
 };

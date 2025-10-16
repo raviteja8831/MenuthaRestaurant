@@ -220,6 +220,7 @@ import { createBuffetOrder } from "../api/buffetOrder";
 import { getRestaurantById } from "../api/restaurantApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getBuffetDetails } from "../api/buffetApi";
+import { useUserData } from "../services/getUserData";
 
 // UPI Payment imports
 import UpiService from "../services/UpiService";
@@ -228,37 +229,22 @@ const BuffetTimeScreen = () => {
   const [persons, setPersons] = React.useState(0);
   const [currentBuffet, setcurrentBuffet] = React.useState([]);
   const [selectedBuffet, setSelectedBuffet] = React.useState(null);
-  const [userId, setUserId] = React.useState(null);
+  const { userId, error } = useUserData();
   const params = useLocalSearchParams();
 
   // UPI Payment states
   const [paying, setPaying] = React.useState(false);
   const [upiUrl, setUpiUrl] = React.useState("");
-  // const currentBuffet = buffetData[0];
-  useEffect(() => {
-    const initializeProfile = async () => {
-      try {
-        const userProfile = await AsyncStorage.getItem("user_profile");
-        if (userProfile) {
-          const user = JSON.parse(userProfile);
-          console.log("User Profile:", user); // Debug log
-          setUserId(user.id);
-          // Only fetch profile data if we have a userId
-          if (user.id) {
-            await fetchProfileData(user.id);
-          }
-        } else {
-          console.log("No user profile found");
-          router.push("/customer-login");
-        }
-      } catch (error) {
-        console.error("Error initializing profile:", error);
-        // AlertService.error("Error loading profile");
-      }
-    };
 
-    initializeProfile();
-  }, []);
+  if (error) {
+    return (
+      <SafeAreaView style={buffetsimescreenstyles.container}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Text>Error loading user data. Please try again.</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
   const handleBack = () => {
     router.push({
       pathname: "/menu-list",
@@ -271,10 +257,11 @@ const BuffetTimeScreen = () => {
   };
   useFocusEffect(
     React.useCallback(() => {
+      console.log("BuffetTimeScreen focused, User ID:", userId, "Hotel ID:", params.hotelId);
       const fetchRestaurantData = async () => {
         try {
-          if (params.hotelId) {
-            const data = await getBuffetDetails(params.hotelId);
+          if (params.hotelId && userId) {
+            const data = await getBuffetDetails(params.hotelId, userId);
             console.log("Fetched restaurant data:", data);
             // Filter only active buffets
             const activeBuffets = Array.isArray(data)
@@ -284,12 +271,14 @@ const BuffetTimeScreen = () => {
           }
         } catch (error) {
           console.error("Error fetching restaurant details:", error);
-          // Alert.alert("Error", "Failed to load restaurant details");
+          Alert.alert("Error", "Failed to load restaurant details");
         }
       };
 
-      fetchRestaurantData();
-    }, [params.hotelId])
+      if (userId) {
+        fetchRestaurantData();
+      }
+    }, [params.hotelId, userId])
   );
   const handleCreateBuffetOrder = async () => {
     if (!selectedBuffet) {

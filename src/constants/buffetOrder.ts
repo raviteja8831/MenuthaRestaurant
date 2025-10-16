@@ -8,6 +8,8 @@ export const BUFFET_API = {
   BOOKINGS: "/buffet/bookings",
   AVAILABILITY: "/buffet/availability",
   PRICING: "/buffet/pricing",
+  GET_PENDING_ORDERS: "/buffet/pending/:restaurantId",
+  VERIFY_PAYMENT: "/buffet/:id/verify-payment",
 };
 
 /* // Base buffet interface

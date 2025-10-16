@@ -82,3 +82,28 @@ export const getRestaurantTableBookingSummary = async (restaurantId) => {
     throw error;
   }
 };
+
+export const getPendingBookings = async (restaurantId) => {
+  try {
+    const url = TABLE_BOOKING_API.GET_PENDING_BOOKINGS.replace(
+      ":restaurantId",
+      restaurantId
+    );
+    const res = await api.get(url);
+    return res.data;
+  } catch (error) {
+    showApiError(error);
+    throw error;
+  }
+};
+
+export const verifyPayment = async (bookingId) => {
+  try {
+    const url = TABLE_BOOKING_API.VERIFY_PAYMENT.replace(":id", bookingId);
+    const res = await api.put(url);
+    return res.data;
+  } catch (error) {
+    showApiError(error);
+    throw error;
+  }
+};

@@ -347,17 +347,8 @@ main() {
 
       restore_app_json
 
-      # Create zip archive of all builds
-      print_status "Creating zip archive of all builds..."
-      zip -r builds-archive.zip builds/
-      print_success "Build archive created: builds-archive.zip"
-
-      # Remove individual build files from builds directory
-      print_status "Cleaning up individual build files..."
-      rm -rf builds/
-      print_success "Individual build files removed, only builds-archive.zip remains"
-
       print_header "✅ All builds completed successfully with AWS Remote + Camera + Cleartext"
+      print_status "Individual APK and AAB files available in builds/ folder"
       ;;
 
     *)
