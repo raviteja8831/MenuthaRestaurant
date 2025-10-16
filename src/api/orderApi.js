@@ -103,3 +103,15 @@ export const getPaidOrders = async (restaurantId) => {
     throw error;
   }
 };
+
+export const getPaymentPendingOrders = async (restaurantId) => {
+  try {
+    const res = await api.get(
+      `${API_BASE_URL}/orders/payment-pending/${restaurantId}`
+    );
+    return res.data;
+  } catch (error) {
+    showApiError(error);
+    throw error;
+  }
+};

@@ -198,21 +198,22 @@ export default function OrderSummaryScreen() {
         AlertService.info("Scan QR code to pay with any UPI app");
       }
 
-      // Update order status to PAID
+      // Update order status to PAYMENT_PENDING (awaiting manager verification)
       const updatedItems = orderItems.map((it) => ({ id: it.id, quantity: it.quantity }));
       const removedItems = [];
       const payload = {
         totalAmount: totalAmount,
         updatedItems,
         removedItems,
-        status: "PAID",
+        status: "PAYMENT_PENDING",
+        transactionRef: response?.refId || "TXN" + Date.now(),
       };
 
       const res = await updateOrderStatus(params.orderID, payload);
       console.log("Order update response:", res);
-      AlertService.success("Payment completed successfully! Order marked as PAID.");
+      AlertService.success("Payment initiated! Your order is pending verification by the restaurant.");
 
-      // After successful payment, navigate back to customer home
+      // After successful payment initiation, navigate back to customer home
       setTimeout(() => {
         router.push({ pathname: "/customer-home" });
       }, 2000);
