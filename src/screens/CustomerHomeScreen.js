@@ -983,7 +983,7 @@ const CustomerHomeScreen = () => {
       </View>
 
       {/* Results Counter */}
-      {!showFilter && (
+      {/* {!showFilter && (
         <View style={styles.resultsCounter}>
           <Text style={styles.resultsText}>
             {loading
@@ -991,7 +991,7 @@ const CustomerHomeScreen = () => {
               : `${filtered.length} restaurant${filtered.length !== 1 ? "s" : ""} found`}
           </Text>
         </View>
-      )}
+      )} */}
 
       {/* Filter Modal */}
       <FilterModal
