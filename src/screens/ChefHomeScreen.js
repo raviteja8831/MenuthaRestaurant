@@ -354,11 +354,12 @@ export default function ChefHomeScreen() {
                       />
                     </Pressable>
                   </View>
-                )
-              );
+                 )
+              
             })
-          )
-        )}
+})
+        )
+      }
       </View>
     </View>
   );
