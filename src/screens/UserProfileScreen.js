@@ -16,7 +16,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 // import { userData } from "../Mock/CustomerHome";
-import { getUserReviews, getUserFavorites } from "../api/favoritesApi";
+import { getUserReviews, getUserFavorites, getRecentOrders } from "../api/favoritesApi";
 import { getUserProfile, logout } from "../services/authService";
 import { AlertService } from "../services/alert.service";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -96,6 +96,34 @@ export default function UserProfileScreen() {
         });
       }
 
+      // Fetch recent orders from API
+      const ordersResponse = await getRecentOrders(id);
+      console.log("Recent orders API response:", ordersResponse);
+
+      if (ordersResponse && ordersResponse.data) {
+        const orders = ordersResponse.data;
+
+        // Map orders to transaction format
+        if (orders && orders.length > 0) {
+          setTransactionsData(orders.map(order => ({
+            id: order.id,
+            restaurantId: order.restaurantId,
+            restaurantName: order.restaurantName,
+            restaurantAddress: order.restaurantAddress,
+            status: order.status,
+            totalAmount: order.totalAmount,
+            createdAt: order.date + " " + order.time,
+            items: order.items || []
+          })));
+        } else {
+          setTransactionsData([]);
+        }
+
+        // Set table bookings and buffet orders
+        setTableOrders(ordersResponse.tableBookings || []);
+        setBufferOrders(ordersResponse.buffetOrders || []);
+      }
+
       // Fetch user reviews
       const reviewsResponse = await getUserReviews(id);
       if (reviewsResponse && reviewsResponse.data) {
@@ -121,11 +149,6 @@ export default function UserProfileScreen() {
           addedAt: favorite.createdAt
         })));
       }
-
-      // Initialize empty data for transactions
-      setTransactionsData([]);
-      setBufferOrders([]);
-      setTableOrders([]);
     } catch (error) {
       console.error("Error fetching profile:", error);
       AlertService.error("Error fetching profile data");
@@ -306,8 +329,8 @@ export default function UserProfileScreen() {
         </View>
       )}
 
-      {/* Pay Button - Show if order is PLACED, PREPARING, PREPARED, or SERVED */}
-      {item.status && (item.status === 'PLACED' || item.status === 'PREPARING' || item.status === 'PREPARED' || item.status === 'SERVED') && (
+      {/* Pay Button - Show if order is PAYMENT_PENDING or PLACED */}
+      {item.status && (item.status === 'PAYMENT_PENDING' || item.status === 'PLACED') && (
         <Pressable
           style={styles.payButton}
           onPress={() => handlePayOrder(item)}

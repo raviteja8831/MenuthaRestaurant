@@ -26,7 +26,6 @@ import { useUserData } from "../src/services/getUserData";
 
 // PhonePe SDK import
 import UpiService from "../src/services/UpiService";
-import QRCode from "react-native-qrcode-svg";
 // import { setApiAuthToken } from "./api/api"; (unused)
 // import { getRestaurantById } from "./api/restaurantApi"; (unused)
 
@@ -45,7 +44,6 @@ export default function OrderSummaryScreen() {
   // const [removedItems, setRemovedItems] = useState([]); (unused)
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [paying] = useState(false); // Only 'paying' is used
-  const [upiUrl, setUpiUrl] = useState("");
   // const [restaurantDetails, setRestaurantDetails] = useState({}); (unused)
 
   const { userId, error } = useUserData();
@@ -133,37 +131,8 @@ export default function OrderSummaryScreen() {
 
   // const handleWebPaymentComplete = async (txnRef, upiId, amount) => {}; (unused)
 
-  const handleSubmitAndPay = async () => {
-    if (totalAmount <= 0) {
-      AlertService.error("Total amount must be greater than 0 to pay.", "Invalid amount");
-      return;
-    }
-    let payAmount = totalAmount;
-    if (payAmount <= 30) {
-      payAmount += 1; // Minimum order amount is 30
-    } else if (payAmount > 30) {
-      payAmount += 3;
-    }
-    // Generate UPI URL for QR code
-    const response = await UpiService.initiatePayment({
-      restaurantId: params.restaurantId,
-      name: "Menutha Payment",
-      amount: payAmount,
-      transactionRef: "",
-    });
-    if (response && response.url) {
-      setUpiUrl(response.url);
-      // Opened UPI app; ask user to confirm once payment completes
-      AlertService.info("UPI Payment initiated. After completing payment in your UPI app, press 'Complete Payment (Test)'.");
-    } else if (response && response.status === 'failed') {
-      AlertService.error('Failed to initiate UPI payment. Please install a UPI app.');
-    } else if (response && response.status === 'error') {
-      AlertService.error('Error initiating UPI payment. Please try again.');
-    }
-    console.log("UPI Payment Result:", response);
-  };
 
-  // Handle payment: Generate QR and mark order as PAID
+  // Handle payment: Initiate UPI payment, update status to PAYMENT_PENDING, and redirect
   const handlePayment = async () => {
     if (!params.orderID) {
       AlertService.error("No order ID available to complete payment.");
@@ -185,7 +154,7 @@ export default function OrderSummaryScreen() {
         payAmount += 3;
       }
 
-      // Generate UPI URL for QR code
+      // Initiate UPI payment
       const response = await UpiService.initiatePayment({
         restaurantId: params.restaurantId,
         name: "Menutha Payment",
@@ -193,12 +162,7 @@ export default function OrderSummaryScreen() {
         transactionRef: "",
       });
 
-      if (response && response.url) {
-        setUpiUrl(response.url);
-        AlertService.info("Scan QR code to pay with any UPI app");
-      }
-
-      // Update order status to PAYMENT_PENDING (awaiting manager verification)
+      // Update order status to PAYMENT_PENDING (manager will verify later)
       const updatedItems = orderItems.map((it) => ({ id: it.id, quantity: it.quantity }));
       const removedItems = [];
       const payload = {
@@ -211,15 +175,13 @@ export default function OrderSummaryScreen() {
 
       const res = await updateOrderStatus(params.orderID, payload);
       console.log("Order update response:", res);
-      AlertService.success("Payment initiated! Your order is pending verification by the restaurant.");
 
-      // After successful payment initiation, navigate back to customer home
-      setTimeout(() => {
-        router.push({ pathname: "/user-profile" });
-      }, 2000);
+      // Immediately redirect to user profile screen
+      AlertService.success("Order placed successfully! Manager will verify your payment.");
+      router.push({ pathname: "/user-profile" });
     } catch (err) {
       console.error("Failed to complete payment:", err);
-      AlertService.error("Failed to complete payment. Please try again.");
+      AlertService.error("Failed to place order. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -300,11 +262,11 @@ export default function OrderSummaryScreen() {
         </Pressable>
 
         <View style={styles.totalRow}>
-          <Text style={[styles.cell, styles.statusColumn]} />
-          <Text style={[styles.cell, styles.orderColumn]}>Total</Text>
-          <Text style={[styles.cell, styles.qtyColumn]} />
-          <Text style={[styles.cell, styles.priceColumn]} />
-          <Text style={[styles.cell, styles.totalColumn]}>{totalAmount}</Text>
+          <Text style={[styles.hcell, styles.statusColumn]} />
+          <Text style={[styles.hcell, styles.orderColumn]}>Total</Text>
+          <Text style={[styles.hcell, styles.qtyColumn]} />
+          <Text style={[styles.hcell, styles.priceColumn]} />
+          <Text style={[styles.hcell, styles.totalColumn]}>{totalAmount}</Text>
         </View>
 
         <View style={styles.ratingSection}>
@@ -341,17 +303,9 @@ export default function OrderSummaryScreen() {
           {loading || paying ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.payText}>Pay</Text>
+            <Text style={styles.payText}>Place Order</Text>
           )}
         </Pressable>
-
-        {/* Show QR code for UPI payment as backup */}
-        {upiUrl ? (
-          <View style={{ alignItems: "center", marginVertical: 20 }}>
-            <Text style={{ marginBottom: 10, fontWeight: "bold" }}>Or scan to pay with any UPI app:</Text>
-            <QRCode value={upiUrl} size={180} />
-          </View>
-        ) : null}
 
         <CommentModal
           visible={isModalOpen}
@@ -406,6 +360,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 6,
     minHeight: 35,
+  },
+  totalRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+    marginTop: 8,
+    borderTopWidth: 2,
+    borderTopColor: "#333",
   },
   hcell: {
     fontSize: 14,

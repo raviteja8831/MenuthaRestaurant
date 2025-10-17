@@ -18,6 +18,7 @@ import {
 } from "../api/chefApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { setApiAuthToken } from "../api/api";
+import { IMG_BASE_URL } from "../constants/api.constants";
 
 export default function ChefProfileScreen() {
   const [profile, setProfile] = useState(null);
@@ -39,8 +40,12 @@ export default function ChefProfileScreen() {
         );
         setStats(statsRes);
         const chefProfile = await AsyncStorage.getItem("user_profile");
-        setProfile(chefProfile ? JSON.parse(chefProfile) : null);
-      } catch (e) {}
+        const parsedProfile = chefProfile ? JSON.parse(chefProfile) : null;
+        console.log("Chef profile loaded:", parsedProfile); // Debug log
+        setProfile(parsedProfile);
+      } catch (e) {
+        console.error("Error loading chef profile:", e);
+      }
       setLoading(false);
     };
     loadProfile();
@@ -60,14 +65,41 @@ export default function ChefProfileScreen() {
         />
       </View>
       <View style={{ alignItems: "center", marginTop: 8, marginBottom: 8 }}>
-        <Image
-          source={{
-            uri:
-              profile?.photoUrl ||
-              "https://randomuser.me/api/portraits/men/32.jpg",
-          }}
-          style={styles.profileImgLarge}
-        />
+        {(() => {
+          const imageUrl = profile?.profileImage || profile?.image_url;
+          console.log("Profile image URL:", imageUrl); // Debug log
+
+          if (imageUrl && typeof imageUrl === 'string') {
+            const finalUrl = imageUrl.startsWith('http')
+              ? imageUrl
+              : `${IMG_BASE_URL}${imageUrl}`;
+            console.log("Final image URL:", finalUrl); // Debug log
+
+            return (
+              <Image
+                source={{ uri: finalUrl }}
+                style={styles.profileImgLarge}
+                onError={(e) => console.log("Image load error:", e.nativeEvent.error)}
+              />
+            );
+          } else {
+            return (
+              <View style={[styles.profileImgLarge, { backgroundColor: '#d1c4e9', alignItems: 'center', justifyContent: 'center' }]}>
+                <MaterialCommunityIcons name="account-circle" size={100} color="#7b6eea" />
+              </View>
+            );
+          }
+        })()}
+        {/* Chef Name */}
+        <Text style={styles.chefName}>
+          {profile?.firstname || ''} {profile?.lastname || ''}
+        </Text>
+        {/* Restaurant ID */}
+        {profile?.restaurantId && (
+          <Text style={styles.restaurantId}>
+            Restaurant ID: {profile.restaurantId}
+          </Text>
+        )}
       </View>
       {/* Main Content */}
       <ScrollView
@@ -242,6 +274,22 @@ const styles = StyleSheet.create({
     borderWidth: 4,
     borderColor: "#fff",
     backgroundColor: "#e6e0fa",
+  },
+  chefName: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#fff",
+    marginTop: 12,
+    textShadowColor: "#6c63b5",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  restaurantId: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#fff",
+    marginTop: 4,
+    opacity: 0.9,
   },
   scrollContent: {
     flexGrow: 1,

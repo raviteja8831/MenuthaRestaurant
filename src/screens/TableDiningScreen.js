@@ -155,13 +155,14 @@ const TableDiningScreen = () => {
         price: selectedBuffet.price,
         type: selectedBuffet.type,
         orderDate: new Date().toISOString(),
+        status: "PAYMENT_PENDING"
       };
 
       console.log("Creating buffet order:", orderData);
       const response = await createBuffetOrder(orderData);
 
       if (response?.success) {
-        // Generate UPI URL for buffet payment
+        // Initiate UPI payment
         const upiResponse = await UpiService.initiatePayment({
           restaurantId: params.hotelId,
           name: `Buffet Order - ${selectedBuffet.name}`,
@@ -169,15 +170,19 @@ const TableDiningScreen = () => {
           transactionRef: `BUFFET_${Date.now()}`,
         });
 
-        if (upiResponse && upiResponse.url) {
-          setUpiUrl(upiResponse.url);
-          Alert.alert(
-            "Buffet Order Placed",
-            `Your buffet order has been placed! Please complete the payment of ₹${selectedBuffet.price}.`
-          );
-        }
+        console.log("Buffet order created with PAYMENT_PENDING status:", response);
 
-        console.log("Buffet order created successfully:", response);
+        // Immediately redirect to user profile screen
+        Alert.alert(
+          "Buffet Order Placed",
+          "Buffet order placed successfully! Manager will verify your payment.",
+          [
+            {
+              text: "OK",
+              onPress: () => router.push({ pathname: "/user-profile" })
+            }
+          ]
+        );
       } else {
         Alert.alert("Order Failed", "Failed to place buffet order. Please try again.");
       }
@@ -212,11 +217,15 @@ const TableDiningScreen = () => {
       // Calculate total amount (50 Rs per table)
       const totalAmount = tableCount * 50;
 
-      // First create the table booking
-      const bookingResponse = await createTableBooking({ userId, selectedTables });
+      // First create the table booking with PAYMENT_PENDING status
+      const bookingResponse = await createTableBooking({
+        userId,
+        selectedTables,
+        status: "PAYMENT_PENDING"
+      });
 
       if (bookingResponse.success) {
-        // Generate UPI URL for payment
+        // Initiate UPI payment
         const upiResponse = await UpiService.initiatePayment({
           restaurantId: params.hotelId,
           name: "Table Reservation Payment",
@@ -224,26 +233,23 @@ const TableDiningScreen = () => {
           transactionRef: `TABLE_${Date.now()}`,
         });
 
-        if (upiResponse && upiResponse.url) {
-          setUpiUrl(upiResponse.url);
-          Alert.alert(
-            "Payment Required",
-            `Please complete the payment of ₹${totalAmount} for table reservation.`
-          );
-        }
-
-        // Reset state after successful booking
-        setSelectedTables([]);
-        setTableCount(0);
-        setAvailableTablesList([]);
-        setTableOrderLength(0);
-        fetchTableBookings();
-
-        console.log("Table booking created and UPI payment initiated:", {
+        console.log("Table booking created with PAYMENT_PENDING status:", {
           selectedTables,
           totalAmount,
           upiResponse
         });
+
+        // Immediately redirect to user profile screen
+        Alert.alert(
+          "Booking Placed",
+          "Table booking placed successfully! Manager will verify your payment.",
+          [
+            {
+              text: "OK",
+              onPress: () => router.push({ pathname: "/user-profile" })
+            }
+          ]
+        );
       } else {
         Alert.alert("Booking Failed", "Failed to create table booking. Please try again.");
       }
@@ -472,8 +478,8 @@ const TableDiningScreen = () => {
           )}
         </Pressable>
 
-        {/* Show QR code for UPI payment */}
-        {upiUrl ? (
+        {/* Show QR code for UPI payment - COMMENTED OUT */}
+        {/* {upiUrl ? (
           <View style={styles.qrCodeContainer}>
             <Text style={styles.qrCodeTitle}>Scan to pay with any UPI app:</Text>
             <QRCode value={upiUrl} size={180} />
@@ -481,7 +487,7 @@ const TableDiningScreen = () => {
               Amount: ₹{tableCount * 50}
             </Text>
           </View>
-        ) : null}
+        ) : null} */}
       </View>
     </SafeAreaView>
   );

@@ -52,3 +52,14 @@ export const getUserReviews = async (userId) => {
     throw error;
   }
 };
+
+// Get recent orders for a user
+export const getRecentOrders = async (userId) => {
+  try {
+    const res = await api.get(`/users/recent-orders?userId=${userId}`);
+    return res.data;
+  } catch (error) {
+    showApiError(error);
+    throw error;
+  }
+};

@@ -27,7 +27,7 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Appbar, Surface } from "react-native-paper";
 import TabBar from "./TabBarScreen";
-import { API_BASE_URL } from "../constants/api.constants";
+import { API_BASE_URL, IMG_BASE_URL } from "../constants/api.constants";
 
 export default function ManagerDashboardScreenNew() {
   const [salesDateFilter, setSalesDateFilter] = useState("day");
@@ -62,7 +62,7 @@ export default function ManagerDashboardScreenNew() {
   const [chefLogouts, setChefLogouts] = useState(0);
   const [totalChefLogins, setTotalChefLogins] = useState(0);
   const [buffet, setBuffet] = useState({ name: "", items: "", price: "" });
-  const [profile, setProfile] = useState({ name: "", phone: "" });
+  const [profile, setProfile] = useState({ name: "", phone: "", userImage: null });
   const [salesData, setSalesData] = useState([]);
   const [incomeData, setIncomeData] = useState([]);
   // const [loading, setLoading] = useState(true);
@@ -87,6 +87,7 @@ export default function ManagerDashboardScreenNew() {
           setProfile({
             name: user.firstname || user.name || "",
             phone: user.phone || "",
+            userImage: user.userImage || null,
             restaurant: user.restaurant || null,
           });
           setUpi(user.restaurant.upi);
@@ -313,11 +314,18 @@ export default function ManagerDashboardScreenNew() {
               style={styles.profileImg}
               onPress={() => setProfileVisible(true)}
             >
-              <MaterialCommunityIcons
-                name="account-circle"
-                size={60}
-                color="#7b6eea"
-              />
+              {profile.userImage ? (
+                <Image
+                  source={{ uri: `${IMG_BASE_URL}${profile.userImage}` }}
+                  style={{ width: 60, height: 60, borderRadius: 30 }}
+                />
+              ) : (
+                <MaterialCommunityIcons
+                  name="account-circle"
+                  size={60}
+                  color="#7b6eea"
+                />
+              )}
             </Pressable>
           </View>
 

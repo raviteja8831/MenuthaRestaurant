@@ -7,12 +7,10 @@ import {
   Pressable,
   Modal,
   ActivityIndicator,
-  BackHandler,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import OrderMostImg from "../assets/images/order_most.png";
 import { router } from "expo-router";
-import { useFocusEffect } from "@react-navigation/native";
 import {
   chefLogout,
   fetchChefMessages,
@@ -22,6 +20,7 @@ import {
 import { setApiAuthToken } from "../api/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { logout } from "../services/authService";
+import { IMG_BASE_URL } from "../constants/api.constants";
 
 export default function ChefHomeScreen() {
   const [showMsgModal, setShowMsgModal] = useState(false);
@@ -30,6 +29,7 @@ export default function ChefHomeScreen() {
   const [loading, setLoading] = useState(true);
   const [chefName, setChefName] = useState("");
   const [loginAt, setLoginAt] = useState("");
+  const [userImage, setUserImage] = useState(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -44,10 +44,14 @@ export default function ChefHomeScreen() {
         }
         if (userStr) {
           user = JSON.parse(userStr);
+          console.log("Chef user data:", user); // Debug log
           setChefName(user.firstname || user.name || "");
           setLoginAt(user.loginAT || "");
+          setUserImage(user.profileImage || user.image_url || user.userImage || null);
         }
         const ordersRes = await fetchChefOrders(user ? user.id : null);
+        console.log("Orders API response:", ordersRes); // Debug log
+        console.log("Orders array:", ordersRes.orders); // Debug log
         setOrders(ordersRes.orders || []);
         const msgRes = await fetchChefMessages(user ? user.id : null);
         setMessages(msgRes.messages || []);
@@ -84,21 +88,6 @@ export default function ChefHomeScreen() {
       console.log(e, "error in logout");
     }
   };
-
-  // Handle hardware back button to prevent going back to login/index
-  useFocusEffect(
-    React.useCallback(() => {
-      const onBackPress = () => {
-        // Return true to prevent default back behavior (going back)
-        // This keeps user on chef-home
-        return true;
-      };
-
-      BackHandler.addEventListener('hardwareBackPress', onBackPress);
-
-      return () => BackHandler.removeEventListener('hardwareBackPress', onBackPress);
-    }, [])
-  );
 
   return (
     <View style={styles.container}>
@@ -157,10 +146,16 @@ export default function ChefHomeScreen() {
       <View style={styles.profileImgRow}>
         <View style={{ flex: 1 }} />
         <Pressable onPress={() => router.push("/chef-profile")}>
-          <Image
-            source={{ uri: "https://randomuser.me/api/portraits/men/32.jpg" }}
-            style={styles.profileImgLarge}
-          />
+          {userImage ? (
+            <Image
+              source={{ uri: userImage.startsWith('http') ? userImage : `${IMG_BASE_URL}${userImage}` }}
+              style={styles.profileImgLarge}
+            />
+          ) : (
+            <View style={[styles.profileImgLarge, { backgroundColor: '#d1c4e9', alignItems: 'center', justifyContent: 'center' }]}>
+              <MaterialCommunityIcons name="account-circle" size={60} color="#7b6eea" />
+            </View>
+          )}
         </Pressable>
       </View>
       {/* Name, login, filter row */}
@@ -184,9 +179,16 @@ export default function ChefHomeScreen() {
       <View style={{ marginHorizontal: 16, marginTop: 8 }}>
         {loading ? (
           <ActivityIndicator color="#7b6eea" size="large" />
+        ) : orders.length === 0 ? (
+          <Text style={{ textAlign: 'center', marginTop: 20, color: '#222' }}>No orders available</Text>
         ) : (
-          orders.map((order, i) =>
-            order.orderProducts.map((firstProduct, j) => {
+          orders.map((order, i) => {
+            console.log("Processing order:", order); // Debug log
+            if (!order.orderProducts || order.orderProducts.length === 0) {
+              return null;
+            }
+            return order.orderProducts.map((firstProduct, j) => {
+              console.log("Processing product:", firstProduct); // Debug log
               const menuItemName =
                 firstProduct && firstProduct.menuitem
                   ? firstProduct.menuitem.name
@@ -194,8 +196,12 @@ export default function ChefHomeScreen() {
 
               const tableNumber = order.tableId ? `Table ${order.tableId}` : "";
 
+              // Check if product has valid data (id or other identifying field)
+              if (!firstProduct || (!firstProduct.id && !firstProduct.menuitem)) {
+                return null;
+              }
+
               return (
-                firstProduct.id && (
                   <View
                     key={`${order.id}-${firstProduct.id || j}`}
                     style={styles.orderCard}
