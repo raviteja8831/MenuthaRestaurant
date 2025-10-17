@@ -21,7 +21,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "\u001b[0;34m[INFO]\u001b[0m Creating adaptive icon with safe zone padding for menutha...\n\u001b[0;32m[SUCCESS]\u001b[0m Adaptive icon created: ./src/assets/menutha_adaptive.png\n./src/assets/menutha_adaptive.png",
-        "backgroundColor": "#FFFFFF"
+        "backgroundColor": "#7b6eea"
       },
       "config": {
         "googleMaps": {
@@ -52,7 +52,7 @@
     "splash": {
       "image": "./src/assets/menutha.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#a9a1e2"
     },
     "extra": {
       "DEFAULT_LANDING_PAGE": "/login",

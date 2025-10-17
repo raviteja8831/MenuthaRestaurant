@@ -4,7 +4,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import { fetchManagerDashboard, fetchChefActivityReport } from "../api/managerApi";
 import { updateRestaurantUpi } from "../api/updateRestaurantUpi";
-import { getPaidOrders, getPaymentPendingOrders, updateOrderStatus } from "../api/orderApi";
 import axios from "axios";
 import { logout } from "../services/authService";
 
@@ -39,16 +38,11 @@ export default function ManagerDashboardScreenNew() {
   const [incomeDropdownLayout, setIncomeDropdownLayout] = useState({ x: 0, y: 0 });
   // Tab state management
 
-  // QR Code states
+  // UPI states
   const [showPayModal, setShowPayModal] = useState(false);
   const [upi, setUpi] = useState("");
   const [upiEdit, setUpiEdit] = useState(false);
   const [upiLoading, setUpiLoading] = useState(false);
-  const [paidOrders, setPaidOrders] = useState([]);
-  const [paymentPendingOrders, setPaymentPendingOrders] = useState([]);
-  const [selectedOrder, setSelectedOrder] = useState(null);
-  const [completingOrder, setCompletingOrder] = useState(false);
-  const [activeTab, setActiveTab] = useState("pending"); // 'pending' or 'paid'
 
   // State for API data
   // const [dashboard, setDashboard] = useState(null);
@@ -169,80 +163,6 @@ export default function ManagerDashboardScreenNew() {
     }
   };
 
-  const fetchPaidOrders = async () => {
-    try {
-      const userStr = await AsyncStorage.getItem("user_profile");
-      const user = userStr ? JSON.parse(userStr) : {};
-      const restaurantId = user?.restaurant?.id;
-      if (restaurantId) {
-        const response = await getPaidOrders(restaurantId);
-        setPaidOrders(response.data || []);
-      }
-    } catch (error) {
-      console.error("Error fetching paid orders:", error);
-    }
-  };
-
-  const fetchPaymentPendingOrders = async () => {
-    try {
-      const userStr = await AsyncStorage.getItem("user_profile");
-      const user = userStr ? JSON.parse(userStr) : {};
-      const restaurantId = user?.restaurant?.id;
-      if (restaurantId) {
-        const response = await getPaymentPendingOrders(restaurantId);
-        setPaymentPendingOrders(response.data || []);
-      }
-    } catch (error) {
-      console.error("Error fetching payment pending orders:", error);
-    }
-  };
-
-  const handleVerifyPayment = async (orderId) => {
-    try {
-      setCompletingOrder(true);
-      await updateOrderStatus(orderId, {
-        totalAmount: selectedOrder?.totalAmount || 0,
-        updatedItems: [],
-        removedItems: [],
-        status: "PAID",
-      });
-      // Refresh both lists
-      await fetchPaymentPendingOrders();
-      await fetchPaidOrders();
-      setSelectedOrder(null);
-      setActiveTab("paid"); // Switch to paid tab to show verified order
-    } catch (error) {
-      console.error("Error verifying payment:", error);
-    } finally {
-      setCompletingOrder(false);
-    }
-  };
-
-  const handleMarkAsCompleted = async (orderId) => {
-    try {
-      setCompletingOrder(true);
-      await updateOrderStatus(orderId, {
-        totalAmount: selectedOrder?.totalAmount || 0,
-        updatedItems: [],
-        removedItems: [],
-        status: "COMPLETED",
-      });
-      // Refresh paid orders list
-      await fetchPaidOrders();
-      setSelectedOrder(null);
-    } catch (error) {
-      console.error("Error marking order as completed:", error);
-    } finally {
-      setCompletingOrder(false);
-    }
-  };
-
-  useEffect(() => {
-    if (showPayModal) {
-      fetchPaymentPendingOrders();
-      fetchPaidOrders();
-    }
-  }, [showPayModal]);
 
   // Handle hardware back button to prevent going back to login/index
   // useFocusEffect(
@@ -286,59 +206,31 @@ export default function ManagerDashboardScreenNew() {
           </Pressable>
         </Appbar.Header>
 
-          {/* Pay Modal */}
+          {/* UPI Edit Modal */}
           <Modal
             visible={showPayModal}
             transparent
             animationType="fade"
             onRequestClose={() => {
               setShowPayModal(false);
-              setSelectedOrder(null);
             }}
           >
             <View style={styles.modalOverlay}>
-              <View style={[styles.paidOrdersCard, { width: "90%", maxHeight: "80%" }]}>
+              <View style={[styles.paidOrdersCard, { width: "90%", maxWidth: 400 }]}>
                 <Pressable
                   style={{ position: "absolute", top: 10, right: 10, zIndex: 20 }}
                   onPress={() => {
                     setShowPayModal(false);
-                    setSelectedOrder(null);
                   }}
                 >
                   <MaterialCommunityIcons name="close" size={28} color="#222" />
                 </Pressable>
-                <Text style={{ fontWeight: "bold", fontSize: 20, marginBottom: 12, color: "#6c63b5", textAlign: "center" }}>
-                  Payment Management
+                <Text style={{ fontWeight: "bold", fontSize: 20, marginBottom: 20, color: "#6c63b5", textAlign: "center" }}>
+                  UPI Management
                 </Text>
 
-                {/* Tabs for Pending and Paid */}
-                <View style={{ flexDirection: "row", marginBottom: 16, gap: 8 }}>
-                  <Pressable
-                    style={[
-                      { flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: "center" },
-                      activeTab === "pending" ? { backgroundColor: "#6c63b5" } : { backgroundColor: "#ddd" }
-                    ]}
-                    onPress={() => setActiveTab("pending")}
-                  >
-                    <Text style={{ color: activeTab === "pending" ? "#fff" : "#666", fontWeight: "bold" }}>
-                      Pending ({paymentPendingOrders.length})
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    style={[
-                      { flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: "center" },
-                      activeTab === "paid" ? { backgroundColor: "#6c63b5" } : { backgroundColor: "#ddd" }
-                    ]}
-                    onPress={() => setActiveTab("paid")}
-                  >
-                    <Text style={{ color: activeTab === "paid" ? "#fff" : "#666", fontWeight: "bold" }}>
-                      Paid ({paidOrders.length})
-                    </Text>
-                  </Pressable>
-                </View>
-
                 {/* UPI Edit Section */}
-                <View style={{ width: "100%", marginBottom: 16, paddingHorizontal: 8 }}>
+                <View style={{ width: "100%", paddingHorizontal: 8 }}>
                   <Text style={{ fontSize: 14, fontWeight: "bold", color: "#6c63b5", marginBottom: 8 }}>
                     Restaurant UPI ID
                   </Text>
@@ -406,156 +298,6 @@ export default function ManagerDashboardScreenNew() {
                     )}
                   </View>
                 </View>
-
-                <View style={{ borderBottomWidth: 1, borderBottomColor: "#ccc", marginVertical: 12 }} />
-
-                {selectedOrder ? (
-                  // Order Detail View
-                  <ScrollView style={{ width: "100%" }}>
-                    <Text style={{ fontSize: 16, fontWeight: "bold", color: "#222", marginBottom: 8 }}>
-                      Order #{selectedOrder.id}
-                    </Text>
-                    <Text style={{ fontSize: 14, color: "#333", marginBottom: 4 }}>
-                      Customer: {selectedOrder.customerName}
-                    </Text>
-                    <Text style={{ fontSize: 14, color: "#333", marginBottom: 4 }}>
-                      Phone: {selectedOrder.customerPhone}
-                    </Text>
-                    <Text style={{ fontSize: 14, color: "#333", marginBottom: 4 }}>
-                      Table: {selectedOrder.tableId || "N/A"}
-                    </Text>
-                    <Text style={{ fontSize: 14, color: "#333", marginBottom: 8 }}>
-                      Time: {selectedOrder.time}
-                    </Text>
-
-                    <View style={{ backgroundColor: "#fff", borderRadius: 8, padding: 12, marginBottom: 12 }}>
-                      <Text style={{ fontWeight: "bold", marginBottom: 8, color: "#6c63b5" }}>Items:</Text>
-                      {selectedOrder.items.map((item, idx) => (
-                        <View key={idx} style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
-                          <Text style={{ flex: 1, color: "#222" }}>{item.name}</Text>
-                          <Text style={{ color: "#222", marginRight: 8 }}>x{item.quantity}</Text>
-                          <Text style={{ fontWeight: "bold", color: "#6c63b5" }}>₹{item.total}</Text>
-                        </View>
-                      ))}
-                      <View style={{ borderTopWidth: 1, borderTopColor: "#ddd", marginTop: 8, paddingTop: 8, flexDirection: "row", justifyContent: "space-between" }}>
-                        <Text style={{ fontWeight: "bold", color: "#222" }}>Total:</Text>
-                        <Text style={{ fontWeight: "bold", color: "#6c63b5", fontSize: 16 }}>₹{selectedOrder.totalAmount}</Text>
-                      </View>
-                    </View>
-
-                    <View style={{ flexDirection: "row", gap: 12, justifyContent: "center", marginTop: 16 }}>
-                      {activeTab === "pending" ? (
-                        <>
-                          <Pressable
-                            style={[styles.profileCloseBtn, { backgroundColor: "#28a745", flex: 1 }]}
-                            disabled={completingOrder}
-                            onPress={() => handleVerifyPayment(selectedOrder.id)}
-                          >
-                            <Text style={{ color: "#fff", fontWeight: "bold" }}>
-                              {completingOrder ? "Verifying..." : "✓ Verify Payment"}
-                            </Text>
-                          </Pressable>
-                          <Pressable
-                            style={[styles.profileCloseBtn, { flex: 1 }]}
-                            onPress={() => setSelectedOrder(null)}
-                          >
-                            <Text style={styles.logoutText}>Cancel</Text>
-                          </Pressable>
-                        </>
-                      ) : (
-                        <>
-                          <Pressable
-                            style={[styles.profileCloseBtn, { backgroundColor: "#6c63b5" }]}
-                            disabled={completingOrder}
-                            onPress={() => handleMarkAsCompleted(selectedOrder.id)}
-                          >
-                            <Text style={{ color: "#fff", fontWeight: "bold" }}>
-                              {completingOrder ? "Processing..." : "Mark as Completed"}
-                            </Text>
-                          </Pressable>
-                          <Pressable
-                            style={styles.profileCloseBtn}
-                            onPress={() => setSelectedOrder(null)}
-                          >
-                            <Text style={styles.logoutText}>Back</Text>
-                          </Pressable>
-                        </>
-                      )}
-                    </View>
-                  </ScrollView>
-                ) : (
-                  // Orders List View
-                  <ScrollView style={{ width: "100%" }} showsVerticalScrollIndicator={false}>
-                    {activeTab === "pending" ? (
-                      paymentPendingOrders.length === 0 ? (
-                        <Text style={{ textAlign: "center", color: "#666", marginTop: 20 }}>
-                          No pending payment verifications
-                        </Text>
-                      ) : (
-                        paymentPendingOrders.map((order) => (
-                          <Pressable
-                            key={order.id}
-                            style={[styles.paidOrderItem, { borderLeftWidth: 4, borderLeftColor: "#ff9800" }]}
-                            onPress={() => setSelectedOrder(order)}
-                          >
-                            <View style={{ flex: 1 }}>
-                              <Text style={{ fontWeight: "bold", fontSize: 15, color: "#222", marginBottom: 4 }}>
-                                Order #{order.id}
-                              </Text>
-                              <Text style={{ fontSize: 13, color: "#333", marginBottom: 2 }}>
-                                {order.customerName}
-                              </Text>
-                              <Text style={{ fontSize: 12, color: "#666" }}>
-                                Table {order.tableId || "N/A"} • {order.time}
-                              </Text>
-                              <Text style={{ fontSize: 11, color: "#ff9800", fontWeight: "bold", marginTop: 4 }}>
-                                ⚠ Awaiting Verification
-                              </Text>
-                            </View>
-                            <View style={{ alignItems: "flex-end" }}>
-                              <Text style={{ fontWeight: "bold", fontSize: 16, color: "#ff9800", marginBottom: 4 }}>
-                                ₹{order.totalAmount}
-                              </Text>
-                              <MaterialCommunityIcons name="chevron-right" size={24} color="#ff9800" />
-                            </View>
-                          </Pressable>
-                        ))
-                      )
-                    ) : (
-                      paidOrders.length === 0 ? (
-                        <Text style={{ textAlign: "center", color: "#666", marginTop: 20 }}>
-                          No paid orders at the moment
-                        </Text>
-                      ) : (
-                        paidOrders.map((order) => (
-                          <Pressable
-                            key={order.id}
-                            style={styles.paidOrderItem}
-                            onPress={() => setSelectedOrder(order)}
-                          >
-                            <View style={{ flex: 1 }}>
-                              <Text style={{ fontWeight: "bold", fontSize: 15, color: "#222", marginBottom: 4 }}>
-                                Order #{order.id}
-                              </Text>
-                              <Text style={{ fontSize: 13, color: "#333", marginBottom: 2 }}>
-                                {order.customerName}
-                              </Text>
-                              <Text style={{ fontSize: 12, color: "#666" }}>
-                                Table {order.tableId || "N/A"} • {order.time}
-                              </Text>
-                            </View>
-                            <View style={{ alignItems: "flex-end" }}>
-                              <Text style={{ fontWeight: "bold", fontSize: 16, color: "#6c63b5", marginBottom: 4 }}>
-                                ₹{order.totalAmount}
-                              </Text>
-                              <MaterialCommunityIcons name="chevron-right" size={24} color="#6c63b5" />
-                            </View>
-                          </Pressable>
-                        ))
-                      )
-                    )}
-                  </ScrollView>
-                )}
               </View>
             </View>
           </Modal>

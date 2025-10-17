@@ -195,14 +195,15 @@ create_adaptive_icon() {
 
   print_status "Creating adaptive icon with safe zone padding for $OUTPUT_NAME..."
 
-  # Create a padded version for adaptive icon (66% of original size, centered)
-  # This ensures the logo doesn't get cut off by the circular/rounded mask
+  # Create a padded version for adaptive icon (80% of original size, centered)
+  # Android adaptive icons: safe zone is inner 66%, so 80% ensures good visibility
+  # while preventing cutoff from circular/rounded mask
   local ADAPTIVE_ICON="./src/assets/${OUTPUT_NAME}_adaptive.png"
 
   if command -v convert &>/dev/null; then
     # Using ImageMagick to create padded icon
-    # Resize logo to 66% and center it on 1024x1024 canvas with white background
-    convert "$SOURCE_LOGO" -resize 66% -gravity center -background white -extent 1024x1024 "$ADAPTIVE_ICON"
+    # Resize logo to 80% and center it on 1024x1024 canvas with purple background
+    convert "$SOURCE_LOGO" -resize 80% -gravity center -background "#7b6eea" -extent 1024x1024 "$ADAPTIVE_ICON"
     print_success "Adaptive icon created: $ADAPTIVE_ICON"
   else
     # Fallback: just copy the original (will still work but may be cut off)
@@ -222,13 +223,13 @@ update_app_json() {
   local ADAPTIVE_ICON=$(create_adaptive_icon "$LOGO" "${NAME,,}")
 
   if command -v jq &>/dev/null; then
-    jq ".expo.name=\"$NAME\" | .expo.android.package=\"$PKG\" | .expo.ios.bundleIdentifier=\"$PKG\" | .expo.icon=\"$LOGO\" | .expo.android.adaptiveIcon.foregroundImage=\"$ADAPTIVE_ICON\" | .expo.android.adaptiveIcon.backgroundColor=\"#FFFFFF\" | .expo.plugins=[\"expo-router\"]" app.json > app.json.tmp && mv app.json.tmp app.json
+    jq ".expo.name=\"$NAME\" | .expo.android.package=\"$PKG\" | .expo.ios.bundleIdentifier=\"$PKG\" | .expo.icon=\"$LOGO\" | .expo.android.adaptiveIcon.foregroundImage=\"$ADAPTIVE_ICON\" | .expo.android.adaptiveIcon.backgroundColor=\"#7b6eea\" | .expo.splash.backgroundColor=\"#a9a1e2\" | .expo.plugins=[\"expo-router\"]" app.json > app.json.tmp && mv app.json.tmp app.json
   else
     sed -i "s/\"name\": \".*\"/\"name\": \"$NAME\"/" app.json
     sed -i "s/\"package\": \".*\"/\"package\": \"$PKG\"/" app.json
     sed -i "s|\"icon\": \".*\"|\"icon\": \"$LOGO\"|" app.json
     sed -i "s|\"foregroundImage\": \".*\"|\"foregroundImage\": \"$ADAPTIVE_ICON\"|" app.json
-    sed -i "s|\"backgroundColor\": \".*\"|\"backgroundColor\": \"#FFFFFF\"|" app.json
+    sed -i "s|\"backgroundColor\": \".*\"|\"backgroundColor\": \"#7b6eea\"|" app.json
   fi
 }
 

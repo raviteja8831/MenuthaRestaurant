@@ -29,7 +29,7 @@ const APP_LOGO = isCustomerApp
  */
 const LoaderScreen = ({
   text = 'Loading...',
-  backgroundColor = '#BEBEBE'
+  backgroundColor = '#a9a1e2'
 }) => {
   const spinValue = useRef(new Animated.Value(0)).current;
   const pulseValue = useRef(new Animated.Value(1)).current;
@@ -68,9 +68,11 @@ const LoaderScreen = ({
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
-      {/* Logo */}
-      <View style={styles.logoWrapper}>
-        <Image source={APP_LOGO} style={styles.logo} resizeMode="contain" />
+      {/* Logo with rounded purple background */}
+      <View style={styles.logoContainer}>
+        <View style={styles.logoWrapper}>
+          <Image source={APP_LOGO} style={styles.logo} resizeMode="contain" />
+        </View>
       </View>
 
       {/* Spinning Circle Loader */}
@@ -90,13 +92,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  logoWrapper: {
+  logoContainer: {
+    backgroundColor: '#7b6eea',
+    borderRadius: 30,
+    padding: 30,
     marginBottom: 40,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 8,
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  logoWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   logo: {
     width: 180,

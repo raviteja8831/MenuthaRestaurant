@@ -11,7 +11,8 @@ import {
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import OrderMostImg from "../assets/images/order_most.png";
-import { router, useFocusEffect } from "expo-router";
+import { router } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   chefLogout,
   fetchChefMessages,
