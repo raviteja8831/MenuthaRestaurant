@@ -183,7 +183,7 @@ export default function MenuListScreen() {
       const response = await updateOrderProductStatusList(
         orderSummary.orderId,
         {
-          status: "1",
+          status: "PLACED",
         }
       );
       console.log("Order status update response:", response);

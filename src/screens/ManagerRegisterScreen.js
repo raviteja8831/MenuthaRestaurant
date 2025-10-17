@@ -18,7 +18,7 @@ import { Button, Text, Surface, IconButton } from "react-native-paper";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import { registerManager } from "../api/managerApi";
-import { showApiError } from "../services/messagingService";
+import { showApiError, showSuccess } from "../services/messagingService";
 import { FormInput, useFormValidation } from "../components/formHelper";
 import { uploadImage } from "../api/imageApi";
 import { API_BASE_URL } from "../constants/api.constants";
@@ -313,7 +313,7 @@ export default function ManagerRegisterScreen() {
         longitude,
       };
       const data = await registerManager(payload);
-      showApiError(data.message || "Registered successfully");
+      showSuccess(data.message || "Registered successfully");
         router.push("/login");
     } catch (err) {
       showApiError(err);
