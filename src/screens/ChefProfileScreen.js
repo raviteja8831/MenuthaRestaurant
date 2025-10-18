@@ -30,19 +30,21 @@ export default function ChefProfileScreen() {
       setLoading(true);
       try {
         const token = await AsyncStorage.getItem("auth_token");
-        const user = await AsyncStorage.getItem("user_profile");
+        const userStr = await AsyncStorage.getItem("user_profile");
 
         if (token) {
           setApiAuthToken(token);
         }
-        const statsRes = await fetchChefStats(
-          user ? JSON.parse(user).id : null
-        );
-        setStats(statsRes);
-        const chefProfile = await AsyncStorage.getItem("user_profile");
-        const parsedProfile = chefProfile ? JSON.parse(chefProfile) : null;
-        console.log("Chef profile loaded:", parsedProfile); // Debug log
+
+        const parsedProfile = userStr ? JSON.parse(userStr) : null;
+        console.log("Chef profile loaded:", parsedProfile);
         setProfile(parsedProfile);
+
+        if (parsedProfile && parsedProfile.id) {
+          const statsRes = await fetchChefStats(parsedProfile.id);
+          console.log("Chef stats loaded:", statsRes);
+          setStats(statsRes);
+        }
       } catch (e) {
         console.error("Error loading chef profile:", e);
       }
@@ -55,7 +57,11 @@ export default function ChefProfileScreen() {
     <View style={styles.container}>
       {/* Top Row: Back, Profile, Send */}
       <View style={styles.topRow}>
-        <Pressable onPress={() => router.back()}>
+        <Pressable
+          onPress={() => router.back()}
+          style={styles.backButton}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
           <MaterialCommunityIcons name="arrow-left" size={28} color="#222" />
         </Pressable>
         <Image
@@ -136,7 +142,7 @@ export default function ChefProfileScreen() {
         )}
         {/* Login Hours (placeholder) */}
         <Text style={styles.loginHours}>
-          Login Hours : {stats?.todayStats.loginHours} Hrs
+          Login Hours : {stats?.todayStats?.loginHours || 0} Hrs
         </Text>
 
         {/* Orders grouped by Today and Yesterday */}
@@ -247,6 +253,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 24,
     marginTop: 16,
+  },
+  backButton: {
+    padding: 8,
+    zIndex: 10,
   },
   profileImg: {
     width: 120,

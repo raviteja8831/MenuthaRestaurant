@@ -51,28 +51,38 @@ export default function ChefHomeScreen() {
         }
         const ordersRes = await fetchChefOrders(user ? user.id : null);
         console.log("Orders API response:", ordersRes); // Debug log
-        console.log("Active orders array:", ordersRes.activeOrders); // Debug log
-        console.log("All orders array:", ordersRes.orders); // Debug log
+        console.log("Active orders array:", ordersRes?.activeOrders); // Debug log
+        console.log("All orders array:", ordersRes?.orders); // Debug log
+
         // Use activeOrders for home screen (excludes served orders)
-        setOrders(ordersRes.activeOrders || ordersRes.orders || []);
+        const ordersToSet = ordersRes?.activeOrders || ordersRes?.orders || [];
+        console.log("Setting orders to:", ordersToSet); // Debug log
+        setOrders(ordersToSet);
         const msgRes = await fetchChefMessages(user ? user.id : null);
-        setMessages(msgRes.messages || []);
-      } catch (e) {}
+        setMessages(msgRes?.messages || []);
+      } catch (e) {
+        console.error("Error loading chef data:", e);
+      }
       setLoading(false);
     };
     loadData();
   }, []);
   const handleOrderStatusUpdate = async (data) => {
-    const response = await updateOrderStatus(data);
-    if (response.status === "success") {
-      const userStr = await AsyncStorage.getItem("user_profile");
-      let user = null;
-      if (userStr) {
-        user = JSON.parse(userStr);
+    try {
+      const response = await updateOrderStatus(data);
+      if (response?.status === "success") {
+        const userStr = await AsyncStorage.getItem("user_profile");
+        let user = null;
+        if (userStr) {
+          user = JSON.parse(userStr);
+        }
+        const ordersRes = await fetchChefOrders(user ? user.id : null);
+        // Use activeOrders for home screen (excludes served orders)
+        const ordersToSet = ordersRes?.activeOrders || ordersRes?.orders || [];
+        setOrders(ordersToSet);
       }
-      const ordersRes = await fetchChefOrders(user ? user.id : null);
-      // Use activeOrders for home screen (excludes served orders)
-      setOrders(ordersRes.activeOrders || ordersRes.orders || []);
+    } catch (e) {
+      console.error("Error updating order status:", e);
     }
   };
 
@@ -175,15 +185,16 @@ export default function ChefHomeScreen() {
         {loading ? (
           <ActivityIndicator color="#7b6eea" size="large" />
         ) : orders.length === 0 ? (
-          <Text style={{ textAlign: 'center', marginTop: 20, color: '#222' }}>No orders available</Text>
+          <Text style={{ textAlign: 'center', marginTop: 20, color: '#222', fontSize: 16 }}>No orders available</Text>
         ) : (
           orders.map((order, i) => {
-            console.log("Processing order:", order); // Debug log
-            if (!order.orderProducts || order.orderProducts.length === 0) {
+            console.log(`Processing order ${i}:`, order); // Debug log
+            if (!order?.orderProducts || order.orderProducts.length === 0) {
+              console.log(`Order ${i} has no products`); // Debug log
               return null;
             }
             return order.orderProducts.map((firstProduct, j) => {
-              console.log("Processing product:", firstProduct); // Debug log
+              console.log(`Processing product ${j} in order ${i}:`, firstProduct); // Debug log
               const menuItemName =
                 firstProduct && firstProduct.menuitem
                   ? firstProduct.menuitem.name
