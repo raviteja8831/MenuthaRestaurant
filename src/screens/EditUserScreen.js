@@ -132,7 +132,7 @@ export default function EditUserScreen({ user, onSave, onClose, visible }) {
               keyboardType="phone-pad"
             />
 
-            <FormInput
+            {/* <FormInput
               label="New Password (optional)"
               name="password"
               value={form.password}
@@ -141,7 +141,7 @@ export default function EditUserScreen({ user, onSave, onClose, visible }) {
               error={errors.password}
               touched={touched.password}
               type="password"
-            />
+            /> */}
 
             <FormInput
               label="Role *"
