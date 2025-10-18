@@ -57,7 +57,7 @@
     "extra": {
       "DEFAULT_LANDING_PAGE": "/login",
       "API_BASE_URL": "http://13.127.228.119:8090/api",
-      "IMG_BASE_URL": "http://13.127.228.119:8090/"
+      "IMG_BASE_URL": "http://13.127.228.119:8090"
     }
   }
 }

@@ -26,7 +26,7 @@ export default function TabBar({ activeTab }) {
           ]}>
             <MaterialCommunityIcons
               name={activeTab === tab.key ? tab.icon.replace('-outline', '') : tab.icon}
-              size={32}
+              size={38}
               color={activeTab === tab.key ? '#000' : '#000'}
             />
           </View>
@@ -51,29 +51,36 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    paddingVertical: 10,
-    paddingBottom: 24,
+    paddingVertical: 12,
+    paddingBottom: 28,
+    paddingTop: 16,
+    backgroundColor: '#C8BFEF',
     elevation: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
-   
+    minHeight: 80,
   },
   tabItem: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 6,
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 8,
   },
   iconContainer: {
-    padding: 12,
+    padding: 14,
     borderRadius: 50,
     borderWidth: 2,
     borderColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 68,
+    minHeight: 68,
   },
   iconContainerActive: {
-    backgroundColor: 'rgba(108, 99, 181, 0.1)',
+    backgroundColor: 'rgba(108, 99, 181, 0.15)',
     borderWidth: 3,
     borderColor: '#6c63b5',
   },

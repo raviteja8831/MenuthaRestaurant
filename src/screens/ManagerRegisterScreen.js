@@ -324,7 +324,7 @@ export default function ManagerRegisterScreen() {
           
             <ScrollView
               style={{ flex: 1 }}
-              contentContainerStyle={{ flexGrow: 1 }}
+              contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
             >
@@ -422,6 +422,7 @@ export default function ManagerRegisterScreen() {
                       <Button
                         mode="contained"
                         style={styles.locationBtnStep2}
+                        labelStyle={styles.locationBtnLabel}
                         icon="crosshairs-gps"
                         onPress={handleUseCurrentLocation}
                       >
@@ -684,20 +685,21 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   logoText: {
-    fontSize: 48,
+    fontSize: 52,
     fontWeight: "700",
     color: "#5a5a8a",
     textAlign: "center",
-    marginTop: 40,
-    marginBottom: 60,
+    marginTop: 30,
+    marginBottom: 40,
   },
   typeFoodGridRow: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
     width: "100%",
-    marginBottom: 16,
-    gap: 30,
+    marginBottom: 20,
+    gap: 24,
+    paddingHorizontal: 16,
   },
   input: {
     // ...existing input styles...
@@ -716,7 +718,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginTop: 16,
-    marginBottom: 24,
+    marginBottom: 32,
     gap: 10,
     width: "100%",
     display: "flex",
@@ -739,7 +741,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   uploadPhotoTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "400",
     marginTop: 0,
     marginBottom: 16,
@@ -904,7 +906,7 @@ const styles = StyleSheet.create({
     marginBottom: 0,
     flex: 1,
     justifyContent: "flex-start",
-    paddingHorizontal: 28,
+    paddingHorizontal: 20,
     paddingTop: 0,
     alignSelf: "center",
   },
@@ -946,30 +948,31 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     width: "100%",
-    paddingHorizontal: 32,
-    paddingTop: 24,
+    paddingHorizontal: 20,
+    paddingTop: 20,
     paddingBottom: 40,
     alignItems: "center",
+    backgroundColor: "#8D8BEA",
   },
   bottomButtonStep: {
-    borderRadius: 10,
+    borderRadius: 12,
     width: "100%",
     minWidth: 280,
     maxWidth: 600,
     alignSelf: "center",
-    paddingVertical: 12,
-    backgroundColor: "#6c6cf2",
+    paddingVertical: 14,
+    backgroundColor: "#5a4dbf",
     marginTop: 0,
     marginBottom: 0,
     marginHorizontal: "auto",
-    elevation: 3,
-    height: 56,
+    elevation: 4,
+    height: 58,
   },
   buttonTextStep: {
-    fontSize: 22,
+    fontSize: 24,
     color: "#fff",
     fontWeight: "600",
-    letterSpacing: 0.3,
+    letterSpacing: 0.5,
   },
   buttonRow: {
     flexDirection: "row",
@@ -1043,7 +1046,7 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   chooseRestaurantTypeTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "400",
     marginTop: 0,
     marginBottom: 20,
@@ -1055,18 +1058,20 @@ const styles = StyleSheet.create({
   typeFoodGridCol: {
     flexDirection: "column",
     alignItems: "center",
+    justifyContent: "center",
     gap: 12,
+    width: 140,
   },
 
   enableTextStep2Grid: {
-    fontSize: 15,
+    fontSize: 16,
     color: "#fff",
     marginLeft: 8,
     fontWeight: "400",
   },
 
   checkboxLabelStep2Grid: {
-    fontSize: 15,
+    fontSize: 16,
     color: "#fff",
     marginLeft: 8,
   },
@@ -1079,18 +1084,18 @@ const styles = StyleSheet.create({
   typeBoxStep2: {
     alignItems: "center",
     justifyContent: "center",
-    padding: 8,
-    borderRadius: 20,
+    padding: 10,
+    borderRadius: 24,
     backgroundColor: "#7B6EEA",
     marginHorizontal: 0,
-    borderWidth: 3,
-    borderColor: "#7B6EEA",
-    width: 100,
-    height: 100,
+    borderWidth: 4,
+    borderColor: "#5a4dbf",
+    width: 140,
+    height: 140,
   },
   typeBoxActiveStep2: {
     borderColor: "#2c2c54",
-    borderWidth: 3,
+    borderWidth: 5,
     backgroundColor: "#7B6EEA",
   },
   typeIconStep2: {
@@ -1108,7 +1113,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   typeLabelStep2Small: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "400",
     color: "#fff",
     textAlign: "center",
@@ -1123,52 +1128,52 @@ const styles = StyleSheet.create({
   foodTypeBoxStep2: {
     alignItems: "center",
     justifyContent: "center",
-    padding: 20,
-    borderRadius: 12,
+    padding: 22,
+    borderRadius: 16,
     backgroundColor: "#fff",
     marginHorizontal: 0,
-    borderWidth: 4,
+    borderWidth: 5,
     borderColor: "#d0d0d0",
-    width: 100,
-    height: 100,
+    width: 140,
+    height: 140,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2.0,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3.0,
+    elevation: 3,
   },
   foodTypeBoxVeg: {
-    borderColor: "#d0d0d0",
-    borderWidth: 4,
+    borderColor: "#4ade80",
+    borderWidth: 5,
     backgroundColor: "#fff",
   },
   foodTypeBoxNonVeg: {
-    borderColor: "#d0d0d0",
-    borderWidth: 4,
+    borderColor: "#ef4444",
+    borderWidth: 5,
     backgroundColor: "#fff",
   },
   foodTypeBoxVegActive: {
-    borderColor: "#22c55e",
-    borderWidth: 4,
+    borderColor: "#16a34a",
+    borderWidth: 6,
     backgroundColor: "#fff",
   },
   foodTypeBoxNonVegActive: {
     borderColor: "#b91c1c",
-    borderWidth: 4,
+    borderWidth: 6,
     backgroundColor: "#fff",
   },
   foodCircleVegStep2: {
-    width: 45,
-    height: 45,
-    borderRadius: 23,
+    width: 65,
+    height: 65,
+    borderRadius: 33,
   },
   foodCircleNonVegStep2: {
-    width: 45,
-    height: 45,
-    borderRadius: 23,
+    width: 65,
+    height: 65,
+    borderRadius: 33,
   },
   foodLabelStep2: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "400",
     color: "#fff",
     marginTop: 10,
@@ -1187,12 +1192,12 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   checkboxStep2: {
-    width: 16,
-    height: 16,
-    borderRadius: 2,
+    width: 18,
+    height: 18,
+    borderRadius: 3,
     borderWidth: 0,
     borderColor: "#fff",
-    marginRight: 8,
+    marginRight: 10,
     backgroundColor: "#fff",
   },
   checkboxActiveStep2: { backgroundColor: "#4ade80" },

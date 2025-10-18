@@ -51,8 +51,10 @@ export default function ChefHomeScreen() {
         }
         const ordersRes = await fetchChefOrders(user ? user.id : null);
         console.log("Orders API response:", ordersRes); // Debug log
-        console.log("Orders array:", ordersRes.orders); // Debug log
-        setOrders(ordersRes.orders || []);
+        console.log("Active orders array:", ordersRes.activeOrders); // Debug log
+        console.log("All orders array:", ordersRes.orders); // Debug log
+        // Use activeOrders for home screen (excludes served orders)
+        setOrders(ordersRes.activeOrders || ordersRes.orders || []);
         const msgRes = await fetchChefMessages(user ? user.id : null);
         setMessages(msgRes.messages || []);
       } catch (e) {}
@@ -69,7 +71,8 @@ export default function ChefHomeScreen() {
         user = JSON.parse(userStr);
       }
       const ordersRes = await fetchChefOrders(user ? user.id : null);
-      setOrders(ordersRes.orders || []);
+      // Use activeOrders for home screen (excludes served orders)
+      setOrders(ordersRes.activeOrders || ordersRes.orders || []);
     }
   };
 
@@ -96,13 +99,13 @@ export default function ChefHomeScreen() {
         style={styles.powerIcon}
         onPress={handleLogout}
       >
-        <MaterialCommunityIcons name="power" size={28} color="#222" />
+        <MaterialCommunityIcons name="power" size={36} color="#222" />
       </Pressable>
       <Pressable
         style={styles.bellIcon}
         onPress={() => setShowMsgModal(true)}
       >
-        <MaterialCommunityIcons name="bell-outline" size={28} color="#222" />
+        <MaterialCommunityIcons name="bell-outline" size={36} color="#222" />
       </Pressable>
       {/* Message Modal */}
       <Modal
@@ -355,9 +358,9 @@ export default function ChefHomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#a9a1e2", paddingTop: 24 },
-  powerIcon: { position: "absolute", top: 18, left: 24, zIndex: 10 },
-  bellIcon: { position: "absolute", top: 18, right: 24, zIndex: 10 },
+  container: { flex: 1, backgroundColor: "#a9a1e2", paddingTop: 50 },
+  powerIcon: { position: "absolute", top: 50, left: 24, zIndex: 10, padding: 8 },
+  bellIcon: { position: "absolute", top: 50, right: 24, zIndex: 10, padding: 8 },
   profileImgRow: {
     flexDirection: "row",
     alignItems: "flex-end",

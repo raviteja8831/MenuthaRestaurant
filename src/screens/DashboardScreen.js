@@ -6,6 +6,7 @@ import { fetchManagerDashboard, fetchChefActivityReport } from "../api/managerAp
 import { updateRestaurantUpi } from "../api/updateRestaurantUpi";
 import axios from "axios";
 import { logout } from "../services/authService";
+import { AlertService } from "../services/alertService";
 
 import { HEADINGS } from "../constants/headings";
 import ProfileModal from "../components/ProfileModal";
@@ -81,6 +82,7 @@ export default function ManagerDashboardScreenNew() {
         const userStr = await AsyncStorage.getItem("user_profile");
         const token = await AsyncStorage.getItem("auth_token");
         let user = null;
+        let userUpi = "";
         if (userStr) {
           user = JSON.parse(userStr);
           setManagerName(user.firstname || user.name || "");
@@ -90,7 +92,8 @@ export default function ManagerDashboardScreenNew() {
             userImage: user.userImage || null,
             restaurant: user.restaurant || null,
           });
-          setUpi(user.restaurant.upi);
+          // Get UPI from user profile with fallback
+          userUpi = user.restaurant?.upi || "";
         }
         const restaurantId = user?.restaurant.id;
         const dash = await fetchManagerDashboard(restaurantId, token, salesDateFilter);
@@ -122,7 +125,8 @@ export default function ManagerDashboardScreenNew() {
         setChefLogins(dash.currentlyLoggedIn || 0);
         setChefLogouts(dash.chefLogouts || 0);
         setTotalChefLogins(dash.chefLogins || 0);
-        setUpi(dash.upi || "");
+        // Set UPI: prefer dashboard value, then user profile value, then empty string
+        setUpi(dash.upi || userUpi || "");
       } catch (_e) {
         // fallback to static if needed
       }
@@ -270,10 +274,26 @@ export default function ManagerDashboardScreenNew() {
                               const userStr = await AsyncStorage.getItem("user_profile");
                               const user = userStr ? JSON.parse(userStr) : {};
                               const restaurantId = user?.restaurant?.id;
+
+                              if (!restaurantId) {
+                                AlertService.error("Restaurant ID not found. Please try logging in again.");
+                                setUpiLoading(false);
+                                return;
+                              }
+
                               await updateRestaurantUpi(restaurantId, upi);
+
+                              // Update local user profile in AsyncStorage with new UPI
+                              if (user.restaurant) {
+                                user.restaurant.upi = upi;
+                                await AsyncStorage.setItem("user_profile", JSON.stringify(user));
+                              }
+
+                              AlertService.success("UPI updated successfully!");
                               setUpiEdit(false);
                             } catch (_err) {
                               console.error("Error updating UPI:", _err);
+                              AlertService.error("Failed to update UPI. Please try again.");
                             }
                             setUpiLoading(false);
                           }}

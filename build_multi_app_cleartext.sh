@@ -163,16 +163,8 @@ build_app() {
   mkdir -p android/app/src/main/assets
   mkdir -p android/app/src/main/res
 
-  print_status "Creating JS bundle with Expo Router entry point..."
-  npx react-native bundle \
-    --platform android \
-    --dev false \
-    --entry-file node_modules/expo-router/entry.js \
-    --bundle-output android/app/src/main/assets/index.android.bundle \
-    --assets-dest android/app/src/main/res
-
   cd android
-  print_status "Running Gradle assembleRelease (skipping automatic bundling)..."
+  print_status "Running Gradle assembleRelease (Gradle will handle bundling)..."
   ./gradlew assembleRelease -PreactNativeArchitectures=armeabi-v7a,arm64-v8a
   cd ..
 
@@ -195,15 +187,16 @@ create_adaptive_icon() {
 
   print_status "Creating adaptive icon with safe zone padding for $OUTPUT_NAME..."
 
-  # Create a padded version for adaptive icon (80% of original size, centered)
-  # Android adaptive icons: safe zone is inner 66%, so 80% ensures good visibility
-  # while preventing cutoff from circular/rounded mask
+  # Create a padded version for adaptive icon
+  # Android adaptive icons: safe zone is inner 66%, so we resize to 60% of canvas
+  # to ensure the entire logo is visible within the safe zone
   local ADAPTIVE_ICON="./src/assets/${OUTPUT_NAME}_adaptive.png"
 
   if command -v convert &>/dev/null; then
     # Using ImageMagick to create padded icon
-    # Resize logo to 80% and center it on 1024x1024 canvas with purple background
-    convert "$SOURCE_LOGO" -resize 80% -gravity center -background "#7b6eea" -extent 1024x1024 "$ADAPTIVE_ICON"
+    # Resize logo to fit within 614x614 (60% of 1024) and center it on 1024x1024 canvas
+    # This ensures the logo is fully visible even with circular/rounded masks
+    convert "$SOURCE_LOGO" -resize 614x614 -gravity center -background "#7b6eea" -extent 1024x1024 "$ADAPTIVE_ICON"
     print_success "Adaptive icon created: $ADAPTIVE_ICON"
   else
     # Fallback: just copy the original (will still work but may be cut off)

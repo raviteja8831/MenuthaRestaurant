@@ -6,6 +6,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { LoaderProvider } from '../src/components/LoaderContext';
 import Loader from '../src/components/Loader';
 import { AlertProvider } from '../src/contexts/AlertContext';
+import BackButtonHandler from '../src/components/BackButtonHandler';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -42,6 +43,7 @@ export default function RootLayout() {
       <LoaderProvider>
         <StatusBar style="auto" />
         <Loader />
+        <BackButtonHandler />
         <Stack
           screenOptions={{
             headerShown: false,
