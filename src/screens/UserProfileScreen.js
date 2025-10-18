@@ -115,7 +115,7 @@ export default function UserProfileScreen() {
             restaurantAddress: order.restaurantAddress,
             status: order.status,
             totalAmount: order.totalAmount,
-            createdAt: order.createdAt || (order.date && order.time ? `${order.date} ${order.time}` : new Date().toISOString()),
+            createdAt: order.createdAt,
             items: order.items || []
           })));
         } else {
@@ -279,7 +279,7 @@ export default function UserProfileScreen() {
 
       {/* Members and Total Section */}
       <View style={styles.membersTotalSection}>
-        <Text style={styles.members}>{item.members || "Members not specified"}</Text>
+        <Text style={styles.members}>{item.membercount || "Members not specified"}</Text>
         <Text style={styles.totalAmount}>₹{item.totalAmount}/-</Text>
       </View>
 
