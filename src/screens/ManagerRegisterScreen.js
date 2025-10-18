@@ -229,14 +229,6 @@ export default function ManagerRegisterScreen() {
             const data = await uploadImage(fileObj);
             const SERVER_URL = API_BASE_URL;
             let imageUrl = data.url;
-            imageUrl =
-              SERVER_URL +
-              (imageUrl.startsWith("/") ? imageUrl : "/" + imageUrl);
-            if (imageUrl && !imageUrl.startsWith("http")) {
-              imageUrl =
-                SERVER_URL +
-                (imageUrl.startsWith("/") ? imageUrl : "/" + imageUrl);
-            }
             ambianceImageUrl = imageUrl;
           } catch (err) {
             showApiError(err);

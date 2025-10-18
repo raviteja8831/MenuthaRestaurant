@@ -33,7 +33,7 @@ export default function EditUserScreen({ user, onSave, onClose, visible }) {
     firstname: "",
     lastname: "",
     phone: "",
-    password: "",
+    password: "123456",
     role: "",
   }, validateForm);
 
@@ -55,7 +55,7 @@ export default function EditUserScreen({ user, onSave, onClose, visible }) {
         firstname: user.firstname || user.name?.split(' ')[0] || '',
         lastname: user.lastname || user.name?.split(' ')[1] || '',
         phone: user.phone || '',
-        password: '',
+        password: '123456',
         role: roleValue,
       });
     }

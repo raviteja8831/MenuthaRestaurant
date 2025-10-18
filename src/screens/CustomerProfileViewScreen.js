@@ -74,7 +74,7 @@ export default function CustomerProfileViewScreen() {
         <View style={styles.profileImageContainer}>
           {userData.profileImage ? (
             <Image
-              source={{ uri: userData.profileImage }}
+              source={{ uri: userImage.startsWith('http') ? userImage : `${IMG_BASE_URL}${userData.profileImage}` }}
               style={styles.profileImage}
             />
           ) : (

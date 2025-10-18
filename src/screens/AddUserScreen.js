@@ -18,7 +18,6 @@ export default function AddUserScreen({ navigation, onSave, onClose, visible }) 
     const errors = {};
     if (!values.firstname?.trim()) errors.firstname = "First name is required";
     if (!values.lastname?.trim()) errors.lastname = "Last name is required";
-    if (!values.password?.trim()) errors.password = "Password is required";
     if (values.password && values.password.length < 6) errors.password = "Password must be at least 6 characters";
     if (!values.role?.trim()) errors.role = "Role is required";
     if (!values.phone?.trim()) errors.phone = "Phone number is required";
@@ -39,7 +38,7 @@ export default function AddUserScreen({ navigation, onSave, onClose, visible }) 
   } = useFormValidation({
     firstname: "",
     lastname: "",
-    password: "",
+    password: "123456",
     role: "",
     phone: "",
   }, validateForm);
@@ -101,7 +100,7 @@ export default function AddUserScreen({ navigation, onSave, onClose, visible }) 
       setForm({
         firstname: "",
         lastname: "",
-        password: "",
+        password: "123456",
         role: "",
         phone: "",
       });
@@ -162,7 +161,7 @@ export default function AddUserScreen({ navigation, onSave, onClose, visible }) 
               touched={touched.lastname}
               type="text"
             />
-
+{/* 
             <FormInput
               label="Password *"
               name="password"
@@ -172,7 +171,7 @@ export default function AddUserScreen({ navigation, onSave, onClose, visible }) 
               error={errors.password}
               touched={touched.password}
               type="password"
-            />
+            /> */}
 
             <FormInput
               label="Role *"

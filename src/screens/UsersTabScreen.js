@@ -15,7 +15,7 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import TabBar from "./TabBarScreen";
 import AddMenuItemModal from "../Modals/AddMenuItemModal";
-import { API_BASE_URL } from "../constants/api.constants";
+import { API_BASE_URL, IMG_BASE_URL } from "../constants/api.constants";
 
 import {
   getUserDashboard,
@@ -236,7 +236,7 @@ export default function UsersTabScreen() {
                 ]}>
                   {user.userImage ? (
                     <Image
-                      source={{ uri: user.userImage.startsWith('http') ? user.userImage : `${API_BASE_URL}${user.userImage}` }}
+                      source={{ uri: user.userImage.startsWith('http') ? user.userImage : `${IMG_BASE_URL}${user.userImage}` }}
                       style={styles.userAvatarImage}
                     />
                   ) : (
@@ -292,7 +292,7 @@ export default function UsersTabScreen() {
             <View style={styles.usersProfileAvatarCircle}>
               {selectedUser?.userImage ? (
                 <Image
-                  source={{ uri: selectedUser.userImage.startsWith('http') ? selectedUser.userImage : `${API_BASE_URL}${selectedUser.userImage}` }}
+                  source={{ uri: selectedUser.userImage.startsWith('http') ? selectedUser.userImage : `${IMG_BASE_URL}${selectedUser.userImage}` }}
                   style={styles.usersProfileAvatarImage}
                 />
               ) : (
