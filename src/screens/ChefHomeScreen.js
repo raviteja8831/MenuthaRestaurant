@@ -30,6 +30,7 @@ export default function ChefHomeScreen() {
   const [chefName, setChefName] = useState("");
   const [loginAt, setLoginAt] = useState("");
   const [userImage, setUserImage] = useState(null);
+  const [imageError, setImageError] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -158,10 +159,28 @@ export default function ChefHomeScreen() {
 
       <View style={styles.profileImgRow}>
         <Pressable onPress={() => router.push("/chef-profile")}>
-          {userImage ? (
+          {userImage && !imageError ? (
             <Image
-              source={{ uri: userImage.startsWith('http') ? userImage : `${IMG_BASE_URL}${userImage}` }}
+              source={{
+                uri: (() => {
+                  const baseUrl = IMG_BASE_URL.endsWith('/') ? IMG_BASE_URL.slice(0, -1) : IMG_BASE_URL;
+                  const imagePath = userImage.startsWith('/') ? userImage : `/${userImage}`;
+                  const fullUrl = userImage.startsWith('http') ? userImage : `${baseUrl}${imagePath}`;
+                  console.log('Loading chef profile image:', fullUrl);
+                  return fullUrl;
+                })(),
+                cache: 'reload'
+              }}
               style={styles.profileImgLarge}
+              resizeMode="cover"
+              onError={(error) => {
+                console.log('Chef profile image loading error:', error.nativeEvent?.error);
+                setImageError(true);
+              }}
+              onLoad={() => {
+                console.log('Chef profile image loaded successfully');
+                setImageError(false);
+              }}
             />
           ) : (
             <View style={[styles.profileImgLarge, { backgroundColor: '#d1c4e9', alignItems: 'center', justifyContent: 'center' }]}>
@@ -220,21 +239,31 @@ export default function ChefHomeScreen() {
                       <Text style={styles.orderTable}>{tableNumber}</Text>
                     </View>
 
-                    <MaterialCommunityIcons
-                      name="cog"
-                      size={32}
-                      color={
-                        firstProduct.status == 1
-                          ? "#f0ad4e"
-                          : firstProduct.status == 2
-                          ? "#5bc0de"
-                          : firstProduct.status == 3
-                          ? "#5cb85c"
-                          : firstProduct.status == 4
-                          ? "#0275d8"
-                          : "#666"
-                      }
-                    />
+                    <Pressable
+                      onPress={() => {
+                        const updatedOrders = [...orders];
+                        updatedOrders[i]["orderProducts"][
+                          j
+                        ].showDropdown = true;
+                        setOrders(updatedOrders);
+                      }}
+                    >
+                      <MaterialCommunityIcons
+                        name="cog"
+                        size={32}
+                        color={
+                          firstProduct.status == 1 || firstProduct.status === 'ORDERED'
+                            ? "#f0ad4e"
+                            : firstProduct.status == 2
+                            ? "#5bc0de"
+                            : firstProduct.status == 3
+                            ? "#5cb85c"
+                            : firstProduct.status == 4
+                            ? "#0275d8"
+                            : "#666"
+                        }
+                      />
+                    </Pressable>
 
                     <Modal
                       visible={firstProduct.showDropdown || false}
@@ -279,10 +308,8 @@ export default function ChefHomeScreen() {
                           </Text>
 
                           {[
-                            { id: 1, label: "Waiting", color: "#f0ad4e" },
                             { id: 2, label: "Preparing", color: "#5bc0de" },
                             { id: 3, label: "Ready", color: "#5cb85c" },
-                            { id: 4, label: "Served", color: "#0275d8" },
                           ].map((status) => (
                             <Pressable
                               key={`${firstProduct.id || j}-${status.id}`}
@@ -324,38 +351,6 @@ export default function ChefHomeScreen() {
                         </View>
                       </View>
                     </Modal>
-
-                    <Pressable
-                      onPress={() => {
-                        const updatedOrders = [...orders];
-                        updatedOrders[i]["orderProducts"][
-                          j
-                        ].showDropdown = true;
-                        setOrders(updatedOrders);
-                      }}
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        padding: 8,
-                      }}
-                    >
-                      <Text style={{ color: "#666", marginRight: 8 }}>
-                        {firstProduct.status === 1
-                          ? "Waiting"
-                          : firstProduct.status === 2
-                          ? "Preparing"
-                          : firstProduct.status === 3
-                          ? "Ready"
-                          : firstProduct.status === 4
-                          ? "Served"
-                          : "Unknown"}
-                      </Text>
-                      <MaterialCommunityIcons
-                        name="chevron-down"
-                        size={24}
-                        color="#666"
-                      />
-                    </Pressable>
                   </View>
                  )
               

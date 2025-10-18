@@ -24,6 +24,7 @@ export default function ChefProfileScreen() {
   const [profile, setProfile] = useState(null);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -72,20 +73,31 @@ export default function ChefProfileScreen() {
       </View>
       <View style={{ alignItems: "center", marginTop: 8, marginBottom: 8 }}>
         {(() => {
-          const imageUrl = profile?.profileImage || profile?.image_url;
+          const imageUrl = profile?.profileImage || profile?.image_url || profile?.userImage;
           console.log("Profile image URL:", imageUrl); // Debug log
 
-          if (imageUrl && typeof imageUrl === 'string') {
-            const finalUrl = imageUrl.startsWith('http')
-              ? imageUrl
-              : `${IMG_BASE_URL}${imageUrl}`;
-            console.log("Final image URL:", finalUrl); // Debug log
+          if (imageUrl && typeof imageUrl === 'string' && !imageError) {
+            const baseUrl = IMG_BASE_URL.endsWith('/') ? IMG_BASE_URL.slice(0, -1) : IMG_BASE_URL;
+            const imagePath = imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`;
+            const finalUrl = imageUrl.startsWith('http') ? imageUrl : `${baseUrl}${imagePath}`;
+            console.log("Final chef profile image URL:", finalUrl); // Debug log
 
             return (
               <Image
-                source={{ uri: finalUrl }}
+                source={{
+                  uri: finalUrl,
+                  cache: 'reload'
+                }}
                 style={styles.profileImgLarge}
-                onError={(e) => console.log("Image load error:", e.nativeEvent.error)}
+                resizeMode="cover"
+                onError={(e) => {
+                  console.log("Chef profile image load error:", e.nativeEvent?.error);
+                  setImageError(true);
+                }}
+                onLoad={() => {
+                  console.log("Chef profile image loaded successfully");
+                  setImageError(false);
+                }}
               />
             );
           } else {
