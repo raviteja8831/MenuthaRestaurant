@@ -252,14 +252,12 @@ export default function ChefHomeScreen() {
                         name="cog"
                         size={32}
                         color={
-                          firstProduct.status == 1 || firstProduct.status === 'ORDERED'
+                          firstProduct.status === 'ORDERED'
                             ? "#f0ad4e"
-                            : firstProduct.status == 2
+                            : firstProduct.status === 'PREPARING'
                             ? "#5bc0de"
-                            : firstProduct.status == 3
+                            : firstProduct.status === 'READY'
                             ? "#5cb85c"
-                            : firstProduct.status == 4
-                            ? "#0275d8"
                             : "#666"
                         }
                       />
@@ -308,16 +306,16 @@ export default function ChefHomeScreen() {
                           </Text>
 
                           {[
-                            { id: 2, label: "Preparing", color: "#5bc0de" },
-                            { id: 3, label: "Ready", color: "#5cb85c" },
+                            { value: "PREPARING", label: "Preparing", color: "#5bc0de" },
+                            { value: "READY", label: "Ready", color: "#5cb85c" },
                           ].map((status) => (
                             <Pressable
-                              key={`${firstProduct.id || j}-${status.id}`}
+                              key={`${firstProduct.id || j}-${status.value}`}
                               style={[
                                 styles.profileCloseBtn,
                                 {
                                   backgroundColor:
-                                    firstProduct.status === status.id
+                                    firstProduct.status === status.value
                                       ? status.color
                                       : "#a9a1e2",
                                   marginBottom: 8,
@@ -327,20 +325,15 @@ export default function ChefHomeScreen() {
                               onPress={async () => {
                                 const updatedOrders = [...orders];
                                 updatedOrders[i]["orderProducts"][j].status =
-                                  status.id;
+                                  status.value;
                                 updatedOrders[i]["orderProducts"][
                                   j
                                 ].showDropdown = false;
                                 setOrders(updatedOrders);
                                 handleOrderStatusUpdate({
                                   id: firstProduct.id,
-                                  status: status.id,
+                                  status: status.value,
                                 });
-                                // Directly call updateOrderStatus here
-                                /*  const response = await updateOrderStatus({
-                                  id: firstProduct.id,
-                                  status: status.id,
-                                }); */
                               }}
                             >
                               <Text style={{ color: "white" }}>
