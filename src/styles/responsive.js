@@ -373,6 +373,9 @@ export const orderitemsstyle = {
   quantityText: { marginHorizontal: 6, fontSize: 14 },
 };
 export const menuliststyles = {
+  name:{
+    color: "#000"
+  },
   backgroundImage: {
     flex: 1,
     width: "100%",
