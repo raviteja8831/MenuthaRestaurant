@@ -50,7 +50,9 @@
       "Read(//c/Users/ravit/Siddhu'sWorld/updated/restaurant/server/app/routes/**)",
       "Read(//c/Users/ravit/AppData/Roaming/Code/User/workspaceStorage/vscode-chat-images/**)",
       "Read(//c/Users/ravit/Siddhu'sWorld/updated/restaurant/server/**)",
-      "Read(//home/ec2-user/**)"
+      "Read(//home/ec2-user/**)",
+      "Bash(pm2 restart:*)",
+      "Bash(git pull:*)"
     ],
     "deny": [],
     "ask": []

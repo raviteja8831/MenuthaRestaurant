@@ -26,7 +26,7 @@ export default function TabBar({ activeTab }) {
           ]}>
             <MaterialCommunityIcons
               name={activeTab === tab.key ? tab.icon.replace('-outline', '') : tab.icon}
-              size={26}
+              size={32}
               color={activeTab === tab.key ? '#000' : '#000'}
             />
           </View>

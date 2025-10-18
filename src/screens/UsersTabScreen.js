@@ -290,17 +290,23 @@ export default function UsersTabScreen() {
         <View style={styles.usersProfileRow}>
           <View style={styles.usersProfileColLeft}>
             <View style={styles.usersProfileAvatarCircle}>
-              <MaterialCommunityIcons
-                name="account"
-                size={48}
-                color="#6c63b5"
-              />
+              {selectedUser?.userImage ? (
+                <Image
+                  source={{ uri: selectedUser.userImage.startsWith('http') ? selectedUser.userImage : `${API_BASE_URL}${selectedUser.userImage}` }}
+                  style={styles.usersProfileAvatarImage}
+                />
+              ) : (
+                <Image
+                  source={require("../assets/images/default-user.png")}
+                  style={styles.usersProfileAvatarImage}
+                />
+              )}
             </View>
             <View>
-              <Text style={styles.usersProfileName}>{selectedUser?.name}</Text>
-              <Text style={styles.usersProfileRole}>{selectedUser?.role}</Text>
+              <Text style={styles.usersProfileName}>{selectedUser?.firstname || selectedUser?.name}</Text>
+              <Text style={styles.usersProfileRole}>{selectedUser?.role || "Chef"}</Text>
               <Text style={styles.usersLoginTime}>
-                Today Login Time : {dashboard?.todayLoginTime}
+                Today Login Time : {dashboard?.todayLoginTime || "N/A"}
               </Text>
             </View>
           </View>
@@ -308,7 +314,7 @@ export default function UsersTabScreen() {
             style={styles.usersProfileSettingsBtn}
             onPress={() => setShowEditUserModal(true)}
           >
-            <MaterialCommunityIcons name="cog" size={28} color="#6c63b5" />
+            <MaterialCommunityIcons name="cog" size={32} color="#6c63b5" />
           </Pressable>
         </View>
 
@@ -360,7 +366,7 @@ export default function UsersTabScreen() {
               >
                 <MaterialCommunityIcons
                   name="minus"
-                  size={22}
+                  size={28}
                   color="#6c63b5"
                 />
               </Pressable>
@@ -371,7 +377,7 @@ export default function UsersTabScreen() {
                   setAction("add");
                 }}
               >
-                <MaterialCommunityIcons name="plus" size={22} color="#6c63b5" />
+                <MaterialCommunityIcons name="plus" size={28} color="#6c63b5" />
               </Pressable>
             </View>
             <ScrollView style={{ flex: 1 }}>
@@ -767,13 +773,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   usersProfileAvatarCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     backgroundColor: "#ece9fa",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
+    overflow: 'hidden',
+  },
+  usersProfileAvatarImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    resizeMode: 'cover',
   },
   usersProfileName: {
     fontSize: 20,

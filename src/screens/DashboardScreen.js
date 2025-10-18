@@ -317,12 +317,12 @@ export default function ManagerDashboardScreenNew() {
               {profile.userImage ? (
                 <Image
                   source={{ uri: `${IMG_BASE_URL}${profile.userImage}` }}
-                  style={{ width: 60, height: 60, borderRadius: 30 }}
+                  style={{ width: 100, height: 100, borderRadius: 50 }}
                 />
               ) : (
                 <MaterialCommunityIcons
                   name="account-circle"
-                  size={60}
+                  size={100}
                   color="#7b6eea"
                 />
               )}
@@ -553,18 +553,15 @@ export default function ManagerDashboardScreenNew() {
         {/* Chef Status Card */}
         <Surface style={styles.chefCard}>
           <Text style={styles.chefTitle}>Chef Status</Text>
+          <Text style={[styles.chefLabel, { textAlign: 'center', marginBottom: 12 }]}>No of Logins : {String(totalChefLogins).padStart(2, '0')}</Text>
           <View style={styles.chefRow}>
             <View style={styles.chefBox}>
               <Text style={styles.chefLabel}>Login</Text>
-              <Text style={styles.chefValue}>{chefLogins}</Text>
-            </View>
-            <View style={styles.chefBox}>
-              <Text style={styles.chefLabel}>No of Logins :</Text>
-              <Text style={styles.chefValue}>{totalChefLogins}</Text>
+              <Text style={styles.chefValue}>{String(chefLogins).padStart(2, '0')}</Text>
             </View>
             <View style={styles.chefBox}>
               <Text style={styles.chefLabel}>Logout</Text>
-              <Text style={styles.chefValue}>{chefLogouts}</Text>
+              <Text style={styles.chefValue}>{String(chefLogouts).padStart(2, '0')}</Text>
             </View>
           </View>
         </Surface>
@@ -834,10 +831,10 @@ const styles = StyleSheet.create({
     padding: 18,
   },
   buffetImg: {
-    width: 70,
-    height: 70,
-    marginTop: 12,
-    marginBottom: 12,
+    width: 80,
+    height: 80,
+    marginTop: 8,
+    marginBottom: 8,
   },
   buffetMenuPopupNew: {
     backgroundColor: "#fff",
@@ -872,17 +869,20 @@ const styles = StyleSheet.create({
     minWidth: 120,
     minHeight: 180,
     alignItems: "center",
-    borderRadius: 20,
+    borderRadius: 24,
     elevation: 0,
     shadowOpacity: 0,
   },
   buffetTitle: {
     fontWeight: "bold",
-    fontSize: 16,
-    color: "#222",
+    fontSize: 18,
+    color: "#fff",
   },
   buffetMenuIcon: {
     padding: 4,
+  },
+  buffetIcon: {
+    marginVertical: 8,
   },
   menuOverlay: {
     flex: 1,
@@ -911,19 +911,20 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   chefCard: {
-    backgroundColor: "#DAD6FE",
-    borderRadius: 20,
+    backgroundColor: "#C8BFEF",
+    borderRadius: 24,
     padding: 20,
     marginHorizontal: 20,
     marginTop: 8,
     marginBottom: 16,
-    elevation: 2,
+    elevation: 0,
+    shadowOpacity: 0,
   },
   chefTitle: {
     fontWeight: "bold",
-    fontSize: 16,
-    color: "#6c63b5",
-    marginBottom: 12,
+    fontSize: 18,
+    color: "#000",
+    marginBottom: 8,
     textAlign: "center",
   },
   chefRow: {
@@ -936,15 +937,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   chefLabel: {
-    fontSize: 14,
-    color: "#222",
-    marginBottom: 6,
-    fontWeight: "400",
+    fontSize: 15,
+    color: "#000",
+    marginBottom: 8,
+    fontWeight: "bold",
   },
   chefValue: {
     fontWeight: "bold",
-    fontSize: 20,
-    color: "#6c63b5",
+    fontSize: 24,
+    color: "#000",
   },
   // QR Code Tab Styles
   qrContainer: {
@@ -1256,71 +1257,73 @@ const styles = StyleSheet.create({
   },
   headerLeft: {},
   todayText: {
-    fontSize: 16,
+    fontSize: 20,
     color: "#fff",
-    fontWeight: "500",
-    marginBottom: 4,
+    fontWeight: "bold",
+    marginBottom: 2,
   },
   dayText: {
-    fontSize: 24,
+    fontSize: 28,
     color: "#fff",
     fontWeight: "bold",
     marginBottom: 2,
   },
   dateText: {
-    fontSize: 20,
+    fontSize: 26,
     color: "#fff",
-    marginBottom: 12,
-    fontWeight: "400",
+    marginBottom: 16,
+    fontWeight: "bold",
   },
   greetText: {
-    fontSize: 18,
+    fontSize: 20,
     color: "#fff",
     marginBottom: 8,
     fontWeight: "500",
   },
   profileImg: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     backgroundColor: "#fff",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 2,
-    borderColor: "#d1c4e9",
+    borderWidth: 3,
+    borderColor: "#fff",
     overflow: "hidden",
   },
   infoCard: {
     marginHorizontal: 20,
     marginTop: 12,
     marginBottom: 16,
-    padding: 18,
-    borderRadius: 20,
-    backgroundColor: "#DAD6FE",
-    elevation: 4,
-    alignItems: "center",
+    padding: 20,
+    borderRadius: 24,
+    backgroundColor: "#C8BFEF",
+    elevation: 0,
+    shadowOpacity: 0,
+    alignItems: "flex-start",
   },
   infoTitle: {
     fontWeight: "bold",
-    fontSize: 16,
-    marginBottom: 12,
+    fontSize: 18,
+    marginBottom: 16,
     textAlign: "center",
-    color: "#222",
+    color: "#000",
+    width: "100%",
   },
   infoRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 8,
+    marginBottom: 10,
     width: "100%",
   },
   infoLabel: {
-    fontSize: 15,
-    color: "#222",
+    fontSize: 17,
+    color: "#000",
     fontWeight: "400",
   },
   infoValue: {
-    fontSize: 16,
-    color: "#7b6eea",
+    fontSize: 18,
+    color: "#000",
     fontWeight: "bold",
   },
   statusCard: {
@@ -1328,17 +1331,18 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 16,
     padding: 20,
-    borderRadius: 20,
-    backgroundColor: "#DAD6FE",
-    elevation: 4,
+    borderRadius: 24,
+    backgroundColor: "#C8BFEF",
+    elevation: 0,
+    shadowOpacity: 0,
     alignItems: "center",
   },
   statusTitle: {
     fontWeight: "bold",
-    fontSize: 16,
-    marginBottom: 12,
+    fontSize: 18,
+    marginBottom: 16,
     textAlign: "center",
-    color: "#222",
+    color: "#000",
   },
   statusRow: {
     flexDirection: "row",
@@ -1350,15 +1354,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statusLabel: {
-    fontSize: 14,
-    color: "#222",
+    fontSize: 15,
+    color: "#000",
     textAlign: "center",
-    marginBottom: 4,
+    marginBottom: 8,
+    fontWeight: "400",
   },
   statusValue: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: "bold",
-    color: "#7b6eea",
+    color: "#000",
     textAlign: "center",
   },
   chartCard: {

@@ -21,7 +21,8 @@ import { fetchQRCodeOrders } from "../src/services/qrcodeService";
 import { updateTable, deleteTable } from "../src/constants/tableApi";
 import { showApiError } from "../src/services/messagingService";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { updateOrderStatus } from "../src/constants/orderApi";
+import { updateOrderStatus } from "../src/api/orderApi";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const PERIODS = [
   { label: "Week", value: "week" },
@@ -46,6 +47,7 @@ export default function QRCodeOrdersScreen() {
   const [editValue, setEditValue] = useState(qrcode.name || "");
   const [editLoading, setEditLoading] = useState(false);
   const [actionMenuOrderId, setActionMenuOrderId] = useState(null);
+  const [restaurantName, setRestaurantName] = useState("");
   // Handler for QR code edit
   const handleEditQRCode = () => {
     setShowEditModal(true);
@@ -147,16 +149,12 @@ export default function QRCodeOrdersScreen() {
   // Action menu handlers
   const handleClearOrder = async (orderId) => {
     try {
-      const response = await updateOrderStatus(orderId, {
+      await updateOrderStatus(orderId, {
         status: "COMPLETED",
       });
-      console.log("Order cleared:", response);
-
-      if (response.status === "success") {
-        setActionMenuOrderId(null);
-        fetch(); // Reload orders after clearing
-        AlertService.success("Order cleared successfully");
-      }
+      setActionMenuOrderId(null);
+      fetch(); // Reload orders after clearing
+      AlertService.success("Order cleared successfully");
     } catch (error) {
       console.error("Error clearing order:", error);
       AlertService.error("Failed to clear order");
@@ -164,48 +162,73 @@ export default function QRCodeOrdersScreen() {
   };
   const handlePrintOrder = async (order) => {
     setActionMenuOrderId(null);
+
+    // Build order items HTML if available
+    let orderItemsHTML = '';
+    if (order.items && Array.isArray(order.items) && order.items.length > 0) {
+      orderItemsHTML = `
+        <div class="section">
+          <h3>Order Items</h3>
+          <table>
+            <tr>
+              <th>Item Name</th>
+              <th>Quantity</th>
+              <th>Price</th>
+              <th>Total</th>
+            </tr>
+            ${order.items.map(item => `
+              <tr>
+                <td>${item.name || item.menuItemName || ''}</td>
+                <td>${item.quantity || 1}</td>
+                <td>${item.price || 0}</td>
+                <td>${(item.quantity || 1) * (item.price || 0)}</td>
+              </tr>
+            `).join('')}
+          </table>
+        </div>
+      `;
+    }
+
     // Compose HTML for PDF
     const html = `
       <html>
         <head>
           <style>
             body { font-family: Arial, sans-serif; padding: 24px; }
-            h2 { color: #6c63b5; }
+            h2 { color: #6c63b5; margin-bottom: 10px; }
+            h3 { color: #6c63b5; margin-top: 16px; margin-bottom: 8px; font-size: 18px; }
             .section { margin-bottom: 18px; }
-            table { border-collapse: collapse; width: 100%; }
-            th, td { border: 1px solid #ece9fa; padding: 8px 12px; text-align: left; }
-            th { background: #e6e1fa; color: #6c63b5; }
+            .info { margin-bottom: 8px; }
+            table { border-collapse: collapse; width: 100%; margin-top: 8px; }
+            th, td { border: 1px solid #ddd; padding: 8px 12px; text-align: left; }
+            th { background: #e6e1fa; color: #6c63b5; font-weight: bold; }
+            .total-row { font-weight: bold; background: #f5f5f5; }
           </style>
         </head>
         <body>
-          <h2>Order Details</h2>
-          <div class="section"><b>Table Name:</b> ${qrcode.name || ""}</div>
-          <div class="section"><b>Restaurant Name:</b> ${
-            order.restaurantName || ""
-          }</div>
+          <h2>Order Receipt</h2>
           <div class="section">
-            <table>
-              <tr><th>Name</th><th>Contact</th><th>Time</th><th>Amount</th><th>Status</th></tr>
-              <tr>
-                <td>${order.name}</td>
-                <td>${order.contact}</td>
-                <td>${order.time ? String(order.time).slice(11, 19) : ""}</td>
-                <td>${order.amount}</td>
-                <td>${order.status}</td>
-              </tr>
-            </table>
+            <div class="info"><b>Restaurant Name:</b> ${restaurantName || order.restaurant?.name || order.restaurantName || "N/A"}</div>
+            <div class="info"><b>Table Name:</b> ${qrcode.name || "N/A"}</div>
+            <div class="info"><b>Customer Name:</b> ${order.name || "N/A"}</div>
+            <div class="info"><b>Contact:</b> ${order.contact || "N/A"}</div>
+            <div class="info"><b>Order Time:</b> ${order.time ? String(order.time).slice(0, 19).replace('T', ' ') : "N/A"}</div>
+            <div class="info"><b>Status:</b> ${order.status || "N/A"}</div>
+          </div>
+          ${orderItemsHTML}
+          <div class="section">
+            <div class="info"><b>Total Amount: ₹${order.amount || 0}</b></div>
           </div>
         </body>
       </html>
     `;
     try {
-      const { uri } = await Print.printToFileAsync({ html, base64: false });
-      await Sharing.shareAsync(uri, {
-        mimeType: "application/pdf",
-        dialogTitle: "Share or Save PDF",
-      });
+      // Use printAsync to show print dialog
+      await Print.printAsync({ html });
+      AlertService.success("Print initiated");
     } catch (err) {
-      AlertService.error("Failed to generate PDF", "Error");
+      console.error("Print error:", err);
+      AlertService.error("Failed to print", "Error");
     }
   };
   const handleDownloadOrder = (order) => {
@@ -224,6 +247,17 @@ export default function QRCodeOrdersScreen() {
   };
 
   useEffect(() => {
+    const loadRestaurantName = async () => {
+      try {
+        const userProfile = await AsyncStorage.getItem('user_profile');
+        const parsed = JSON.parse(userProfile || '{}');
+        setRestaurantName(parsed?.restaurant?.name || "");
+      } catch (err) {
+        console.error('Failed to load restaurant name', err);
+      }
+    };
+
+    loadRestaurantName();
     if (qrcode.id) fetch();
   }, [period, qrcode.id]);
 

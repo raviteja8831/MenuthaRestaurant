@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, TextInput, StyleSheet, Modal, ScrollView } from 'react-native';
+import { View, Text, Pressable, TextInput, StyleSheet, Modal, ScrollView, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
@@ -36,26 +36,31 @@ export default function AddMenuItemScreen({ visible, onClose, onSave }) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
-        <View style={styles.modalCard}>
-          <Pressable style={styles.closeBtn} onPress={onClose}>
-            <MaterialCommunityIcons name="close" size={28} color="#222" />
-          </Pressable>
-          <Text style={styles.modalTitle}>Add Menu Item</Text>
-          {/* Menu Picker */}
-          <Text style={styles.label}>Menu</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={selectedMenuId}
-              onValueChange={(itemValue) => setSelectedMenuId(itemValue)}
-              style={styles.picker}
-              dropdownIconColor="#222"
-            >
-              <Picker.Item label="Select menu" value="" />
-              {menus.map((m) => (
-                <Picker.Item key={m.id} label={m.name} value={m.id} />
-              ))}
-            </Picker>
-          </View>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.modalCard}>
+            <Pressable style={styles.closeBtn} onPress={onClose}>
+              <MaterialCommunityIcons name="close" size={28} color="#222" />
+            </Pressable>
+            <Text style={styles.modalTitle}>Add Menu Item</Text>
+            {/* Menu Picker */}
+            <Text style={styles.label}>Menu</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={selectedMenuId}
+                onValueChange={(itemValue) => setSelectedMenuId(itemValue)}
+                style={styles.picker}
+                dropdownIconColor="#222"
+                mode="dropdown"
+              >
+                <Picker.Item label="Select menu" value="" />
+                {menus.map((m) => (
+                  <Picker.Item key={m.id} label={m.name} value={m.id} />
+                ))}
+              </Picker>
+            </View>
           {/* Type */}
           <Text style={styles.label}>Type</Text>
           <TextInput
@@ -92,7 +97,8 @@ export default function AddMenuItemScreen({ visible, onClose, onSave }) {
           }}>
             <Text style={styles.saveBtnText}>Save</Text>
           </Pressable>
-        </View>
+          </View>
+        </ScrollView>
       </View>
     </Modal>
   );
@@ -105,13 +111,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
   modalCard: {
     backgroundColor: '#d6d1f7',
     borderRadius: 24,
     padding: 24,
     width: 320,
     alignItems: 'center',
-    alignSelf: 'center',
     elevation: 8,
     position: 'relative',
   },
@@ -140,14 +151,16 @@ const styles = StyleSheet.create({
   pickerContainer: {
     width: '100%',
     marginBottom: 8,
-    backgroundColor: '#ece9fa',
+    backgroundColor: '#fff',
     borderRadius: 8,
-    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#d0c9f5',
   },
   picker: {
     width: '100%',
     height: 50,
     color: '#222',
+    backgroundColor: 'transparent',
   },
   input: {
     width: '100%',
