@@ -1,0 +1,63 @@
+{
+  "expo": {
+    "name": "Menutha",
+    "slug": "ft",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./src/assets/menutha.png",
+    "scheme": "ft",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": false,
+    "ios": {
+      "supportsTablet": true,
+      "config": {
+        "googleMapsApiKey": "AIzaSyCJT87ZYDqm6bVLxRsg4Zde87HyefUfASQ"
+      },
+      "bundleIdentifier": "com.menutha.customer",
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app needs access to the camera to scan QR codes for table orders."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "\u001b[0;34m[INFO]\u001b[0m Creating adaptive icon with safe zone padding for menutha...\n\u001b[0;32m[SUCCESS]\u001b[0m Adaptive icon created: ./src/assets/menutha_adaptive.png\n./src/assets/menutha_adaptive.png",
+        "backgroundColor": "#7b6eea"
+      },
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyCJT87ZYDqm6bVLxRsg4Zde87HyefUfASQ"
+        }
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.menutha.customer",
+      "usesCleartextTraffic": true,
+      "permissions": [
+        "CAMERA",
+        "INTERNET",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./src/assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "splash": {
+      "image": "./src/assets/menutha.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#a9a1e2"
+    },
+    "extra": {
+      "DEFAULT_LANDING_PAGE": "/login",
+      "API_BASE_URL": "http://13.127.228.119:8090/api",
+      "IMG_BASE_URL": "http://13.127.228.119:8090/"
+    }
+  }
+}

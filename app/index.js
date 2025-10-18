@@ -17,23 +17,21 @@ export default function IndexScreen() {
       const authenticated = await isAuthenticated();
 
       if (!authenticated) {
-        return router.replace("/login");
+        return router.replace("/Customer-Login");
       }
 
       const userType = await getUserType();
 
-      // Restaurant app - handle manager and chef users
-      if (userType === USER_TYPES.MANAGER) {
-        router.replace("/dashboard");
-      } else if (userType === USER_TYPES.CHEF) {
-        router.replace("/chef-home");
+      // Customer app - only handle customer login
+      if (userType === USER_TYPES.CUSTOMER) {
+        router.replace("/customer-home");
       } else {
-        // If logged in as customer, log them out and show restaurant login
-        router.replace("/login");
+        // If logged in as restaurant user, log them out and show customer login
+        router.replace("/Customer-Login");
       }
     } catch (error) {
       console.error("Auth check error:", error);
-      router.replace("/login");
+      router.replace("/Customer-Login");
     } finally {
       setIsLoading(false);
     }
@@ -41,7 +39,7 @@ export default function IndexScreen() {
 
   return (
     <LoaderScreen
-      text={isLoading ? "Loading Menuva..." : "Redirecting..."}
+      text={isLoading ? "Loading Menutha..." : "Redirecting..."}
       backgroundColor="#a6a6e7"
     />
   );
