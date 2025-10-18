@@ -4,7 +4,7 @@ import { View, Text, TextInput, Pressable, StyleSheet, Image } from 'react-nativ
 import { AlertService } from '../services/alert.service';
 import { chefLogin } from '../api/chefApi';
 import { showApiError } from '../services/messagingService';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { storeAuthData, USER_TYPES } from '../services/authService';
 import { router } from 'expo-router';
 
 export default function ChefLoginScreen({ navigation }) {
@@ -15,10 +15,8 @@ export default function ChefLoginScreen({ navigation }) {
     try {
       const res = await chefLogin({ phone, password });
       if (res && res.token) {
-        // Store auth data consistently with customer login
-        await AsyncStorage.setItem('auth_token', res.token);
-        await AsyncStorage.setItem('user_profile', JSON.stringify(res.user));
-        await AsyncStorage.setItem('user_type', 'restaurant'); // Set user type as restaurant
+        // Store auth data using centralized service (sets both AsyncStorage and axios headers)
+        await storeAuthData(res.token, res.user, USER_TYPES.CHEF);
 
         AlertService.success('Login successful', 'Success');
         router.replace('/chef-home');
