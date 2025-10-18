@@ -21,9 +21,17 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getAllRestaurants } from "../api/restaurantApi";
 import FilterModal from "../Modals/FilterModal";
 
-// Conditional imports for native-only modules
+// Conditional imports - react-native-maps is aliased to WebMapView on web via metro.config.js
 let MapView, Marker, Circle, PROVIDER_GOOGLE;
-if (Platform.OS !== "web") {
+if (Platform.OS === "web") {
+  // On web, metro will resolve 'react-native-maps' to WebMapView.js
+  const Maps = require("react-native-maps");
+  MapView = Maps.MapView || Maps.default;
+  Marker = Maps.Marker;
+  Circle = () => null; // Circle not supported on web
+  PROVIDER_GOOGLE = undefined;
+} else {
+  // On native platforms, use actual react-native-maps
   const Maps = require("react-native-maps");
   MapView = Maps.default;
   Marker = Maps.Marker;
@@ -686,19 +694,7 @@ const CustomerHomeScreen = () => {
   //   }
   // };
 
-  // Web fallback - show simple message
-  if (Platform.OS === "web") {
-    return (
-      <View style={[styles.container, styles.centerContent]}>
-        <Text style={styles.loadingText}>
-          Map view is only available on mobile devices (Android/iOS).
-        </Text>
-        <Text style={styles.loadingText}>
-          Please use the mobile app to view restaurant locations.
-        </Text>
-      </View>
-    );
-  }
+  // Web is now supported via WebMapView component (aliased in metro.config.js)
 
   // Show map immediately with loading overlay while data is loading
   const showLoadingOverlay = loading || (!dataLoadingComplete && restaurants.length === 0);
@@ -719,7 +715,7 @@ const CustomerHomeScreen = () => {
   return (
     <View style={styles.container}>
       <MapView
-  provider={PROVIDER_GOOGLE}
+  {...(Platform.OS !== "web" && PROVIDER_GOOGLE ? { provider: PROVIDER_GOOGLE } : {})}
   ref={mapRef}
   style={styles.map}
   region={mapRegion}
