@@ -7,7 +7,6 @@ import {
   Pressable,
   Modal,
   ActivityIndicator,
-  ScrollView,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import OrderMostImg from "../assets/images/order_most.png";
@@ -31,13 +30,6 @@ export default function ChefHomeScreen() {
   const [chefName, setChefName] = useState("");
   const [loginAt, setLoginAt] = useState("");
   const [userImage, setUserImage] = useState(null);
-  const [stats, setStats] = useState({
-    totalOrdersCompleted: 45,
-    workingDays: 215,
-    numberOfItems: [],
-    mostOrderedDishes: []
-  });
-  const [loginHours, setLoginHours] = useState("4 Hrs");
 
   useEffect(() => {
     const loadData = async () => {
@@ -99,19 +91,18 @@ export default function ChefHomeScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
       {/* Absolute icons at corners */}
       <Pressable
         style={styles.powerIcon}
         onPress={handleLogout}
       >
-        <MaterialCommunityIcons name="arrow-left" size={32} color="#222" />
+        <MaterialCommunityIcons name="power" size={28} color="#222" />
       </Pressable>
       <Pressable
         style={styles.bellIcon}
         onPress={() => setShowMsgModal(true)}
       >
-        <MaterialCommunityIcons name="send" size={28} color="#222" />
+        <MaterialCommunityIcons name="bell-outline" size={28} color="#222" />
       </Pressable>
       {/* Message Modal */}
       <Modal
@@ -153,7 +144,8 @@ export default function ChefHomeScreen() {
       </Modal>
 
       <View style={styles.profileImgRow}>
-        <Pressable onPress={() => router.push("/chef-profile")} style={{ alignSelf: 'center', width: '100%', alignItems: 'center' }}>
+        <View style={{ flex: 1 }} />
+        <Pressable onPress={() => router.push("/chef-profile")}>
           {userImage ? (
             <Image
               source={{ uri: userImage.startsWith('http') ? userImage : `${IMG_BASE_URL}${userImage}` }}
@@ -161,57 +153,28 @@ export default function ChefHomeScreen() {
             />
           ) : (
             <View style={[styles.profileImgLarge, { backgroundColor: '#d1c4e9', alignItems: 'center', justifyContent: 'center' }]}>
-              <MaterialCommunityIcons name="account-circle" size={140} color="#7b6eea" />
+              <MaterialCommunityIcons name="account-circle" size={60} color="#7b6eea" />
             </View>
           )}
         </Pressable>
       </View>
-
-      {/* Stats Cards Row */}
-      <View style={styles.statsContainer}>
-        {/* Left Column - Number of Items */}
-        <View style={[styles.statsCard, { flex: 1, marginRight: 8 }]}>
-          <Text style={styles.statsCardTitle}>Number of Items</Text>
-          <View style={{ marginTop: 12 }}>
-            {['Masala Dosa', 'Plain Dosa', 'Rava Dosa', 'Paper Dosa', 'Masala Paper Dosa', 'Set Dosa', 'Pesarattu', 'Cheese Dosa', 'Neer Dosa', 'Adai Dosa', 'Oats Dosa', 'Masala Oats Dosa', 'Moong Dal Dosa', 'Jowar Dosa', 'Butter Dosa', 'Masala Butter Dosa', 'Paneer Dosa', 'Masala Paneer Dosa', 'Poori'].map((item, index) => (
-              <Text key={index} style={styles.itemText}>• {item}</Text>
-            ))}
-          </View>
+      {/* Name, login, filter row */}
+      <View style={styles.nameRow}>
+        <View>
+          <Text style={styles.greetText}>Hi</Text>
+          <Text style={styles.greetText}>{chefName || "Chef"}</Text>
+          <Text style={styles.loginText}>{loginAt || ""}</Text>
         </View>
-
-        {/* Right Column - Stats Cards */}
-        <View style={{ flex: 1, marginLeft: 8 }}>
-          {/* Total Order Completed */}
-          <View style={[styles.statsCard, { marginBottom: 16 }]}>
-            <Text style={styles.statsCardTitle}>Total Order{'\n'}Completed</Text>
-            <Text style={styles.statsBigNumber}>{stats.totalOrdersCompleted}</Text>
-          </View>
-
-          {/* No of Working Days */}
-          <View style={[styles.statsCard, { marginBottom: 16 }]}>
-            <Text style={styles.statsCardTitle}>No of Working Days</Text>
-            <Text style={styles.statsBigNumber}>{stats.workingDays}</Text>
-          </View>
-
-          {/* Most Ordered Dish */}
-          <View style={styles.statsCard}>
-            <Text style={styles.statsCardTitle}>Most Ordered{'\n'}Dish</Text>
-            <View style={{ marginTop: 12 }}>
-              {['Masala Butter Dosa', 'Paneer Dosa', 'Masala Paneer Dosa'].map((dish, index) => (
-                <Text key={index} style={styles.itemText}>• {dish}</Text>
-              ))}
-            </View>
-          </View>
-        </View>
+        <Pressable style={styles.filterIcon}>
+          <MaterialCommunityIcons
+            name="filter-variant"
+            size={28}
+            color="#1976d2"
+          />
+        </Pressable>
       </View>
-
-      {/* Login Hours Section */}
-      <View style={styles.loginHoursSection}>
-        <Text style={styles.loginHoursText}>Login Hours : {loginHours}</Text>
-      </View>
-
       {/* Orders Title */}
-      <Text style={styles.ordersSectionTitle}>Today</Text>
+      <Text style={styles.ordersTitle}>Your Orders</Text>
       {/* Orders List */}
       <View style={{ marginHorizontal: 16, marginTop: 8 }}>
         {loading ? (
@@ -398,7 +361,6 @@ export default function ChefHomeScreen() {
         )
       }
       </View>
-      </ScrollView>
     </View>
   );
 }
@@ -409,17 +371,16 @@ const styles = StyleSheet.create({
   bellIcon: { position: "absolute", top: 18, right: 24, zIndex: 10 },
   profileImgRow: {
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "flex-end",
     marginTop: 32,
-    marginBottom: 24,
+    marginBottom: 8,
     paddingHorizontal: 24,
   },
   profileImgLarge: {
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    borderWidth: 4,
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    borderWidth: 2,
     borderColor: "#fff",
   },
   nameRow: {
@@ -450,71 +411,21 @@ const styles = StyleSheet.create({
     marginLeft: 16,
     marginTop: 24,
   },
-  ordersSectionTitle: {
-    fontSize: 16,
-    color: "#fff",
-    fontWeight: "500",
-    marginLeft: 16,
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  statsContainer: {
-    flexDirection: "row",
-    marginHorizontal: 16,
-    marginBottom: 16,
-  },
-  statsCard: {
-    backgroundColor: "#C8BFEF",
-    borderRadius: 20,
-    padding: 16,
-  },
-  statsCardTitle: {
-    fontSize: 16,
-    color: "#000",
-    fontWeight: "600",
-    textAlign: "center",
-  },
-  statsBigNumber: {
-    fontSize: 80,
-    fontWeight: "bold",
-    color: "#6c6c6c",
-    textAlign: "center",
-    marginTop: 8,
-    textShadowColor: "#999",
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 4,
-  },
-  itemText: {
-    fontSize: 13,
-    color: "#000",
-    marginBottom: 4,
-    lineHeight: 18,
-  },
-  loginHoursSection: {
-    marginHorizontal: 16,
-    marginBottom: 16,
-    alignItems: "center",
-  },
-  loginHoursText: {
-    fontSize: 28,
-    color: "#fff",
-    fontWeight: "bold",
-  },
   orderCard: {
-    backgroundColor: "#E8E5FA",
-    borderRadius: 12,
+    backgroundColor: "#fff",
+    borderRadius: 16,
     padding: 16,
-    marginBottom: 12,
+    marginBottom: 16,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     shadowColor: "#000",
     shadowOpacity: 0.05,
     shadowRadius: 4,
-    elevation: 1,
+    elevation: 2,
   },
-  orderName: { fontWeight: "600", color: "#000", fontSize: 15 },
-  orderTable: { color: "#000", fontSize: 13, marginTop: 2 },
+  orderName: { fontWeight: "bold", color: "#222", fontSize: 15 },
+  orderTable: { color: "#333", fontSize: 13, marginTop: 2 },
   orderIcon: { marginLeft: 10 },
   modalOverlay: {
     flex: 1,
