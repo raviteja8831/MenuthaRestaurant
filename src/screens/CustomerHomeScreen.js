@@ -531,14 +531,10 @@ const CustomerHomeScreen = () => {
       return;
     }
     setSearchQuery("");
-    setSelectedFilters((prev) => {
-      const exists = prev.find((f) => f?.name === filterObj.name);
-      if (exists) {
-        return prev.filter((f) => f?.name !== filterObj.name);
-      } else {
-        return [...prev, filterObj];
-      }
-    });
+    // Single selection only - replace current filter
+    setSelectedFilters([filterObj]);
+    // Auto-close filter modal after selection
+    setShowFilter(false);
   };
 
   const handleFilterModalClose = () => setShowFilter(false);
@@ -903,6 +899,8 @@ const CustomerHomeScreen = () => {
         onFilterSelect={handleFilterSelect}
         selectedFilters={selectedFilters}
         onClearAll={() => setSelectedFilters([])}
+        restaurants={restaurants}
+        userLocation={userLocation}
       />
 
       {/* Bottom Navigation */}
@@ -936,8 +934,8 @@ const CustomerHomeScreen = () => {
               renderItem={({ item }) => (
                 <View style={styles.modalItem}>
                   <View style={styles.modalItemInfo}>
-                    <Text style={styles.modalItemName}>{item.name}</Text>
-                    <Text style={styles.modalItemAddress}>{item.address}</Text>
+                    <Text style={styles.modalItemName}>{item.name || 'Unnamed Restaurant'}</Text>
+                    <Text style={styles.modalItemAddress}>{item.address || 'No address available'}</Text>
                     {item.rating && (
                       <View style={styles.modalRating}>
                         <MaterialIcons name="star" size={16} color="#FFD700" />
@@ -1166,6 +1164,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 2,
+    color: '#000',
   },
   modalItemAddress: {
     fontSize: 13,

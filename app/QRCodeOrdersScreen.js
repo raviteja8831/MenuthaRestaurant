@@ -21,7 +21,7 @@ import { fetchQRCodeOrders } from "../src/services/qrcodeService";
 import { updateTable, deleteTable } from "../src/constants/tableApi";
 import { showApiError } from "../src/services/messagingService";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { updateOrderStatus } from "../src/api/orderApi";
+import { updateOrderStatus, getOrderItemList } from "../src/api/orderApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const PERIODS = [
@@ -150,7 +150,7 @@ export default function QRCodeOrdersScreen() {
   const handleClearOrder = async (orderId) => {
     try {
       await updateOrderStatus(orderId, {
-        status: "COMPLETED",
+        status: "CLEARED",
       });
       setActionMenuOrderId(null);
       fetch(); // Reload orders after clearing
@@ -163,9 +163,19 @@ export default function QRCodeOrdersScreen() {
   const handlePrintOrder = async (order) => {
     setActionMenuOrderId(null);
 
+    // Fetch full order details with items
+    let orderItems = [];
+    try {
+      const response = await getOrderItemList(order.id);
+      orderItems = response?.orderItems || [];
+    } catch (error) {
+      console.error('Error fetching order items:', error);
+      AlertService.error('Failed to fetch order items');
+    }
+
     // Build order items HTML if available
     let orderItemsHTML = '';
-    if (order.items && Array.isArray(order.items) && order.items.length > 0) {
+    if (orderItems && Array.isArray(orderItems) && orderItems.length > 0) {
       orderItemsHTML = `
         <div class="section">
           <h3>Order Items</h3>
@@ -176,12 +186,12 @@ export default function QRCodeOrdersScreen() {
               <th>Price</th>
               <th>Total</th>
             </tr>
-            ${order.items.map(item => `
+            ${orderItems.map(item => `
               <tr>
-                <td>${item.name || item.menuItemName || ''}</td>
+                <td>${item.menuItemName || ''}</td>
                 <td>${item.quantity || 1}</td>
-                <td>${item.price || 0}</td>
-                <td>${(item.quantity || 1) * (item.price || 0)}</td>
+                <td>₹${item.price || 0}</td>
+                <td>₹${(item.quantity || 1) * (item.price || 0)}</td>
               </tr>
             `).join('')}
           </table>
@@ -585,9 +595,13 @@ export default function QRCodeOrdersScreen() {
           }
           style={{
             backgroundColor: "#fff",
-            borderRadius: 8,
-            marginTop: 8,
-            maxHeight: 340,
+            borderRadius: 12,
+            marginTop: 0,
+            maxHeight: 500,
+          }}
+          contentContainerStyle={{
+            borderBottomLeftRadius: 12,
+            borderBottomRightRadius: 12,
           }}
         />
       )}
@@ -599,9 +613,9 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#8D8BEA", padding: 12 },
   tableTitle: {
     flex: 1,
-    fontWeight: "bold",
-    fontSize: 20,
-    color: "#222",
+    fontWeight: "700",
+    fontSize: 24,
+    color: "#000",
     textAlign: "center",
   },
   periodDropdown: {
@@ -619,31 +633,37 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   totalText: {
-    color: "#222",
-    fontSize: 16,
-    fontWeight: "500",
-    marginBottom: 6,
+    color: "#000",
+    fontSize: 18,
+    fontWeight: "400",
+    marginBottom: 12,
+    marginTop: 8,
     textAlign: "center",
   },
   tableHeaderRow: {
     flexDirection: "row",
-    backgroundColor: "#e6e1fa",
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-    paddingVertical: 6,
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderBottomWidth: 2,
+    borderBottomColor: "#000",
   },
   tableHeader: {
     flex: 1,
-    color: "#6c63b5",
-    fontWeight: "bold",
+    color: "#000",
+    fontWeight: "600",
     fontSize: 14,
     textAlign: "center",
   },
   tableRow: {
     flexDirection: "row",
     borderBottomWidth: 1,
-    borderColor: "#ece9fa",
-    paddingVertical: 4,
+    borderColor: "#000",
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    backgroundColor: "#fff",
   },
   // Add dropdown menu styles
   periodDropdownMenu: {
@@ -667,7 +687,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
   },
-  tableCell: { flex: 1, color: "#222", fontSize: 13, textAlign: "center" },
+  tableCell: { flex: 1, color: "#000", fontSize: 13, textAlign: "center", fontWeight: "400" },
 });
 
 // ...removed duplicate styles...

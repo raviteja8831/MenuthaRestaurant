@@ -384,6 +384,7 @@ export default function ItemsListScreen() {
       {/* Menu Items Grouped by Type */}
       <ScrollView
         style={newOrderItemsStyles.scrollView}
+        contentContainerStyle={newOrderItemsStyles.scrollViewContent}
         showsVerticalScrollIndicator={false}
       >
         {Object.entries(groupItemsByType()).map(([type, typeItems]) => {
@@ -456,33 +457,31 @@ export default function ItemsListScreen() {
             </View>
           );
         })}
-        {/*  </View>
-        ))} */}
-        {params.ishotel == "false" && (
-          <View style={newOrderItemsStyles.orderSummaryContainer}>
-            <Text style={newOrderItemsStyles.summaryText}>
-              No of item Selected: {selectedItems.length.toString().padStart(2, '0')}
-            </Text>
-            <Text style={newOrderItemsStyles.totalCostText}>
-              Total Cost of Selection = {totalCost}
-            </Text>
-            <TouchableOpacity
-              style={[
-                newOrderItemsStyles.placeOrderButton,
-                selectedItems.length === 0 && newOrderItemsStyles.placeOrderButtonDisabled,
-              ]}
-              onPress={() => createOrder_data(true)}
-              disabled={selectedItems.length === 0}
-            >
-              <Text style={newOrderItemsStyles.placeOrderButtonText}>
-                Place Order
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
       </ScrollView>
 
-      {/* Order Summary */}
+      {/* Order Summary - Fixed at bottom */}
+      {params.ishotel == "false" && selectedItems.length > 0 && (
+        <View style={newOrderItemsStyles.orderSummaryContainer}>
+          <Text style={newOrderItemsStyles.summaryText}>
+            No of item Selected: {selectedItems.length.toString().padStart(2, '0')}
+          </Text>
+          <Text style={newOrderItemsStyles.totalCostText}>
+            Total Cost of Selection = {totalCost}
+          </Text>
+          <TouchableOpacity
+            style={[
+              newOrderItemsStyles.placeOrderButton,
+              selectedItems.length === 0 && newOrderItemsStyles.placeOrderButtonDisabled,
+            ]}
+            onPress={() => createOrder_data(true)}
+            disabled={selectedItems.length === 0}
+          >
+            <Text style={newOrderItemsStyles.placeOrderButtonText}>
+              Place Order
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Comment Modal */}
       <CommentModal
@@ -503,23 +502,26 @@ const newOrderItemsStyles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'transparent', // Transparent to show gradient background
   },
+  scrollViewContent: {
+    paddingBottom: 160, // Space for fixed bottom summary
+  },
   typeSection: {
     marginBottom: 20,
   },
   typeHeader: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '700',
     color: '#000',
-    marginBottom: 12,
-    marginTop: 8,
+    marginBottom: 8,
+    marginTop: 16,
     marginLeft: 20,
   },
   itemRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 8,
-    marginBottom: 4,
+    paddingVertical: 6,
+    marginBottom: 2,
   },
   checkboxContainer: {
     marginRight: 12,
@@ -545,10 +547,9 @@ const newOrderItemsStyles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   itemName: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#000',
-    fontWeight: '500',
-    flex: 1,
+    fontWeight: '400',
   },
   dottedLine: {
     flex: 1,
@@ -556,13 +557,13 @@ const newOrderItemsStyles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#000',
     borderStyle: 'dotted',
-    marginHorizontal: 8,
+    marginHorizontal: 6,
   },
   itemPrice: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#000',
-    fontWeight: '600',
-    minWidth: 60,
+    fontWeight: '400',
+    minWidth: 50,
     textAlign: 'right',
   },
   quantityEditContainer: {
@@ -604,36 +605,42 @@ const newOrderItemsStyles = StyleSheet.create({
     padding: 4,
   },
   orderSummaryContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     backgroundColor: '#FFF',
-    margin: 20,
-    padding: 16,
-    borderRadius: 12,
+    paddingVertical: 20,
+    paddingHorizontal: 24,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 5,
   },
   summaryText: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#000',
-    marginBottom: 8,
+    marginBottom: 4,
     textAlign: 'center',
+    fontWeight: '400',
   },
   totalCostText: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#000',
     marginBottom: 16,
     textAlign: 'center',
-    fontWeight: '600',
+    fontWeight: '400',
   },
   placeOrderButton: {
-    backgroundColor: '#8B7FD6', // Purple color matching screenshot
-    paddingHorizontal: 40,
-    paddingVertical: 15,
-    borderRadius: 25,
-    minWidth: 200,
+    backgroundColor: '#8B7FD6',
+    paddingHorizontal: 50,
+    paddingVertical: 14,
+    borderRadius: 20,
+    minWidth: 180,
     alignItems: 'center',
   },
   placeOrderButtonDisabled: {
@@ -642,6 +649,6 @@ const newOrderItemsStyles = StyleSheet.create({
   placeOrderButtonText: {
     color: '#FFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '400',
   },
 });

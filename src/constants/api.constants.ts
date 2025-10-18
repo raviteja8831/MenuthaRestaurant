@@ -7,7 +7,7 @@ import Constants from "expo-constants";
 // - Default kept as the existing value so existing builds keep working
 
 const DEFAULT_API = "http://13.127.228.119:8090/api";
-const DEFAULT_IMG = "http://13.127.228.119:8090/";
+const DEFAULT_IMG = "http://13.127.228.119:8090";
 
 export const API_BASE_URL = getBaseURL();
 function getBaseURL(): string {

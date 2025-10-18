@@ -31,11 +31,54 @@ export default function ChefTransactionScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#b6a6e7', padding: 20 },
-  title: { fontSize: 22, fontWeight: 'bold', color: '#333', marginVertical: 20 },
-  subtitle: { fontSize: 18, color: '#333', marginBottom: 10 },
-  tableHeader: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: '#a18cd1', borderRadius: 8, padding: 10, marginBottom: 5 },
-  th: { color: '#fff', fontWeight: 'bold', width: 60 },
-  tableRow: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: '#e0c3fc', borderRadius: 8, padding: 10, marginBottom: 3 },
-  td: { color: '#333', width: 60 },
+  container: {
+    flex: 1,
+    backgroundColor: '#b6a6e7',
+    padding: 20
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#000',
+    marginBottom: 16,
+    marginTop: 10
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#000',
+    marginBottom: 12,
+    fontWeight: '600'
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: '#a18cd1',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 4
+  },
+  th: {
+    color: '#fff',
+    fontWeight: '600',
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 14
+  },
+  tableRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: '#e0c3fc',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginBottom: 4
+  },
+  td: {
+    color: '#000',
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 13,
+    fontWeight: '400'
+  },
 });

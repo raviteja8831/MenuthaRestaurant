@@ -115,7 +115,7 @@ export default function UserProfileScreen() {
             restaurantAddress: order.restaurantAddress,
             status: order.status,
             totalAmount: order.totalAmount,
-            createdAt: order.date + " " + order.time,
+            createdAt: order.createdAt || (order.date && order.time ? `${order.date} ${order.time}` : new Date().toISOString()),
             items: order.items || []
           })));
         } else {
@@ -496,7 +496,7 @@ export default function UserProfileScreen() {
   );
 
   const renderReviewsTab = () => {
-    // fetchUserReviews();
+    // Show transaction history (last visited restaurants)
     if (loading) {
       return (
         <ActivityIndicator
@@ -507,25 +507,70 @@ export default function UserProfileScreen() {
       );
     }
 
+    // Combine all transaction types for history
+    const allTransactions = [
+      ...transactionsData.map(t => ({
+        id: t.id,
+        restaurantName: t.restaurantName,
+        restaurantAddress: t.restaurantAddress,
+        createdAt: t.createdAt,
+        type: 'order'
+      })),
+      ...tableOrders.map(t => ({
+        id: t.id,
+        restaurantName: t.restaurant?.name || 'Unknown',
+        restaurantAddress: t.restaurant?.address || '',
+        createdAt: t.starttime,
+        type: 'table'
+      })),
+      ...bufferOrders.map(t => ({
+        id: t.id,
+        restaurantName: t.restaurant?.name || 'Unknown',
+        restaurantAddress: t.restaurant?.address || '',
+        createdAt: t.createdAt,
+        type: 'buffet'
+      }))
+    ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
     return (
       <ScrollView style={styles.tabContent}>
-        {reviews.map((review) => (
-          <View key={review.id} style={styles.reviewItem}>
-            <View style={styles.reviewHeader}>
-              <MaterialIcons name="location-on" size={20} color="#666" />
-              <Text style={styles.hotelName}>{review.restaurantName}</Text>
-              <Text style={styles.reviewDate}>
-                {new Date(review.createdAt).toLocaleDateString()}
-              </Text>
+        {allTransactions.map((transaction, index) => (
+          <View key={`${transaction.type}-${transaction.id}`}>
+            <View style={styles.historyCard}>
+              <View style={styles.historyHeaderRow}>
+                <View style={styles.locationPinContainer}>
+                  <MaterialIcons name="location-on" size={40} color="#333" />
+                </View>
+                <View style={styles.historyDetailsContainer}>
+                  <Text style={styles.historyRestaurantName}>
+                    {transaction.restaurantName}
+                  </Text>
+                  <Text style={styles.historyAddress}>
+                    {transaction.restaurantAddress || 'Address not available'}
+                  </Text>
+                  <Text style={styles.historyDate}>
+                    (on {transaction.createdAt ? new Date(transaction.createdAt).toLocaleDateString('en-GB').replace(/\//g, '.') : new Date().toLocaleDateString('en-GB').replace(/\//g, '.')})
+                  </Text>
+                </View>
+                <View style={styles.historyTimeContainer}>
+                  <Text style={styles.historyTime}>
+                    {transaction.createdAt ? new Date(transaction.createdAt).toLocaleTimeString('en-US', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: true
+                    }) : '9:30 PM'}
+                  </Text>
+                </View>
+              </View>
             </View>
-            <Text style={styles.reviewText}>{review.review}</Text>
-            {review.restaurantAddress && (
-              <Text style={styles.hotelAddress}>
-                {review.restaurantAddress}
-              </Text>
+            {index < allTransactions.length - 1 && (
+              <View style={styles.historySeparator} />
             )}
           </View>
         ))}
+        {allTransactions.length === 0 && (
+          <Text style={styles.noHistoryText}>No visit history available</Text>
+        )}
       </ScrollView>
     );
   };
@@ -933,7 +978,7 @@ const styles = StyleSheet.create({
 
   // New styles for updated design
   transactionCard: {
-    backgroundColor: '#CCCCFF',
+    backgroundColor: '#bbbaef',
     borderRadius: 8,
     marginBottom: 8,
     borderWidth: 1,
@@ -944,7 +989,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     padding: 12,
-    backgroundColor: '#CCCCFF',
+    backgroundColor: '#bbbaef',
   },
   locationContainer: {
     marginRight: 8,
@@ -986,7 +1031,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: '#CCCCFF',
+    backgroundColor: '#bbbaef',
   },
   orderRow: {
     flexDirection: 'row',
@@ -1067,5 +1112,62 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
+  },
+
+  // History tab styles (matching history.png design)
+  historyCard: {
+    backgroundColor: '#bbbaef',
+    borderRadius: 0,
+    borderWidth: 1,
+    borderColor: '#333',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+  },
+  historyHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  locationPinContainer: {
+    marginRight: 8,
+    marginTop: 0,
+  },
+  historyDetailsContainer: {
+    flex: 1,
+    marginRight: 8,
+  },
+  historyRestaurantName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#000',
+    marginBottom: 4,
+  },
+  historyAddress: {
+    fontSize: 12,
+    color: '#000',
+    lineHeight: 16,
+    marginBottom: 2,
+  },
+  historyDate: {
+    fontSize: 12,
+    color: '#000',
+    marginTop: 2,
+  },
+  historyTimeContainer: {
+    alignItems: 'flex-end',
+    justifyContent: 'flex-start',
+  },
+  historyTime: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#000',
+  },
+  historySeparator: {
+    height: 0,
+  },
+  noHistoryText: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 20,
   },
 });

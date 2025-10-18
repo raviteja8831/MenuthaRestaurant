@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View,
   StyleSheet,
@@ -12,8 +12,94 @@ import { CustomerHome } from "../Mock/CustomerHome";
 
 const { height } = Dimensions.get("window");
 
-export default function FilterModal({ visible, onClose, onFilterSelect, selectedFilters = [], onClearAll }) {
-  const filterOptions = CustomerHome;
+// Distance calculation helper
+const getDistanceFromLatLonInKm = (lat1, lon1, lat2, lon2) => {
+  if (!lat1 || !lon1 || !lat2 || !lon2) return Infinity;
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
+
+export default function FilterModal({ visible, onClose, onFilterSelect, selectedFilters = [], onClearAll, restaurants = [], userLocation = null }) {
+  // Calculate filter counts from actual restaurant data
+  const filterOptions = useMemo(() => {
+    if (!Array.isArray(restaurants) || restaurants.length === 0) {
+      return CustomerHome;
+    }
+
+    return CustomerHome.map(filter => {
+      let count = 0;
+
+      switch (filter.name) {
+        case "Near Me":
+          if (userLocation) {
+            count = restaurants.filter(r => {
+              if (!r.latitude || !r.longitude) return false;
+              const dist = getDistanceFromLatLonInKm(
+                userLocation.latitude,
+                userLocation.longitude,
+                r.latitude,
+                r.longitude
+              );
+              return dist <= 10;
+            }).length;
+          }
+          break;
+
+        case "Only Veg Restaurant":
+          count = restaurants.filter(r => r.enableVeg === true && r.enableNonveg === false).length;
+          break;
+
+        case "Only Non Veg Restaurant":
+          count = restaurants.filter(r => r.enableNonveg === true && r.enableVeg === false).length;
+          break;
+
+        case "Only Buffet":
+          count = restaurants.filter(r => r.enableBuffet === true).length;
+          break;
+
+        case "Only Table Service":
+          count = restaurants.filter(r => r.enableTableService === true).length;
+          break;
+
+        case "Only Self Service":
+          count = restaurants.filter(r => r.enableSelfService === true).length;
+          break;
+
+        case "3 Star Hotel":
+          count = restaurants.filter(r => r.restaurantType && r.restaurantType.toLowerCase().includes("3 star")).length;
+          break;
+
+        case "5 Star Hotel":
+          count = restaurants.filter(r => r.restaurantType && r.restaurantType.toLowerCase().includes("5 star")).length;
+          break;
+
+        case "5 Star Rating":
+          count = restaurants.filter(r => r.rating && r.rating >= 5).length;
+          break;
+
+        case "Only Bar & Restaurant":
+          count = restaurants.filter(r => r.restaurantType && r.restaurantType.toLowerCase().includes("bar")).length;
+          break;
+
+        default:
+          count = 0;
+      }
+
+      return {
+        name: filter.name,
+        count: count
+      };
+    });
+  }, [restaurants, userLocation]);
 
   const isSelected = (option) => selectedFilters.some(f => f.name === option.name);
 
