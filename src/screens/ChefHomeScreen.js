@@ -144,7 +144,6 @@ export default function ChefHomeScreen() {
       </Modal>
 
       <View style={styles.profileImgRow}>
-        <View style={{ flex: 1 }} />
         <Pressable onPress={() => router.push("/chef-profile")}>
           {userImage ? (
             <Image
@@ -165,13 +164,6 @@ export default function ChefHomeScreen() {
           <Text style={styles.greetText}>{chefName || "Chef"}</Text>
           <Text style={styles.loginText}>{loginAt || ""}</Text>
         </View>
-        <Pressable style={styles.filterIcon}>
-          <MaterialCommunityIcons
-            name="filter-variant"
-            size={28}
-            color="#1976d2"
-          />
-        </Pressable>
       </View>
       {/* Orders Title */}
       <Text style={styles.ordersTitle}>Your Orders</Text>
@@ -194,7 +186,10 @@ export default function ChefHomeScreen() {
                   ? firstProduct.menuitem.name
                   : "Order";
 
-              const tableNumber = order.tableId ? `Table ${order.tableId}` : "";
+              const quantity = firstProduct?.quantity || 0;
+              const quantityStr = quantity < 10 ? `0${quantity}` : `${quantity}`;
+
+              const tableNumber = order.tableId ? `Table No ${order.tableId}` : "Parcel Table";
 
               // Check if product has valid data (id or other identifying field)
               if (!firstProduct || (!firstProduct.id && !firstProduct.menuitem)) {
@@ -206,31 +201,25 @@ export default function ChefHomeScreen() {
                     key={`${order.id}-${firstProduct.id || j}`}
                     style={styles.orderCard}
                   >
-                    <View>
-                      <Text style={styles.orderName}>{menuItemName}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.orderName}>{menuItemName} {quantityStr}</Text>
                       <Text style={styles.orderTable}>{tableNumber}</Text>
                     </View>
 
-                    <Image
-                      source={OrderMostImg}
-                      style={[
-                        styles.orderIcon,
-                        {
-                          width: 32,
-                          height: 32,
-                          tintColor:
-                            firstProduct.status == 1
-                              ? "#f0ad4e"
-                              : firstProduct.status == 2
-                              ? "#5bc0de"
-                              : firstProduct.status == 3
-                              ? "#5cb85c"
-                              : firstProduct.status == 4
-                              ? "#0275d8"
-                              : "#666",
-                        },
-                      ]}
-                      resizeMode="contain"
+                    <MaterialCommunityIcons
+                      name="cog"
+                      size={32}
+                      color={
+                        firstProduct.status == 1
+                          ? "#f0ad4e"
+                          : firstProduct.status == 2
+                          ? "#5bc0de"
+                          : firstProduct.status == 3
+                          ? "#5cb85c"
+                          : firstProduct.status == 4
+                          ? "#0275d8"
+                          : "#666"
+                      }
                     />
 
                     <Modal
@@ -372,15 +361,16 @@ const styles = StyleSheet.create({
   profileImgRow: {
     flexDirection: "row",
     alignItems: "flex-end",
+    justifyContent: "flex-end",
     marginTop: 32,
     marginBottom: 8,
     paddingHorizontal: 24,
   },
   profileImgLarge: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    borderWidth: 2,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 3,
     borderColor: "#fff",
   },
   nameRow: {
@@ -392,12 +382,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   greetText: {
-    fontSize: 16,
-    color: "#222",
+    fontSize: 20,
+    color: "#fff",
     fontWeight: "bold",
-    lineHeight: 20,
+    lineHeight: 26,
   },
-  loginText: { fontSize: 13, color: "#222", marginTop: 2, fontWeight: "500" },
+  loginText: { fontSize: 16, color: "#fff", marginTop: 4, fontWeight: "500" },
   filterIcon: {
     marginLeft: 18,
     backgroundColor: "#ece9fa",
@@ -405,11 +395,11 @@ const styles = StyleSheet.create({
     padding: 6,
   },
   ordersTitle: {
-    fontSize: 16,
-    color: "#222",
+    fontSize: 18,
+    color: "#fff",
     fontWeight: "bold",
     marginLeft: 16,
-    marginTop: 24,
+    marginTop: 20,
   },
   orderCard: {
     backgroundColor: "#fff",
@@ -424,8 +414,8 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  orderName: { fontWeight: "bold", color: "#222", fontSize: 15 },
-  orderTable: { color: "#333", fontSize: 13, marginTop: 2 },
+  orderName: { fontWeight: "600", color: "#222", fontSize: 16 },
+  orderTable: { color: "#666", fontSize: 14, marginTop: 4 },
   orderIcon: { marginLeft: 10 },
   modalOverlay: {
     flex: 1,

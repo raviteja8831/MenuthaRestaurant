@@ -44,7 +44,7 @@ export const fetchChefStats = async (chefId) => {
 
 export const fetchChefMessages = async (userId) => {
   try {
-    const res = await api.get(`users/${userId}/messages`);
+    const res = await api.get(`${CHEF_API.MESSAGES}/${userId}`);
     return res.data;
   } catch (error) {
     showApiError(error);

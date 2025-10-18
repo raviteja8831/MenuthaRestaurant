@@ -90,16 +90,6 @@ export default function ChefProfileScreen() {
             );
           }
         })()}
-        {/* Chef Name */}
-        <Text style={styles.chefName}>
-          {profile?.firstname || ''} {profile?.lastname || ''}
-        </Text>
-        {/* Restaurant ID */}
-        {profile?.restaurantId && (
-          <Text style={styles.restaurantId}>
-            Restaurant ID: {profile.restaurantId}
-          </Text>
-        )}
       </View>
       {/* Main Content */}
       <ScrollView
@@ -308,73 +298,71 @@ const styles = StyleSheet.create({
   itemsBox: {
     backgroundColor: "#e6e0fa",
     borderRadius: 16,
-    padding: 16,
-    width: 160,
-    marginRight: 12,
+    padding: 14,
+    width: 140,
+    marginRight: 8,
     borderWidth: 1,
     borderColor: "#d1c4e9",
   },
   itemsTitle: {
     fontWeight: "700",
-    color: "#5a4fcf",
-    fontSize: 17,
-    marginBottom: 10,
+    color: "#333",
+    fontSize: 16,
+    marginBottom: 12,
   },
-  itemText: { color: "#333", fontSize: 15, marginBottom: 3, fontWeight: "500" },
+  itemText: { color: "#333", fontSize: 14, marginBottom: 4, fontWeight: "400" },
   statsCol: { flex: 1, flexDirection: "column", gap: 18 },
   statBox: {
     backgroundColor: "#e6e0fa",
     borderRadius: 16,
-    paddingVertical: 18,
-    paddingHorizontal: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     alignItems: "center",
-    marginBottom: 18,
+    marginBottom: 12,
     minWidth: 170,
     borderWidth: 1,
     borderColor: "#d1c4e9",
   },
   statLabel: {
-    color: "#444",
+    color: "#333",
     fontWeight: "400",
-    fontSize: 13,
-    marginBottom: 8,
+    fontSize: 12,
+    marginBottom: 4,
     textAlign: "center",
-    letterSpacing: 0.2,
   },
   statValue: {
-    fontSize: 100,
-    color: "#888",
+    fontSize: 80,
+    color: "#999",
     fontWeight: "900",
     textAlign: "center",
-    marginBottom: 2,
-    letterSpacing: 1,
+    marginTop: 4,
   },
   mostOrderedText: {
     color: "#333",
-    fontSize: 15,
+    fontSize: 14,
     textAlign: "left",
-    fontWeight: "500",
-    marginBottom: 2,
+    fontWeight: "400",
+    marginBottom: 4,
     alignSelf: "flex-start",
   },
   loginHours: {
     color: "#fff",
     fontWeight: "900",
-    fontSize: 28,
+    fontSize: 32,
     alignSelf: "center",
-    marginTop: 32,
-    textShadowColor: "#6c63b5",
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-    letterSpacing: 1,
+    marginTop: 24,
+    textShadowColor: "#7b6eea",
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 4,
+    letterSpacing: 0.5,
   },
   orderSectionTitle: {
     color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
-    marginTop: 12,
-    marginBottom: 4,
-    marginLeft: 2,
+    fontWeight: "600",
+    fontSize: 15,
+    marginTop: 16,
+    marginBottom: 8,
+    marginLeft: 0,
   },
   orderRow: {
     backgroundColor: "#e6e0fa",
@@ -392,16 +380,16 @@ const styles = StyleSheet.create({
   },
   orderRowText: {
     color: "#333",
-    fontSize: 15,
-    fontWeight: "500",
+    fontSize: 14,
+    fontWeight: "400",
     flex: 1,
   },
   orderRowTime: {
     color: "#333",
     fontSize: 13,
-    fontWeight: "bold",
+    fontWeight: "600",
     marginLeft: 12,
-    minWidth: 54,
+    minWidth: 60,
     textAlign: "right",
   },
   noOrderMsg: {

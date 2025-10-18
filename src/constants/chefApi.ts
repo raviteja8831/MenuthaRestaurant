@@ -8,7 +8,7 @@ export const CHEF_API = {
   QRCODES: "/chef/qrcodes",
   ORDERS: "/chef/dashboard",
   STATS: "/chef/stats",
-  MESSAGES: "/user/messages",
+  MESSAGES: "/chef/messages",
 };
 export interface ChefOrdersResponse {
   orders: any[];
