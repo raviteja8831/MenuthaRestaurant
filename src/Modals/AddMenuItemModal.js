@@ -5,6 +5,7 @@ import React, { useState, useEffect } from "react";
 import { View, Modal, Text, Pressable, StyleSheet, ScrollView, SafeAreaView } from "react-native";
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Surface } from 'react-native-paper';
+import { Picker } from '@react-native-picker/picker';
 
 // menus: [{ id, name, items: [{id, name}] }]
 // menuItemIds: [id] (all menu item ids for the user)
@@ -82,29 +83,33 @@ export default function AddMenuItemModal({
           ) : (
             <>
               <Text style={styles.label}>Menu</Text>
-              <ScrollView style={styles.dropdown}>
-                {filteredMenus.map(menu => (
-                  <Pressable
-                    key={menu.id}
-                    style={[styles.dropdownItem, selectedMenuId === menu.id && styles.selected]}
-                    onPress={() => {
-                      setSelectedMenuId(menu.id);
-                      setSelectedMenuItemsByMenu(prev => {
-                        const updated = { ...prev };
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={selectedMenuId}
+                  onValueChange={(itemValue) => {
+                    setSelectedMenuId(itemValue);
+                    setSelectedMenuItemsByMenu(prev => {
+                      const updated = { ...prev };
+                      const menu = filteredMenus.find(m => m.id === itemValue);
+                      if (menu) {
                         const menuItemIdsInMenu = (menu.items || []).map(item => String(item.id));
                         const prevForMenu = prev[menu.id] || [];
                         updated[menu.id] = Array.from(new Set([
                           ...menuItemIdsInMenu.filter(id => allottedIdsStr.includes(id)),
                           ...prevForMenu.filter(id => menuItemIdsInMenu.includes(id))
                         ]));
-                        return updated;
-                      });
-                    }}
-                  >
-                    <Text>{menu.name}</Text>
-                  </Pressable>
-                ))}
-              </ScrollView>
+                      }
+                      return updated;
+                    });
+                  }}
+                  style={styles.picker}
+                  dropdownIconColor="#fff"
+                >
+                  {filteredMenus.map(menu => (
+                    <Picker.Item key={menu.id} label={menu.name} value={menu.id} />
+                  ))}
+                </Picker>
+              </View>
               {selectedMenu && (
                 <>
                   <Text style={styles.label}>Menu Items</Text>
@@ -236,6 +241,22 @@ const styles = StyleSheet.create({
     color: '#fff',
     marginTop: 16,
     marginBottom: 8,
+  },
+  pickerContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    marginBottom: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  picker: {
+    width: '100%',
+    height: 50,
+    color: '#212529',
   },
   dropdown: {
     maxHeight: 120,

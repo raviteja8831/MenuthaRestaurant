@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable, TextInput, StyleSheet, Modal, ScrollView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Picker } from '@react-native-picker/picker';
 import { getMenusWithItems } from '../api/menuApi';
 
 
 
 export default function AddMenuItemScreen({ visible, onClose, onSave }) {
-  const [selectedMenuId, setSelectedMenuId] = useState(null);
+  const [selectedMenuId, setSelectedMenuId] = useState('');
   const [menus, setMenus] = useState([]);
-  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [type, setType] = useState('');
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
@@ -41,27 +41,20 @@ export default function AddMenuItemScreen({ visible, onClose, onSave }) {
             <MaterialCommunityIcons name="close" size={28} color="#222" />
           </Pressable>
           <Text style={styles.modalTitle}>Add Menu Item</Text>
-          {/* Category Dropdown */}
+          {/* Menu Picker */}
           <Text style={styles.label}>Menu</Text>
-          <View style={styles.dropdownContainer}>
-            <Pressable style={styles.dropdown} onPress={() => setShowCategoryDropdown(!showCategoryDropdown)}>
-              <Text style={styles.dropdownText}>{
-                menus.find(m => m.id === selectedMenuId)?.name || 'Select menu'
-              }</Text>
-              <MaterialCommunityIcons name={showCategoryDropdown ? 'chevron-up' : 'chevron-down'} size={24} color="#222" />
-            </Pressable>
-            {showCategoryDropdown && (
-              <View style={styles.dropdownMenu}>
-                <Text style={styles.dropdownMenuTitle}>Select Menu</Text>
-                <ScrollView style={styles.dropdownScrollView} nestedScrollEnabled={true}>
-                  {menus.map((m) => (
-                    <Pressable key={m.id} style={styles.dropdownMenuItem} onPress={() => { setSelectedMenuId(m.id); setShowCategoryDropdown(false); }}>
-                      <Text style={styles.dropdownMenuItemText}>• {m.name}</Text>
-                    </Pressable>
-                  ))}
-                </ScrollView>
-              </View>
-            )}
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={selectedMenuId}
+              onValueChange={(itemValue) => setSelectedMenuId(itemValue)}
+              style={styles.picker}
+              dropdownIconColor="#222"
+            >
+              <Picker.Item label="Select menu" value="" />
+              {menus.map((m) => (
+                <Picker.Item key={m.id} label={m.name} value={m.id} />
+              ))}
+            </Picker>
           </View>
           {/* Type */}
           <Text style={styles.label}>Type</Text>
@@ -144,62 +137,17 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     marginTop: 10,
   },
-  dropdownContainer: {
+  pickerContainer: {
     width: '100%',
     marginBottom: 8,
-    zIndex: 100,
-    position: 'relative',
-  },
-  dropdown: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     backgroundColor: '#ece9fa',
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    overflow: 'hidden',
+  },
+  picker: {
     width: '100%',
-    minHeight: 44,
-  },
-  dropdownText: {
+    height: 50,
     color: '#222',
-    fontSize: 15,
-    flex: 1,
-  },
-  dropdownMenu: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
-    marginTop: 4,
-    width: '100%',
-    maxHeight: 200,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 10,
-    borderWidth: 1,
-    borderColor: '#c7c2f3',
-  },
-  dropdownScrollView: {
-    maxHeight: 150,
-  },
-  dropdownMenuTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#7b6eea',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  dropdownMenuItem: {
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ece9fa',
-  },
-  dropdownMenuItemText: {
-    color: '#222',
-    fontSize: 15,
   },
   input: {
     width: '100%',

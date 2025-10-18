@@ -97,8 +97,11 @@ export default function UserProfileScreen() {
       }
 
       // Fetch recent orders from API
+      console.log("🔍 Calling getRecentOrders API with userId:", id);
       const ordersResponse = await getRecentOrders(id);
-      console.log("Recent orders API response:", ordersResponse);
+      console.log("✅ Recent orders API response:", ordersResponse);
+      console.log("📊 Orders data:", ordersResponse?.data);
+      console.log("📊 Orders count:", ordersResponse?.data?.length || 0);
 
       if (ordersResponse && ordersResponse.data) {
         const orders = ordersResponse.data;
@@ -150,7 +153,9 @@ export default function UserProfileScreen() {
         })));
       }
     } catch (error) {
-      console.error("Error fetching profile:", error);
+      console.error("❌ Error fetching profile:", error);
+      console.error("❌ Error details:", error.message);
+      console.error("❌ Error response:", error.response?.data);
       AlertService.error("Error fetching profile data");
     } finally {
       setLoading(false);
@@ -310,20 +315,24 @@ export default function UserProfileScreen() {
           styles.statusBadge,
           {
             backgroundColor:
+              item.status === 'PENDING' ? '#FFA726' :
               item.status === 'PLACED' ? '#F4962A' :
               item.status === 'PREPARING' ? '#FF9800' :
               item.status === 'PREPARED' ? '#2AF441' :
               item.status === 'SERVED' ? '#00BCD4' :
-              item.status === 'PAYMENT PENDING' ? '#2196F3' :
+              item.status === 'PAYMENT_PENDING' ? '#2196F3' :
+              item.status === 'PAID' ? '#4CAF50' :
               item.status === 'COMPLETED' ? '#4CAF50' : '#9E9E9E'
           }
         ]}>
           <Text style={styles.statusText}>
-            {item.status === 'PLACED' ? 'Placed' :
+            {item.status === 'PENDING' ? 'Pending' :
+             item.status === 'PLACED' ? 'Placed' :
              item.status === 'PREPARING' ? 'Preparing' :
              item.status === 'PREPARED' ? 'Prepared' :
              item.status === 'SERVED' ? 'Served' :
-             item.status === 'PAYMENT PENDING' ? 'Payment pending' :
+             item.status === 'PAYMENT_PENDING' ? 'Payment Pending' :
+             item.status === 'PAID' ? 'Paid' :
              item.status === 'COMPLETED' ? 'Completed' : 'Unknown'}
           </Text>
         </View>

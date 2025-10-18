@@ -46,7 +46,6 @@ export default function QRCodeOrdersScreen() {
   const [editValue, setEditValue] = useState(qrcode.name || "");
   const [editLoading, setEditLoading] = useState(false);
   const [actionMenuOrderId, setActionMenuOrderId] = useState(null);
-  const [actionMenuPos, setActionMenuPos] = useState({ x: 0, y: 0 });
   // Handler for QR code edit
   const handleEditQRCode = () => {
     setShowEditModal(true);
@@ -147,13 +146,21 @@ export default function QRCodeOrdersScreen() {
   const qrSvgRef = useRef();
   // Action menu handlers
   const handleClearOrder = async (orderId) => {
-    const response = await updateOrderStatus(orderId, {
-      status: "Completed",
-    });
-    fetch();
-    console.log("Order cleared:", response);
-    // TODO: Update order status to cleared
-    if (response.status == "success") setActionMenuOrderId(null);
+    try {
+      const response = await updateOrderStatus(orderId, {
+        status: "COMPLETED",
+      });
+      console.log("Order cleared:", response);
+
+      if (response.status === "success") {
+        setActionMenuOrderId(null);
+        fetch(); // Reload orders after clearing
+        AlertService.success("Order cleared successfully");
+      }
+    } catch (error) {
+      console.error("Error clearing order:", error);
+      AlertService.error("Failed to clear order");
+    }
   };
   const handlePrintOrder = async (order) => {
     setActionMenuOrderId(null);
@@ -453,12 +460,8 @@ export default function QRCodeOrdersScreen() {
               <Text style={styles.tableCell}>{item.amount}</Text>
               <Text style={styles.tableCell}>{item.status}</Text>
               <Pressable
-                onPress={(event) => {
-                  // Get the position of the pressed icon
-                  event.target.measure((fx, fy, width, height, px, py) => {
-                    setActionMenuPos({ x: px + width, y: py });
-                    setActionMenuOrderId(item.id);
-                  });
+                onPress={() => {
+                  setActionMenuOrderId(item.id);
                 }}
                 style={{ marginLeft: 4 }}
               >
@@ -479,20 +482,16 @@ export default function QRCodeOrdersScreen() {
                   <Pressable
                     style={{
                       flex: 1,
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
+                      backgroundColor: "rgba(0,0,0,0.5)",
+                      justifyContent: "center",
+                      alignItems: "center",
                     }}
                     activeOpacity={1}
-                    onPressOut={() => setActionMenuOrderId(null)}
+                    onPress={() => setActionMenuOrderId(null)}
                   >
-                    <View
+                    <Pressable
+                      onPress={(e) => e.stopPropagation()}
                       style={{
-                        position: "absolute",
-                        left: actionMenuPos.x - 140, // adjust for menu width
-                        top: actionMenuPos.y,
                         backgroundColor: "#fff",
                         borderRadius: 10,
                         elevation: 12,
@@ -501,10 +500,10 @@ export default function QRCodeOrdersScreen() {
                         shadowOpacity: 0.25,
                         shadowRadius: 12,
                         zIndex: 9999,
-                        minWidth: 120,
+                        minWidth: 160,
                         borderWidth: 1,
                         borderColor: "#ece9fa",
-                        paddingVertical: 4,
+                        paddingVertical: 8,
                       }}
                     >
                       <Pressable
@@ -539,7 +538,7 @@ export default function QRCodeOrdersScreen() {
                         />
                         <Text style={{ marginLeft: 8 }}>Print</Text>
                       </Pressable>
-                    </View>
+                    </Pressable>
                   </Pressable>
                 </Modal>
               )}
