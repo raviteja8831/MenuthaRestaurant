@@ -10,9 +10,17 @@ import {
   Image,
   Linking
 } from 'react-native';
-import { Camera, useCameraDevice, useCodeScanner } from 'react-native-vision-camera';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+
+// Conditional imports for native-only modules
+let Camera, useCameraDevice, useCodeScanner;
+if (Platform.OS !== 'web') {
+  const VisionCamera = require('react-native-vision-camera');
+  Camera = VisionCamera.Camera;
+  useCameraDevice = VisionCamera.useCameraDevice;
+  useCodeScanner = VisionCamera.useCodeScanner;
+}
 
 const { width } = Dimensions.get('window');
 
@@ -21,14 +29,23 @@ export default function QRScannerScreen() {
   const [hasPermission, setHasPermission] = useState(null);
   const [scanned, setScanned] = useState(false);
   const [scannedData, setScannedData] = useState(null);
+
+  // Early return for web platform - before hooks that use native modules
+  if (Platform.OS === 'web') {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>
+            QR scanning is only supported on mobile devices (Android/iOS). Please use a native build to scan QR codes.
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   const device = useCameraDevice('back');
 
   useEffect(() => {
-    // Skip permission request on web
-    if (Platform.OS === 'web') {
-      return;
-    }
-
     (async () => {
       try {
         const status = await Camera.requestCameraPermission();
@@ -49,19 +66,6 @@ export default function QRScannerScreen() {
       handleQRCodeScanned(code.value);
     },
   });
-
-  // Early return for web platform - after all hooks
-  if (Platform.OS === 'web') {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>
-            QR scanning is only supported on mobile devices (Android/iOS). Please use a native build to scan QR codes.
-          </Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
 
   const handleQRCodeScanned = (data) => {
     setScanned(true);

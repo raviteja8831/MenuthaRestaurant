@@ -17,10 +17,19 @@ import {
 import { MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import * as Location from "expo-location";
-import MapView, { Marker, Circle, PROVIDER_GOOGLE } from "react-native-maps";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getAllRestaurants } from "../api/restaurantApi";
 import FilterModal from "../Modals/FilterModal";
+
+// Conditional imports for native-only modules
+let MapView, Marker, Circle, PROVIDER_GOOGLE;
+if (Platform.OS !== "web") {
+  const Maps = require("react-native-maps");
+  MapView = Maps.default;
+  Marker = Maps.Marker;
+  Circle = Maps.Circle;
+  PROVIDER_GOOGLE = Maps.PROVIDER_GOOGLE;
+}
 
 const CustomerHomeScreen = () => {
   const router = useRouter();
@@ -677,8 +686,18 @@ const CustomerHomeScreen = () => {
   //   }
   // };
 
+  // Web fallback - show simple message
   if (Platform.OS === "web") {
-    return null;
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <Text style={styles.loadingText}>
+          Map view is only available on mobile devices (Android/iOS).
+        </Text>
+        <Text style={styles.loadingText}>
+          Please use the mobile app to view restaurant locations.
+        </Text>
+      </View>
+    );
   }
 
   // Show map immediately with loading overlay while data is loading

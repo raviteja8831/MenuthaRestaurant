@@ -1,7 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { View, StyleSheet, ActivityIndicator, Pressable, Text, Platform } from "react-native";
 import * as Location from "expo-location";
-import MapView, { Marker } from 'react-native-maps';
+
+// Conditional imports for native-only modules
+let MapView, Marker;
+if (Platform.OS !== 'web') {
+  const Maps = require('react-native-maps');
+  MapView = Maps.default;
+  Marker = Maps.Marker;
+}
 
 // Mock restaurant data
 const mockRestaurants = [
