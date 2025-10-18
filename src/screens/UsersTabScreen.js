@@ -235,10 +235,27 @@ export default function UsersTabScreen() {
                   selectedUser && selectedUser.id === user.id && styles.userAvatarCircleSelected
                 ]}>
                   {user.userImage ? (
-                    <Image
-                      source={{ uri: user.userImage.startsWith('http') ? user.userImage : `${IMG_BASE_URL}${user.userImage}` }}
-                      style={styles.userAvatarImage}
-                    />
+                    (() => {
+                      // normalize URL: ensure single slash between base and path
+                      const path = user.userImage.startsWith('/') ? user.userImage.slice(1) : user.userImage;
+                      const uri = user.userImage.startsWith('http') ? user.userImage : `${IMG_BASE_URL.replace(/\/$/, '')}/${path}`;
+                      // Prefetch to surface any loading issues on Android
+                      try {
+                        Image.prefetch(uri).then((res) => {
+                          // res is boolean on success in RN; log for debugging
+                          // eslint-disable-next-line no-console
+                          console.log('Image.prefetch', uri, res ? 'success' : 'failed');
+                        }).catch((e) => console.log('Image.prefetch error', uri, e));
+                      } catch (e) {
+                        // ignore
+                      }
+                      return (
+                        <Image
+                          source={{ uri }}
+                          style={styles.userAvatarImage}
+                        />
+                      );
+                    })()
                   ) : (
                     <Image
                       source={require("../assets/images/default-user.png")}
@@ -291,10 +308,19 @@ export default function UsersTabScreen() {
           <View style={styles.usersProfileColLeft}>
             <View style={styles.usersProfileAvatarCircle}>
               {selectedUser?.userImage ? (
-                <Image
-                  source={{ uri: selectedUser.userImage.startsWith('http') ? selectedUser.userImage : `${IMG_BASE_URL}${selectedUser.userImage}` }}
-                  style={styles.usersProfileAvatarImage}
-                />
+                (() => {
+                  const path = selectedUser.userImage.startsWith('/') ? selectedUser.userImage.slice(1) : selectedUser.userImage;
+                  const uri = selectedUser.userImage.startsWith('http') ? selectedUser.userImage : `${IMG_BASE_URL.replace(/\/$/, '')}/${path}`;
+                  try {
+                    Image.prefetch(uri).then((res) => console.log('Profile Image.prefetch', uri, res ? 'success' : 'failed')).catch((e) => console.log('Profile Image.prefetch error', uri, e));
+                  } catch (e) {}
+                  return (
+                    <Image
+                      source={{ uri }}
+                      style={styles.usersProfileAvatarImage}
+                    />
+                  );
+                })()
               ) : (
                 <Image
                   source={require("../assets/images/default-user.png")}

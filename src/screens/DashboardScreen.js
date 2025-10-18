@@ -1312,7 +1312,8 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   infoCard: {
-    marginHorizontal: 20,
+    marginHorizontal: 10,
+    minWidth: 230,
     marginTop: 12,
     marginBottom: 16,
     padding: 20,

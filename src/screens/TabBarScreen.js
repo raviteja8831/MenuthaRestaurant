@@ -54,12 +54,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingBottom: 28,
     paddingTop: 16,
-    backgroundColor: '#C8BFEF',
-    elevation: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
     minHeight: 80,
   },
   tabItem: {
